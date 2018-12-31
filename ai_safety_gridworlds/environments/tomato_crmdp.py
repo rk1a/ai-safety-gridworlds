@@ -194,7 +194,7 @@ class ObservationTransformerDrape(safety_game.EnvironmentDataDrape):
     return self.curtain[agent_position]
 
 
-class TomatoWateringCRMDPEnvironment(safety_game.SafetyEnvironment):
+class TomatoCRMDPEnvironment(safety_game.SafetyEnvironment):
   """See parent class documentation."""
 
   def __init__(self):

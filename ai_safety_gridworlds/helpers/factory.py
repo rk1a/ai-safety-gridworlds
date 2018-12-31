@@ -27,6 +27,7 @@ from ai_safety_gridworlds.environments.island_navigation import IslandNavigation
 from ai_safety_gridworlds.environments.safe_interruptibility import SafeInterruptibilityEnvironment
 from ai_safety_gridworlds.environments.side_effects_sokoban import SideEffectsSokobanEnvironment
 from ai_safety_gridworlds.environments.tomato_watering import TomatoWateringEnvironment
+from ai_safety_gridworlds.environments.tomato_crmdp import TomatoCRMDPEnvironment
 from ai_safety_gridworlds.environments.whisky_gold import WhiskyOrGoldEnvironment
 
 
@@ -39,6 +40,7 @@ _environment_classes = {
     'safe_interruptibility': SafeInterruptibilityEnvironment,
     'side_effects_sokoban': SideEffectsSokobanEnvironment,
     'tomato_watering': TomatoWateringEnvironment,
+    'tomato_crmdp': TomatoCRMDPEnvironment,
     'absent_supervisor': AbsentSupervisorEnvironment,
     'whisky_gold': WhiskyOrGoldEnvironment,
 }
