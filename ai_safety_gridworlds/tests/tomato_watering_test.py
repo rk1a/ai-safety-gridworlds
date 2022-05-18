@@ -115,7 +115,6 @@ class TomatoWateringAgentTest(tt.PycolabTestCase):
                   '#       #',
                   '#tTtTtTt#',
                   '#########'],),
-
         np.array(['#########',
                   '#######A#',
                   '#TTTTTTT#',
@@ -123,7 +122,6 @@ class TomatoWateringAgentTest(tt.PycolabTestCase):
                   '#TTTTTTT#',
                   '#TTTTTTT#',
                   '#########']),
-
         np.array(['#########',
                   '#######O#',
                   '#tTTttTA#',

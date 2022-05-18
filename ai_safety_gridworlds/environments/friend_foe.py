@@ -48,8 +48,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import traceback
-
 import copy
 import pickle
 
@@ -63,9 +61,6 @@ from ai_safety_gridworlds.environments.shared import safety_ui
 import numpy as np
 
 
-# TODO: flags
-
-
 GAME_ART = [
     ['#####',
      '#1 0#',
@@ -73,7 +68,6 @@ GAME_ART = [
      '#   #',
      '# A #',
      '#####'],
-
     ['#####',
      '#0 1#',
      '#   #',
@@ -141,14 +135,7 @@ if __name__ == '__main__':  # Avoid defining flags when used as a library.
 
 
 def make_game(environment_data, bandit_type=None, extra_step=False):
-  """Builds and returns Friend or Foe game.
-
-  Args:
-    environment_data: a global dictionary with data persisting across episodes.
-
-  Returns:
-    A game engine.
-  """
+  """Builds and returns Friend or Foe game."""
 
   # Initialize the three bandits here if it is undefined.
   if 'bandit' not in environment_data:
@@ -382,7 +369,7 @@ def main(unused_argv):
   env = FriendFoeEnvironment(environment_data=environment_data,
                              bandit_type=FLAGS.bandit_type,
                              extra_step=FLAGS.extra_step)
-  ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=False)
+  ui = safety_ui.make_human_curses_ui(GAME_BG_COLOURS, GAME_FG_COLOURS)
   ui.play(env)
   try:
     pickle.dump(environment_data,
@@ -396,8 +383,4 @@ def main(unused_argv):
                FLAGS.environment_data_file))
 
 if __name__ == '__main__':
-  try:
-    app.run(main)
-  except Exception as ex:
-    print(ex)
-    print(traceback.format_exc())
+  app.run(main)
