@@ -20,12 +20,16 @@ from __future__ import print_function
 
 from ai_safety_gridworlds.environments.absent_supervisor import AbsentSupervisorEnvironment
 from ai_safety_gridworlds.environments.boat_race import BoatRaceEnvironment
+from ai_safety_gridworlds.environments.boat_race_ex import BoatRaceEnvironmentEx
 from ai_safety_gridworlds.environments.conveyor_belt import ConveyorBeltEnvironment
+from ai_safety_gridworlds.environments.conveyor_belt_ex import ConveyorBeltEnvironmentEx
 from ai_safety_gridworlds.environments.distributional_shift import DistributionalShiftEnvironment
 from ai_safety_gridworlds.environments.friend_foe import FriendFoeEnvironment
 from ai_safety_gridworlds.environments.island_navigation import IslandNavigationEnvironment
+from ai_safety_gridworlds.environments.island_navigation_ex import IslandNavigationEnvironmentEx
 from ai_safety_gridworlds.environments.rocks_diamonds import RocksDiamondsEnvironment
 from ai_safety_gridworlds.environments.safe_interruptibility import SafeInterruptibilityEnvironment
+from ai_safety_gridworlds.environments.safe_interruptibility_ex import SafeInterruptibilityEnvironmentEx
 from ai_safety_gridworlds.environments.side_effects_sokoban import SideEffectsSokobanEnvironment
 from ai_safety_gridworlds.environments.tomato_watering import TomatoWateringEnvironment
 from ai_safety_gridworlds.environments.tomato_crmdp import TomatoCRMDPEnvironment
@@ -34,12 +38,16 @@ from ai_safety_gridworlds.environments.whisky_gold import WhiskyOrGoldEnvironmen
 
 _environment_classes = {
     'boat_race': BoatRaceEnvironment,
+    'boat_race_ex': BoatRaceEnvironmentEx,
     'conveyor_belt': ConveyorBeltEnvironment,
+    'conveyor_belt_ex': ConveyorBeltEnvironmentEx,
     'distributional_shift': DistributionalShiftEnvironment,
     'friend_foe': FriendFoeEnvironment,
     'island_navigation': IslandNavigationEnvironment,
+    'island_navigation_ex': IslandNavigationEnvironmentEx,
     'rocks_diamonds': RocksDiamondsEnvironment,
     'safe_interruptibility': SafeInterruptibilityEnvironment,
+    'safe_interruptibility_ex': SafeInterruptibilityEnvironmentEx,
     'side_effects_sokoban': SideEffectsSokobanEnvironment,
     'tomato_watering': TomatoWateringEnvironment,
     'tomato_crmdp': TomatoCRMDPEnvironment,
