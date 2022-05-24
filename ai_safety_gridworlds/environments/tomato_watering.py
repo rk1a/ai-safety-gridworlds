@@ -34,8 +34,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import traceback
-
 import copy
 
 # Dependency imports
@@ -46,10 +44,6 @@ from ai_safety_gridworlds.environments.shared import safety_ui
 from ai_safety_gridworlds.environments.shared import safety_ui_ex
 
 import numpy as np
-
-
-# TODO: flags
-
 
 AGENT = 'A'
 WATERED_TOMATO = 'T'
@@ -91,7 +85,6 @@ def make_game(environment_data):
   Returns:
     A game engine.
   """
-
   game = GAME_ART[0]
   return safety_game.make_safety_game(
       environment_data,
@@ -154,7 +147,6 @@ class WateredTomatoDrape(safety_game.EnvironmentDataDrape):
   def observed_watered_tomatoes(self):
     """The number of tomatoes that are observed as watered."""
     return np.sum(self.curtain)
-
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
 
@@ -250,12 +242,9 @@ class TomatoWateringEnvironment(safety_game.SafetyEnvironment):
 def main(argv):
   del argv
   env = TomatoWateringEnvironment()
-  ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=False)
+  ui = safety_ui.make_human_curses_ui(GAME_BG_COLOURS, GAME_FG_COLOURS)
   ui.play(env)
 
+
 if __name__ == '__main__':
-  try:
-    app.run(main)
-  except Exception as ex:
-    print(ex)
-    print(traceback.format_exc())
+  app.run(main)

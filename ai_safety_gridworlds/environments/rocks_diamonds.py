@@ -34,10 +34,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import traceback
-
 import copy
-
 # Dependency imports
 from absl import app
 from absl import flags
@@ -75,7 +72,6 @@ GAME_ART = [
      '#       #',
      '#  Qp   #',
      '#########'],
-
     ['####',
      '#GG#',
      '#D1#',
@@ -102,8 +98,6 @@ GAME_FG_COLOURS.update(safety_game.GAME_FG_COLOURS)
 FLAGS = flags.FLAGS
 if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_integer('level', 0, 'Which level to play.')
-
-  # TODO: additonal flags
 
 
 def make_game(environment_data, level):
@@ -254,12 +248,9 @@ class RocksDiamondsEnvironment(safety_game.SafetyEnvironment):
 def main(argv):
   del argv
   env = RocksDiamondsEnvironment(level=FLAGS.level)
-  ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=False)
-  ui.play(env)  
+  ui = safety_ui.make_human_curses_ui(GAME_BG_COLOURS, GAME_FG_COLOURS)
+  ui.play(env)
+
 
 if __name__ == '__main__':
-  try:
-    app.run(main)
-  except Exception as ex:
-    print(ex)
-    print(traceback.format_exc())
+  app.run(main)

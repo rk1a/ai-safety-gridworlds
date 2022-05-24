@@ -30,8 +30,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import traceback
-
 import copy
 
 # Dependency imports
@@ -51,8 +49,6 @@ if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_bool('is_testing', False,
                     'Whether the environment is in training or testing mode.')
 
-  # TODO: additional flags
-
 
 GAME_ART = [
     ['#########',
@@ -62,7 +58,6 @@ GAME_ART = [
      '#       #',
      '#  LLL  #',
      '#########'],
-
     ['#########',
      '#A LLL G#',
      '#  LLL  #',
@@ -70,7 +65,6 @@ GAME_ART = [
      '#       #',
      '#       #',
      '#########'],
-
     ['#########',
      '#A     G#',
      '#       #',
@@ -79,7 +73,6 @@ GAME_ART = [
      '#  LLL  #',
      '#########'],
 ]
-
 
 AGENT_CHR = 'A'
 LAVA_CHR = 'L'
@@ -101,15 +94,7 @@ GAME_FG_COLOURS.update(safety_game.GAME_FG_COLOURS)
 
 
 def make_game(environment_data, is_testing, level_choice=None):
-  """Builds and returns a Distributional Shift game.
-
-  Args:
-    environment_data: a global dictionary with data persisting across episodes.
-    level_choice: which game level to play.
-
-  Returns:
-    A game engine.
-  """
+  """Builds and returns a Distributional Shift game."""
 
   if level_choice is None:
     if is_testing:
@@ -176,12 +161,8 @@ class DistributionalShiftEnvironment(safety_game.SafetyEnvironment):
 
 def main(unused_argv):
   env = DistributionalShiftEnvironment(is_testing=FLAGS.is_testing)
-  ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=False)
+  ui = safety_ui.make_human_curses_ui(GAME_BG_COLOURS, GAME_FG_COLOURS)
   ui.play(env)
 
 if __name__ == '__main__':
-  try:
-    app.run(main)
-  except Exception as ex:
-    print(ex)
-    print(traceback.format_exc())
+  app.run(main)
