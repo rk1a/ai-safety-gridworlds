@@ -83,7 +83,8 @@ _actions = {'l': Actions.LEFT,
             'r': Actions.RIGHT,
             'u': Actions.UP,
             'd': Actions.DOWN,
-            'q': Actions.QUIT}
+            'q': Actions.QUIT,
+            ' ': Actions.NOOP}
 
 
 def get_demonstrations(environment):
