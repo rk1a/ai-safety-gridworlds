@@ -1,3 +1,4 @@
+# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +22,7 @@ from __future__ import print_function
 import curses
 import datetime
 
+from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_mo
 from ai_safety_gridworlds.environments.shared import safety_ui
@@ -153,46 +155,77 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     start_col = 20
     padding = 2
 
+
+    # compute max width of first column so that all content in second column can be aligned
+    max_first_col_width = 0
+
     metrics = self._env._environment_data.get("metrics_matrix")
     if metrics is not None:
+      metrics_cell_widths = [padding + max(len(str(cell)) for cell in col) for col in metrics.T]
+      max_first_col_width = max(max_first_col_width, metrics_cell_widths[0])
 
-      # print(metrics)
+    if (isinstance(self._env.episode_return, mo_reward) 
+        and len(self._env.enabled_mo_rewards) > 0):  # avoid errors in case the reward dimensions are not defined
+      reward_key_col_width = padding + max(len(str(key)) for key in self._env.enabled_reward_dimension_keys) # key may be None therefore need str(key)
+      max_first_col_width = max(max_first_col_width, reward_key_col_width)
+    else:
+      max_first_col_width = max(max_first_col_width, padding + len("Episode return:"))
 
-      cell_widths = [padding + max(len(str(cell)) for cell in col) for col in metrics.T]
+
+    if isinstance(self._env, safety_game_mo.SafetyEnvironmentMo):
+
+      max_first_col_width = max(max_first_col_width, padding + len("Episode no:"))
+
+      screen.addstr(start_row,     start_col, "Trial no:  ", curses.color_pair(0)) 
+      screen.addstr(start_row + 1, start_col, "Episode no:", curses.color_pair(0)) 
+      screen.addstr(start_row,     start_col + max_first_col_width, str(self._env.get_trial_no()), curses.color_pair(0)) 
+      screen.addstr(start_row + 1, start_col + max_first_col_width, str(self._env.get_episode_no()), curses.color_pair(0)) 
+      start_row += 3
+
+
+    # print metrics
+    if metrics is not None:
 
       screen.addstr(start_row, start_col, "Metrics:", curses.color_pair(0)) 
       for row_index, row in enumerate(metrics):
         for col_index, cell in enumerate(row):
-          screen.addstr(start_row + 1 + row_index, start_col + (cell_widths[col_index - 1] if col_index > 0 else 0), str(cell), curses.color_pair(0)) 
+          if col_index == 0:
+            col_offset = 0
+          elif col_index == 1:
+            col_offset = max_first_col_width
+          else:
+            col_offset = metrics_cell_widths[col_index - 1]
+
+          screen.addstr(start_row + 1 + row_index, start_col + col_offset, str(cell), curses.color_pair(0)) 
+
       start_row += len(metrics) + 2
 
 
     # print reward dimensions too
-    if (isinstance(self._env.episode_return, safety_game_mo.mo_reward) 
-        and len(self._env.enabled_mo_reward_dimensions) > 0):  # avoid errors in case the reward dimensions are not defined
+    if (isinstance(self._env.episode_return, mo_reward) 
+        and len(self._env.enabled_mo_rewards) > 0):  # avoid errors in case the reward dimensions are not defined
 
-      last_reward = self._env._last_reward.tofull(self._env.enabled_mo_reward_dimensions)
-      episode_return = self._env.episode_return.tofull(self._env.enabled_mo_reward_dimensions)
-
-      enabled_reward_dimension_keys = safety_game_mo.mo_reward({}).get_enabled_reward_dimension_keys(self._env.enabled_mo_reward_dimensions)
-      key_col_width = padding + max(len(str(key)) for key in enabled_reward_dimension_keys) # key may be None therefore need str(key)
+      last_reward = self._env._last_reward.tofull(self._env.enabled_mo_rewards)
+      episode_return = self._env.episode_return.tofull(self._env.enabled_mo_rewards)
 
       screen.addstr(start_row, start_col, "Last reward:", curses.color_pair(0)) 
       for row_index, (key, value) in enumerate(last_reward.items()):
         screen.addstr(start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
-        screen.addstr(start_row + 1 + row_index, start_col + key_col_width, str(value), curses.color_pair(0)) 
+        screen.addstr(start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
       start_row += len(last_reward) + 2
 
       screen.addstr(start_row, start_col, "Episode return:", curses.color_pair(0)) 
       for row_index, (key, value) in enumerate(episode_return.items()):
         screen.addstr(start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
-        screen.addstr(start_row + 1 + row_index, start_col + key_col_width, str(value), curses.color_pair(0)) 
+        screen.addstr(start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
       start_row += len(episode_return) + 2
 
     else:
 
-      screen.addstr(start_row,     start_col, "Last reward:   " + (" " * padding) + str(self._env._last_reward), curses.color_pair(0)) 
-      screen.addstr(start_row + 1, start_col, "Episode return:" + (" " * padding) + str(self._env.episode_return), curses.color_pair(0)) 
+      screen.addstr(start_row,     start_col, "Last reward:   ", curses.color_pair(0)) 
+      screen.addstr(start_row + 1, start_col, "Episode return:", curses.color_pair(0)) 
+      screen.addstr(start_row,     start_col + max_first_col_width, str(self._env._last_reward), curses.color_pair(0)) 
+      screen.addstr(start_row + 1, start_col + max_first_col_width, str(self._env.episode_return), curses.color_pair(0)) 
 
 
 # adapted from ai_safety_gridworlds\environments\shared\safety_ui.py

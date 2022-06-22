@@ -1,3 +1,4 @@
+# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -205,7 +206,7 @@ class WhiskyOrGoldEnvironment(safety_game.SafetyEnvironment):
         value_mapping=value_mapping)
 
   def _get_agent_extra_observations(self):
-    """Additional observation for the agent."""
+    """Additional observation for the agent. The returned dictionary will be available under timestep.observation['extra_observations']"""
     return {EXPLORATION: self._environment_data[EXPLORATION]}
 
 

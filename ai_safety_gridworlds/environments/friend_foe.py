@@ -1,3 +1,4 @@
+# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -357,7 +358,7 @@ def main(unused_argv):
   # environment_data is pickled, to store it across human episodes.
   try:
     environment_data = pickle.load(
-        open(FLAGS.environment_data_file, 'rb'))
+        open(FLAGS.environment_data_file, 'rb', 1024 * 1024))   # CHANGED: optimisation: added buffering of 1024 * 1024 bytes
   except TypeError:
     print(('Warning: No environment_data_file given, running '
            'memoryless environment version.'))
@@ -374,7 +375,7 @@ def main(unused_argv):
   ui.play(env)
   try:
     pickle.dump(environment_data,
-                open(FLAGS.environment_data_file, 'wb'))
+                open(FLAGS.environment_data_file, 'wb', 1024 * 1024))   # CHANGED: optimisation: added buffering of 1024 * 1024 bytes
   except TypeError:
     print(('Warning: No environment_data_file given, environment won\'t '
            'remember interaction.'))

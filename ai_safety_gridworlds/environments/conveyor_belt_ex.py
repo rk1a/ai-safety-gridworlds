@@ -1,3 +1,4 @@
+# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,6 +55,7 @@ from __future__ import print_function
 import traceback
 
 import copy
+import sys
 
 # Dependency imports
 from absl import app
@@ -61,7 +63,10 @@ from absl import flags
 
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_mo
-from ai_safety_gridworlds.environments.shared.safety_game_mo import mo_reward
+from ai_safety_gridworlds.environments.shared.safety_game_mo import METRICS_MATRIX
+from ai_safety_gridworlds.environments.shared.safety_game_mo import LOG_TIMESTAMP, LOG_ENVIRONMENT, LOG_TRIAL, LOG_EPISODE, LOG_ITERATION, LOG_ARGUMENTS, LOG_REWARD_UNITS, LOG_REWARD, LOG_SCALAR_REWARD, LOG_CUMULATIVE_REWARD, LOG_SCALAR_CUMULATIVE_REWARD, LOG_METRICS
+
+from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared import safety_ui
 from ai_safety_gridworlds.environments.shared import safety_ui_ex
 from ai_safety_gridworlds.environments.shared.safety_ui_ex import map_contains
@@ -76,19 +81,23 @@ DEFAULT_MAX_ITERATIONS = 100
 DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible action.
 
 
-FLAGS = flags.FLAGS
+def define_flags():
 
-if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_enum(
       'variant', DEFAULT_VARIANT, VARIANTS,
       'Environment variant.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS,
-                       'Whether to include NOOP as a possible action.')
+                        'Whether to include NOOP as a possible action.')
 
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 
   flags.DEFINE_integer('goal_reward', 50, 'Reward for reaching the goal.')
+  
+  FLAGS = flags.FLAGS
+  FLAGS(sys.argv)   # need to explicitly to tell flags library to parse argv before you can access FLAGS.xxx
+
+  return FLAGS
 
 
 GAME_ART = [
@@ -290,10 +299,12 @@ class ConveyorBeltEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
   """Python environment for the conveyor belt environment."""
 
   def __init__(self, 
+               FLAGS=flags.FLAGS, 
                variant='vase',
                goal_reward=50,
                max_iterations=DEFAULT_MAX_ITERATIONS, 
-               noops=DEFAULT_NOOPS):
+               noops=DEFAULT_NOOPS,
+               **kwargs):
     """Builds a `ConveyorBeltEnvironmentEx` python environment.
 
     Args:
@@ -303,6 +314,10 @@ class ConveyorBeltEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
 
     Returns: A `Base` python environment interface for this game.
     """
+
+    log_arguments = dict(locals())
+    log_arguments.update(kwargs)
+
 
     value_mapping = {
         WALL_CHR: 0.0,
@@ -315,7 +330,7 @@ class ConveyorBeltEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
     }
 
 
-    enabled_mo_reward_dimensions = []
+    enabled_mo_rewards = []
 
 
     global GOAL_REWARD, REMOVAL_REWARD, HIDDEN_REWARD
@@ -329,26 +344,63 @@ class ConveyorBeltEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
       action_set = safety_game.DEFAULT_ACTION_SET
 
     super(ConveyorBeltEnvironmentEx, self).__init__(
-        enabled_mo_reward_dimensions,
+        enabled_mo_rewards,
         lambda: make_game(self.environment_data, variant),
         copy.copy(GAME_BG_COLOURS),
         copy.copy(GAME_FG_COLOURS),
         actions=(min(action_set).value, max(action_set).value),
         value_mapping=value_mapping,
-        max_iterations=max_iterations)
+        max_iterations=max_iterations,  
+        log_arguments=log_arguments,
+        FLAGS=FLAGS,
+        **kwargs)
 
   #def _calculate_episode_performance(self, timestep):
   #  self._episodic_performances.append(self._get_hidden_reward())  # no hidden rewards please
 
+  #def _get_agent_extra_observations(self):
+  #  """Additional observation for the agent. The returned dictionary will be available under timestep.observation['extra_observations']"""
+  #  return {YOURKEY: self._environment_data[YOURKEY]}
+
 
 def main(unused_argv):
+
+  FLAGS = define_flags()
+
+  log_columns = [
+    # LOG_TIMESTAMP,
+    # LOG_ENVIRONMENT,
+    LOG_TRIAL,       
+    LOG_EPISODE,        
+    LOG_ITERATION,
+    # LOG_ARGUMENTS,     
+    # LOG_REWARD_UNITS,     # TODO
+    LOG_REWARD,
+    LOG_SCALAR_REWARD,
+    LOG_CUMULATIVE_REWARD,
+    LOG_SCALAR_CUMULATIVE_REWARD,
+    LOG_METRICS,
+  ]
+
   env = ConveyorBeltEnvironmentEx(
-      variant=FLAGS.variant, noops=FLAGS.noops,
-      goal_reward=FLAGS.goal_reward, 
-      max_iterations=FLAGS.max_iterations
+    scalarise=False,
+    log_columns=log_columns,
+    log_arguments_to_separate_file=True,
+    log_filename_comment="some_configuration_or_comment=1234",
+    FLAGS=FLAGS,
+    variant=FLAGS.variant, noops=FLAGS.noops,
+    goal_reward=FLAGS.goal_reward, 
+    max_iterations=FLAGS.max_iterations
   )
-  ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
-  ui.play(env)
+
+  for trial_no in range(0, 2):
+    # env.reset(trial_no = trial_no + 1)  # NB! provide only trial_no. episode_no is updated automatically
+    for episode_no in range(0, 2): 
+      env.reset()   # it would also be ok to reset() at the end of the loop, it will not mess up the episode counter
+      ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
+      ui.play(env)
+    env.reset(trial_no = env.get_trial_no() + 1)  # NB! provide only trial_no. episode_no is updated automatically
+
 
 if __name__ == '__main__':
   try:
