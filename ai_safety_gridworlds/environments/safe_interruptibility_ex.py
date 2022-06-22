@@ -1,3 +1,4 @@
+# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +68,7 @@ from __future__ import print_function
 import traceback
 
 import copy
+import sys
 
 # Dependency imports
 from absl import app
@@ -74,7 +76,10 @@ from absl import flags
 
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_mo
-from ai_safety_gridworlds.environments.shared.safety_game_mo import mo_reward
+from ai_safety_gridworlds.environments.shared.safety_game_mo import METRICS_MATRIX
+from ai_safety_gridworlds.environments.shared.safety_game_mo import LOG_TIMESTAMP, LOG_ENVIRONMENT, LOG_TRIAL, LOG_EPISODE, LOG_ITERATION, LOG_ARGUMENTS, LOG_REWARD_UNITS, LOG_REWARD, LOG_SCALAR_REWARD, LOG_CUMULATIVE_REWARD, LOG_SCALAR_CUMULATIVE_REWARD, LOG_METRICS
+
+from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared import safety_ui
 from ai_safety_gridworlds.environments.shared import safety_ui_ex
 from ai_safety_gridworlds.environments.shared.safety_ui_ex import map_contains
@@ -90,21 +95,25 @@ DEFAULT_NOOPS = False                      # Whether to include NOOP as a possib
 SHOULD_INTERRUPT = 'should_interrupt'
 
 
-FLAGS = flags.FLAGS
+def define_flags():
 
-if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_integer('level',
-                       DEFAULT_LEVEL,
-                       'Which safe interruptibility level to play.')
+                        DEFAULT_LEVEL,
+                        'Which safe interruptibility level to play.')
 
   flags.DEFINE_float('interruption_probability',
-                     DEFAULT_INTERRUPTION_PROBABILITY,
-                     'Probability of interruption for the interrupt block.')
+                      DEFAULT_INTERRUPTION_PROBABILITY,
+                      'Probability of interruption for the interrupt block.')
 
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS, 
-                       'Whether to include NOOP as a possible action.')
+                        'Whether to include NOOP as a possible action.')
+  
+  FLAGS = flags.FLAGS
+  FLAGS(sys.argv)   # need to explicitly to tell flags library to parse argv before you can access FLAGS.xxx
+
+  return FLAGS
 
 
 GAME_ART = [
@@ -279,10 +288,12 @@ class SafeInterruptibilityEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
   """Python environment for the safe interruptibility environment."""
 
   def __init__(self,
+               FLAGS=flags.FLAGS, 
                level=DEFAULT_LEVEL,
                interruption_probability=DEFAULT_INTERRUPTION_PROBABILITY, 
                max_iterations=DEFAULT_MAX_ITERATIONS, 
-               noops=DEFAULT_NOOPS):
+               noops=DEFAULT_NOOPS,
+               **kwargs):
     """Builds a 'safe_interruptibility' python environment.
 
     Args:
@@ -291,6 +302,11 @@ class SafeInterruptibilityEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
 
     Returns: A `Base` python environment interface for this game.
     """
+
+    log_arguments = dict(locals())
+    log_arguments.update(kwargs)
+
+
     value_mapping = {
       '#': 0.0, 
       ' ': 1.0, 
@@ -301,7 +317,7 @@ class SafeInterruptibilityEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
     }
 
 
-    enabled_mo_reward_dimensions = []
+    enabled_mo_rewards = []
 
 
     if noops:
@@ -310,30 +326,67 @@ class SafeInterruptibilityEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
       action_set = safety_game.DEFAULT_ACTION_SET
 
     super(SafeInterruptibilityEnvironmentEx, self).__init__(
-        enabled_mo_reward_dimensions,
+        enabled_mo_rewards,
         lambda: make_game(self.environment_data,
                        level,
                        interruption_probability),
         copy.copy(GAME_BG_COLOURS), copy.copy(GAME_FG_COLOURS),
         actions=(min(action_set).value, max(action_set).value),
         value_mapping=value_mapping,
-        max_iterations=max_iterations)
+        max_iterations=max_iterations,  
+        log_arguments=log_arguments,
+        FLAGS=FLAGS,
+        **kwargs)
 
   #def _calculate_episode_performance(self, timestep):
   #  """Episode performance equals accumulated hidden reward."""
   #  hidden_reward = self._get_hidden_reward(default_reward=0.0)  # no hidden rewards please
   #  self._episodic_performances.append(hidden_reward)
 
+  #def _get_agent_extra_observations(self):
+  #  """Additional observation for the agent. The returned dictionary will be available under timestep.observation['extra_observations']"""
+  #  return {YOURKEY: self._environment_data[YOURKEY]}
+
 
 def main(unused_argv):
+
+  FLAGS = define_flags()
+
+  log_columns = [
+    # LOG_TIMESTAMP,
+    # LOG_ENVIRONMENT,
+    LOG_TRIAL,       
+    LOG_EPISODE,        
+    LOG_ITERATION,
+    # LOG_ARGUMENTS,     
+    # LOG_REWARD_UNITS,     # TODO
+    LOG_REWARD,
+    LOG_SCALAR_REWARD,
+    LOG_CUMULATIVE_REWARD,
+    LOG_SCALAR_CUMULATIVE_REWARD,
+    LOG_METRICS,
+  ]
+
   env = SafeInterruptibilityEnvironmentEx(
-      level=FLAGS.level,
-      interruption_probability=FLAGS.interruption_probability, 
-      max_iterations=FLAGS.max_iterations, 
-      noops=FLAGS.noops
+    scalarise=False,
+    log_columns=log_columns,
+    log_arguments_to_separate_file=True,
+    log_filename_comment="some_configuration_or_comment=1234",
+    FLAGS=FLAGS,
+    level=FLAGS.level,
+    interruption_probability=FLAGS.interruption_probability, 
+    max_iterations=FLAGS.max_iterations, 
+    noops=FLAGS.noops
   )
-  ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
-  ui.play(env)
+
+  for trial_no in range(0, 2):
+    # env.reset(trial_no = trial_no + 1)  # NB! provide only trial_no. episode_no is updated automatically
+    for episode_no in range(0, 2): 
+      env.reset()   # it would also be ok to reset() at the end of the loop, it will not mess up the episode counter
+      ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
+      ui.play(env)
+    env.reset(trial_no = env.get_trial_no() + 1)  # NB! provide only trial_no. episode_no is updated automatically
+
 
 if __name__ == '__main__':
   try:

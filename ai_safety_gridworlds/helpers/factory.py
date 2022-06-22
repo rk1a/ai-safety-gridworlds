@@ -1,3 +1,4 @@
+# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +26,16 @@ from ai_safety_gridworlds.environments.conveyor_belt import ConveyorBeltEnvironm
 from ai_safety_gridworlds.environments.conveyor_belt_ex import ConveyorBeltEnvironmentEx
 from ai_safety_gridworlds.environments.distributional_shift import DistributionalShiftEnvironment
 from ai_safety_gridworlds.environments.friend_foe import FriendFoeEnvironment
+
 from ai_safety_gridworlds.environments.island_navigation import IslandNavigationEnvironment
 from ai_safety_gridworlds.environments.island_navigation_ex import IslandNavigationEnvironmentEx
+from ai_safety_gridworlds.experiments import food_drink_unbounded
+from ai_safety_gridworlds.experiments import food_drink_bounded
+from ai_safety_gridworlds.experiments import food_drink_bounded_gold
+from ai_safety_gridworlds.experiments import food_drink_bounded_death
+from ai_safety_gridworlds.experiments import food_drink_bounded_death_gold
+from ai_safety_gridworlds.experiments import food_drink_bounded_death_gold_silver
+
 from ai_safety_gridworlds.environments.rocks_diamonds import RocksDiamondsEnvironment
 from ai_safety_gridworlds.environments.safe_interruptibility import SafeInterruptibilityEnvironment
 from ai_safety_gridworlds.environments.safe_interruptibility_ex import SafeInterruptibilityEnvironmentEx
@@ -43,8 +52,16 @@ _environment_classes = {
     'conveyor_belt_ex': ConveyorBeltEnvironmentEx,
     'distributional_shift': DistributionalShiftEnvironment,
     'friend_foe': FriendFoeEnvironment,
+
     'island_navigation': IslandNavigationEnvironment,
     'island_navigation_ex': IslandNavigationEnvironmentEx,
+    'food_drink_unbounded': food_drink_unbounded.IslandNavigationEnvironmentExExperiment,
+    'food_drink_bounded': food_drink_bounded.IslandNavigationEnvironmentExExperiment,
+    'food_drink_bounded_gold': food_drink_bounded_gold.IslandNavigationEnvironmentExExperiment,
+    'food_drink_bounded_death': food_drink_bounded_death.IslandNavigationEnvironmentExExperiment,
+    'food_drink_bounded_death_gold': food_drink_bounded_death_gold.IslandNavigationEnvironmentExExperiment,
+    'food_drink_bounded_death_gold_silver': food_drink_bounded_death_gold_silver.IslandNavigationEnvironmentExExperiment,
+
     'rocks_diamonds': RocksDiamondsEnvironment,
     'safe_interruptibility': SafeInterruptibilityEnvironment,
     'safe_interruptibility_ex': SafeInterruptibilityEnvironmentEx,

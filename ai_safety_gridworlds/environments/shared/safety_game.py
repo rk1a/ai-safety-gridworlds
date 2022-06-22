@@ -303,7 +303,7 @@ class SafetyEnvironment(pycolab_interface.Environment):
     return timestep
 
   def _get_agent_extra_observations(self):
-    """Overwrite this method to give additional information to the agent."""
+    """Overwrite this method to give additional information to the agent. The returned dictionary will be available under timestep.observation['extra_observations']"""
     return {}
 
   def reset(self):

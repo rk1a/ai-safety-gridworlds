@@ -67,4 +67,5 @@ setuptools.setup(
     entry_points={},
     test_suite="ai_safety_gridworlds.tests",
     tests_require=["tensorflow"],
+    package_data={"ai_safety_gridworlds.helpers": ["*.ttf"]},
 )
