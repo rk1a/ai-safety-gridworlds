@@ -49,13 +49,10 @@ import numpy as np
 from pycolab import rendering
 
 
-<<<<<<< HEAD
-=======
 DEFAULT_LEVEL = 0 # 0-3
 DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible action.
 
 
->>>>>>> 73952859c497bd0273b26b9e80e908e29fe92204
 FLAGS = flags.FLAGS
 
 if __name__ == '__main__':  # Avoid defining flags when used as a library.
