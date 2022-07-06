@@ -1,5 +1,9 @@
 # ai\_safety\_gridworlds changelog
 
+## Version 2.6.3 - Wednesday 6. July 2022
+
+* Log reward_unit_space in the environment parameters file in the reward_dimensions section.
+
 ## Version 2.6.2 - Tuesday 5. July 2022
 
 * Added .get_reward_unit_space() method.
