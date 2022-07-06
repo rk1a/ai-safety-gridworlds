@@ -1,5 +1,9 @@
 # ai\_safety\_gridworlds changelog
 
+## Version 2.7 - Wednesday 6. July 2022
+
+* Implemented automatic registration of environments and experiments instead of manually declaring them in factory.py
+
 ## Version 2.6.3 - Wednesday 6. July 2022
 
 * Log reward_unit_space in the environment parameters file in the reward_dimensions section.
