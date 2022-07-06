@@ -144,16 +144,16 @@ def add_to_factory(klass):
   name = os.path.splitext(os.path.basename(filepath))[0]
   fulldirname = os.path.dirname(filepath)
 
-  modulename = os.path.basename(fulldirname)
+  parentdirname = os.path.basename(fulldirname)
 
   dirnames = fulldirname.split(os.path.sep)
   package_dir_index = dirnames.index(_package_name)
-  dirname = ".".join(dirnames[package_dir_index + 1:])  # this name includes any folders up to the module name, excluding package name
+  dirname = ".".join(dirnames[package_dir_index + 1:])  # this name includes any number of folders up to the module name, excluding package name
 
   _environment_classes[name] = klass
 
-  if modulename:
-    _environment_classes[modulename + "." + name] = klass
+  if parentdirname:
+    _environment_classes[parentdirname + "." + name] = klass
 
   if dirname:
     _environment_classes[dirname + "." + name] = klass
