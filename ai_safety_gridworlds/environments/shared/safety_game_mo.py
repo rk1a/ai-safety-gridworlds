@@ -22,6 +22,7 @@ from __future__ import print_function
 import csv
 import datetime
 import decimal
+import numbers
 import os
 
 # Dependency imports
@@ -657,8 +658,8 @@ class SafetyEnvironmentMo(SafetyEnvironment):
             data += [
                       (
                         _remove_decimal_exponent(decimal_context.create_decimal_from_float(x))
-                          if x is not None 
-                          else None
+                          if isinstance(x, numbers.Number)
+                          else str(x)
                       )
                       for x in
                       [

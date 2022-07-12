@@ -112,6 +112,8 @@ def init_experiment_flags():
 
   FLAGS.DRINK_DEFICIENCY_REWARD = mo_reward({"DRINK_DEFICIENCY_REWARD": 0})    
   FLAGS.FOOD_DEFICIENCY_REWARD = mo_reward({"FOOD_DEFICIENCY_REWARD": 0})    
+
+  # TODO: rename to .DRINK_TILE_REWARD
   FLAGS.DRINK_REWARD = mo_reward({"DRINK_REWARD": 0.02, "FOOD_REWARD": -0.018, "GOLD_REWARD": 0})     
   FLAGS.FOOD_REWARD = mo_reward({"DRINK_REWARD": -0.09, "FOOD_REWARD": 0.1, "GOLD_REWARD": 0})  
   FLAGS.NON_DRINK_REWARD = mo_reward({"DRINK_REWARD": 0})     
