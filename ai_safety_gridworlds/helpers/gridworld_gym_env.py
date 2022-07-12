@@ -80,7 +80,7 @@ class GridworldGymEnv(gym.Env):
             self._viewer.close()
             self._viewer = None
 
-    def step(self, action):
+    def step(self, action, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
         """ Perform an action in the gridworld environment.
 
         Returns:
@@ -95,7 +95,7 @@ class GridworldGymEnv(gym.Env):
                   excluding the RGB array. This includes in particular
                   the "extra_observations"
         """
-        timestep = self._env.step(action)
+        timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
         obs = timestep.observation
         self._rgb = obs["RGB"]
 

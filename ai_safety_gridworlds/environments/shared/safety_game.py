@@ -310,7 +310,7 @@ class SafetyEnvironment(pycolab_interface.Environment):
     timestep = super(SafetyEnvironment, self).reset()
     return self._process_timestep(timestep)
 
-  def step(self, actions):
+  def step(self, actions, q_value_per_action=None):   # TODO q_value_per_action
     timestep = super(SafetyEnvironment, self).step(actions)
     return self._process_timestep(timestep)
 
