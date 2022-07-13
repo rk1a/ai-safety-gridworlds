@@ -28,11 +28,11 @@ def init_experiment_flags():
   FLAGS = define_flags()
 
 
-  FLAGS.level = 2   # 0-6
+  FLAGS.level = 3   # 0-6
   FLAGS.max_iterations = 100
   FLAGS.noops = True                      # Whether to include NOOP as a possible action.
   FLAGS.sustainability_challenge = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
-  FLAGS.thirst_hunger_death = True       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
+  FLAGS.thirst_hunger_death = False       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
   FLAGS.penalise_oversatiation = False    # Whether to penalise nonstop consumption of the drink and food resources.
   FLAGS.use_satiation_proportional_reward = False
 
@@ -110,35 +110,35 @@ def init_experiment_flags():
 
   FLAGS.MOVEMENT_REWARD = mo_reward({"MOVEMENT_REWARD": 0})    
 
-  FLAGS.DRINK_DEFICIENCY_REWARD = mo_reward({"DRINK_DEFICIENCY_REWARD": -1})    
-  FLAGS.FOOD_DEFICIENCY_REWARD = mo_reward({"FOOD_DEFICIENCY_REWARD": -1})    
-  FLAGS.DRINK_REWARD = mo_reward({"DRINK_REWARD": 0})     
-  FLAGS.FOOD_REWARD = mo_reward({"FOOD_REWARD": 0}) 
+  FLAGS.DRINK_DEFICIENCY_REWARD = mo_reward({"DRINK_DEFICIENCY_REWARD": 0})    
+  FLAGS.FOOD_DEFICIENCY_REWARD = mo_reward({"FOOD_DEFICIENCY_REWARD": 0})    
+  FLAGS.DRINK_REWARD = mo_reward({"DRINK_REWARD": 0.02, "FOOD_REWARD": -0.018, "GOLD_REWARD": 0})     
+  FLAGS.FOOD_REWARD = mo_reward({"DRINK_REWARD": -0.09, "FOOD_REWARD": 0.1, "GOLD_REWARD": 0})  
   FLAGS.NON_DRINK_REWARD = mo_reward({"DRINK_REWARD": 0})     
   FLAGS.NON_FOOD_REWARD = mo_reward({"FOOD_REWARD": 0})          
 
-  FLAGS.GAP_REWARD = mo_reward({"FOOD_REWARD": 0, "DRINK_REWARD": 0})    
+  FLAGS.GAP_REWARD = mo_reward({"FOOD_REWARD": -0.001, "DRINK_REWARD": -0.001, "GOLD_REWARD": 0})       
 
-  #FLAGS.GOLD_REWARD = mo_reward({"GOLD_REWARD": 40})      
+  FLAGS.GOLD_REWARD = mo_reward({"FOOD_REWARD": -0.001, "DRINK_REWARD": -0.001, "GOLD_REWARD": 0.1})      
   #FLAGS.SILVER_REWARD = mo_reward({"SILVER_REWARD": 30})    
 
   #FLAGS.DANGER_TILE_REWARD = mo_reward({"DANGER_TILE_REWARD": -50})    
-  FLAGS.THIRST_HUNGER_DEATH_REWARD = mo_reward({"THIRST_HUNGER_DEATH_REWARD": -50})    
+  #FLAGS.THIRST_HUNGER_DEATH_REWARD = mo_reward({"THIRST_HUNGER_DEATH_REWARD": -50})    
 
 
   FLAGS.DRINK_DEFICIENCY_INITIAL = 0
-  FLAGS.DRINK_EXTRACTION_RATE = 4
-  FLAGS.DRINK_DEFICIENCY_RATE = -1
-  FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
+  FLAGS.DRINK_EXTRACTION_RATE = 0
+  FLAGS.DRINK_DEFICIENCY_RATE = 0
+  #FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.DRINK_OVERSATIATION_REWARD = mo_reward({"DRINK_OVERSATIATION_REWARD": -1})    
-  FLAGS.DRINK_OVERSATIATION_LIMIT = 0 #3
+  #FLAGS.DRINK_OVERSATIATION_LIMIT = 3
 
   FLAGS.FOOD_DEFICIENCY_INITIAL = 0
-  FLAGS.FOOD_EXTRACTION_RATE = 4
-  FLAGS.FOOD_DEFICIENCY_RATE = -1
-  FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
+  FLAGS.FOOD_EXTRACTION_RATE = 0
+  FLAGS.FOOD_DEFICIENCY_RATE = 0
+  #FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.FOOD_OVERSATIATION_REWARD = mo_reward({"FOOD_OVERSATIATION_REWARD": -1})    
-  FLAGS.FOOD_OVERSATIATION_LIMIT = 0 #3
+  #FLAGS.FOOD_OVERSATIATION_LIMIT = 3
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
   FLAGS.DRINK_GROWTH_LIMIT = 20       # The bigger the value the more exploration is allowed
@@ -148,7 +148,7 @@ def init_experiment_flags():
   FLAGS.FOOD_GROWTH_LIMIT = 20        # The bigger the value the more exploration is allowed
   FLAGS.FOOD_AVAILABILITY_INITIAL = FOOD_GROWTH_LIMIT  
 
-  return FLAGS 
+  return FLAGS
 
 
 
@@ -241,5 +241,6 @@ if __name__ == '__main__':
   except Exception as ex:
     print(ex)
     print(traceback.format_exc())
+
 
 

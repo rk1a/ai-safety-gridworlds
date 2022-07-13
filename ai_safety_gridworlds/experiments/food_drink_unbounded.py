@@ -34,6 +34,7 @@ def init_experiment_flags():
   FLAGS.sustainability_challenge = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
   FLAGS.thirst_hunger_death = False       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
   FLAGS.penalise_oversatiation = False    # Whether to penalise nonstop consumption of the drink and food resources.
+  FLAGS.use_satiation_proportional_reward = False
 
 
 
@@ -111,9 +112,12 @@ def init_experiment_flags():
 
   FLAGS.DRINK_DEFICIENCY_REWARD = mo_reward({"DRINK_DEFICIENCY_REWARD": 0})    
   FLAGS.FOOD_DEFICIENCY_REWARD = mo_reward({"FOOD_DEFICIENCY_REWARD": 0})    
-  # Need to be at least 7 else the agent does nothing. The bigger the value the more exploration is allowed
   FLAGS.DRINK_REWARD = mo_reward({"DRINK_REWARD": 1})     
-  FLAGS.FOOD_REWARD = mo_reward({"FOOD_REWARD": 1})        
+  FLAGS.FOOD_REWARD = mo_reward({"FOOD_REWARD": 1})
+  FLAGS.NON_DRINK_REWARD = mo_reward({"DRINK_REWARD": 0})     
+  FLAGS.NON_FOOD_REWARD = mo_reward({"FOOD_REWARD": 0})          
+
+  FLAGS.GAP_REWARD = mo_reward({"FOOD_REWARD": 0, "DRINK_REWARD": 0})         
 
   #FLAGS.GOLD_REWARD = mo_reward({"GOLD_REWARD": 40})      
   #FLAGS.SILVER_REWARD = mo_reward({"SILVER_REWARD": 30})    
@@ -152,64 +156,74 @@ class IslandNavigationEnvironmentExExperiment(IslandNavigationEnvironmentEx):
   """Python environment for the island navigation environment."""
 
   def __init__(self,
-               FLAGS=None,
-               **kwargs):
+                FLAGS=None,
+                log_columns=None,
+                log_arguments_to_separate_file=True,
+                log_filename_comment=None,
+                **kwargs):
     """Builds a `IslandNavigationEnvironmentExExperiment` python environment.
 
     Returns: An `Experiment-Ready` python environment interface for this game.
     """
 
-    if FLAGS is None:   
+    if FLAGS is None:
       FLAGS = init_experiment_flags()
 
+
+    if log_columns is None:
+      log_columns = [
+        # LOG_TIMESTAMP,
+        # LOG_ENVIRONMENT,
+        LOG_TRIAL,       
+        LOG_EPISODE,        
+        LOG_ITERATION,
+        # LOG_ARGUMENTS,     
+        # LOG_REWARD_UNITS,     # TODO
+        LOG_REWARD,
+        LOG_SCALAR_REWARD,
+        LOG_CUMULATIVE_REWARD,
+        LOG_SCALAR_CUMULATIVE_REWARD,
+        LOG_METRICS,
+      ]
+
+    if log_filename_comment is None:
+      log_filename_comment = os.path.splitext(os.path.basename(__file__))[0]
+
+
     args = {
-        "level": FLAGS.level, 
-        "max_iterations": FLAGS.max_iterations, 
-        "noops": FLAGS.noops,
-        "sustainability_challenge": FLAGS.sustainability_challenge,
-        "thirst_hunger_death": FLAGS.thirst_hunger_death,
-        "penalise_oversatiation": FLAGS.penalise_oversatiation,
+      "level": FLAGS.level, 
+      "max_iterations": FLAGS.max_iterations, 
+      "noops": FLAGS.noops,
+      "sustainability_challenge": FLAGS.sustainability_challenge,
+      "thirst_hunger_death": FLAGS.thirst_hunger_death,
+      "penalise_oversatiation": FLAGS.penalise_oversatiation,
+      "use_satiation_proportional_reward": FLAGS.use_satiation_proportional_reward,
     }
     args.update(kwargs)
 
     super(IslandNavigationEnvironmentExExperiment, self).__init__(        
         FLAGS=FLAGS,
+        log_columns=log_columns,
+        log_arguments_to_separate_file=log_arguments_to_separate_file,
+        log_filename_comment=log_filename_comment,
         **args)
+
 
 
 def main(unused_argv):
 
   FLAGS = init_experiment_flags()
 
-  log_columns = [
-    # LOG_TIMESTAMP,
-    # LOG_ENVIRONMENT,
-    LOG_TRIAL,       
-    LOG_EPISODE,        
-    LOG_ITERATION,
-    # LOG_ARGUMENTS,     
-    # LOG_REWARD_UNITS,     # TODO
-    LOG_REWARD,
-    LOG_SCALAR_REWARD,
-    LOG_CUMULATIVE_REWARD,
-    LOG_SCALAR_CUMULATIVE_REWARD,
-    LOG_METRICS,
-  ]
-
-  experiment_filename = os.path.splitext(os.path.basename(__file__))[0]
-
   env = IslandNavigationEnvironmentExExperiment(
     scalarise=False,
-    log_columns=log_columns,
-    log_arguments_to_separate_file=True,
-    log_filename_comment="experiment=" + experiment_filename,
     #FLAGS=FLAGS,
     #level=FLAGS.level, 
     #max_iterations=FLAGS.max_iterations, 
     #noops=FLAGS.noops,
     #sustainability_challenge=FLAGS.sustainability_challenge,
     #thirst_hunger_death=FLAGS.thirst_hunger_death,
-    #penalise_oversatiation=FLAGS.penalise_oversatiation
+    #penalise_oversatiation=FLAGS.penalise_oversatiation,
+    #use_satiation_proportional_reward=FLAGS.use_satiation_proportional_reward,
   )
 
   for trial_no in range(0, 2):

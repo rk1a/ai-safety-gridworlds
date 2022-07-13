@@ -146,11 +146,14 @@ class GridworldGymEnv(gym.Env):
 
         return state
 
+    def get_reward_unit_space(self):                    # ADDED
+        return self._env.get_reward_unit_space()
+
     def get_trial_no(self):                             # ADDED
-      return self._env.get_trial_no()
+        return self._env.get_trial_no()
 
     def get_episode_no(self):                           # ADDED
-      return self._env.get_episode_no()
+        return self._env.get_episode_no()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)

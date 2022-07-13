@@ -21,6 +21,8 @@ from __future__ import print_function
 
 import csv
 import datetime
+import decimal
+import numbers
 import os
 
 # Dependency imports
@@ -208,6 +210,10 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
     self.enabled_mo_rewards = enabled_mo_rewards
     self.enabled_reward_dimension_keys = mo_reward.get_enabled_reward_dimension_keys(self.enabled_mo_rewards)
+    
+    self.reward_unit_space = mo_reward.get_enabled_reward_unit_space(self.enabled_mo_rewards)
+    self.reward_unit_space[0] = np.array([float(x) for x in self.reward_unit_space[0]]) # min
+    self.reward_unit_space[1] = np.array([float(x) for x in self.reward_unit_space[1]]) # max
 
     self.scalarise = scalarise
 
@@ -222,8 +228,54 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     self._environment_data[CUMULATIVE_REWARD] = np.array(mo_reward({}).tolist(self.enabled_mo_rewards))
 
 
+
+    # self._init_done = False   # needed in order to skip logging during _compute_observation_spec() call
+
+    super(SafetyEnvironmentMo, self).__init__(*args, environment_data=self._environment_data, **kwargs)
+
+    # parent class safety_game.SafetyEnvironment sets default_reward=0
+    self._default_reward = mo_reward({})  # TODO: consider default_reward argument's value
+
+    # self._init_done = True
+    
+    self.metrics_keys = list(self._environment_data.get(METRICS_DICT, {}).keys())   # NB! METRICS_DICT in _environment_data is populated only after parent class is constructed in super().__init__()
+
+
+
+    prev_experiment_no = getattr(self.__class__, "prev_experiment_no", 0)
+    next_experiment_no = getattr(self.__class__, "next_experiment_no", 1)
+    setattr(self.__class__, "prev_experiment_no", next_experiment_no)
+
+    prev_log_filename_comment = getattr(self.__class__, "log_filename_comment", "")
+    setattr(self.__class__, "log_filename_comment", log_filename_comment)
+
+    prev_log_arguments = getattr(self.__class__, "log_arguments", {})
+    setattr(self.__class__, "log_arguments", self.log_arguments)
+
+    prev_flags = getattr(self.__class__, "flags", {})
+    setattr(self.__class__, "flags", self.flags)
+
+    prev_enabled_reward_dimension_keys = getattr(self.__class__, "enabled_reward_dimension_keys", [])
+    setattr(self.__class__, "enabled_reward_dimension_keys", self.enabled_reward_dimension_keys)
+
+    prev_metrics_keys = getattr(self.__class__, "metrics_keys", [])
+    setattr(self.__class__, "metrics_keys", self.metrics_keys)
+
+
+
     prev_trial_no = getattr(self.__class__, "trial_no", -1)
     setattr(self.__class__, "trial_no", trial_no)
+
+    if (   # detect when a new experiment is started
+      prev_experiment_no != next_experiment_no
+      or prev_log_filename_comment != log_filename_comment 
+      or prev_log_arguments != self.log_arguments
+      or prev_flags != self.flags
+      or prev_enabled_reward_dimension_keys != self.enabled_reward_dimension_keys
+      or prev_metrics_keys != self.metrics_keys
+    ):
+      prev_trial_no = -1    # this causes a new log file to be created
+
 
     if prev_trial_no != trial_no: # if new trial is started then reset the episode_no counter
       setattr(self.__class__, "episode_no", 1)  # use static attribute so that the value survives re-construction of the environment
@@ -235,18 +287,6 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     if episode_no is not None:
       setattr(self.__class__, "episode_no", episode_no)  # use static attribute so that the value survives re-construction of the environment
 
-
-    # self._init_done = False   # needed in order to skip logging during _compute_observation_spec() call
-
-    super(SafetyEnvironmentMo, self).__init__(*args, environment_data=self._environment_data, **kwargs)
-
-    # parent class safety_game.SafetyEnvironment sets default_reward=0
-    self._default_reward = mo_reward({})  # TODO: consider default_reward argument's value
-
-    # self._init_done = True
-
-
-    self.metrics_keys = list(self._environment_data.get(METRICS_DICT, {}).keys())
 
 
     self.log_dir = log_dir
@@ -277,25 +317,27 @@ class SafetyEnvironmentMo(SafetyEnvironment):
             print("{", file=file)   # using print() automatically generate newlines
             
             for key, arg in self.log_arguments.items():
-              print("\t" + str(key) + ": " + str(arg) + ",", file=file)
+              print("\t'" + str(key) + "': " + str(arg) + ",", file=file)
             
-            print("\tFLAGS: {", file=file)
+            print("\t'FLAGS': {", file=file)
             for key, value in self.flags.items():
-              print("\t\t" + str(key) + ": " + str(value) + ",", file=file)
+              print("\t\t'" + str(key) + "': " + str(value) + ",", file=file)
             print("\t},", file=file)
 
-            print("\treward_dimensions: [", file=file)
-            for key in self.enabled_reward_dimension_keys:
-              print("\t\t" + str(key) + ",", file=file)
-            print("\t],", file=file)
+            print("\t'reward_dimensions': {", file=file)
+            for index, key in enumerate(self.enabled_reward_dimension_keys):
+              print("\t\t'" + str(key) + "': [" + str(self.reward_unit_space[0][index]) + ", " + str(self.reward_unit_space[1][index]) + "],", file=file)
+            print("\t},", file=file)
             
-            print("\tmetrics_keys: [", file=file)
+            print("\t'metrics_keys': [", file=file)
             for key in self.metrics_keys:
-              print("\t\t" + str(key) + ",", file=file)
+              print("\t\t'" + str(key) + "',", file=file)
             print("\t],", file=file)
 
             print("}", file=file)
             # TODO: find a way to log reward unit sizes too
+
+            file.flush()
 
 
         with open(os.path.join(self.log_dir, log_filename), 'a', 1024 * 1024, newline='') as file:   # csv writer creates its own newlines therefore need to set newline to empty string here
@@ -341,13 +383,14 @@ class SafetyEnvironmentMo(SafetyEnvironment):
               data += [LOG_METRICS + "_" + x for x in self.metrics_keys]
 
           writer.writerow(data)
+          file.flush()
         
     else:
-      self.log_filename = None
+      setattr(self.__class__, "log_filename", None)
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
-  def reset(self, trial_no=None):  # TODO!!! increment_trial_no
+  def reset(self, trial_no=None, start_new_experiment=False):
     """Start a new episode. 
     Increment the episode counter if the previous game was played.
     
@@ -355,6 +398,12 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     """
     # Environment._compute_observation_spec() -> Environment.reset() -> Engine.its_showtime() -> Engine.play() -> Engine._update_and_render() is called straight from the constructor of Environment therefore need to overwrite _the_plot variable here. Overwriting it in SafetyEnvironmentMo.__init__ would be too late
     
+    if start_new_experiment:  # instruct the environment to start a new log file NEXT time the environment is constructed
+      prev_experiment_no = getattr(self.__class__, "prev_experiment_no", 0)
+      setattr(self.__class__, "next_experiment_no", prev_experiment_no + 1)
+
+
+    # note: no elif here. env.reset(start_new_experiment=True) should still execute rest of the .reset code just in case.
     if trial_no is not None:
       prev_trial_no = getattr(self.__class__, "trial_no")
       if prev_trial_no != trial_no: # if new trial is started then reset the episode_no counter
@@ -365,9 +414,10 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same
         np.random.seed(int(trial_no) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
         # np.random.seed(int(time.time() * 10000000) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
+
     else:
-      episode_no = getattr(self.__class__, "episode_no")
       if self._state != None and self._state != environment.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
+        episode_no = getattr(self.__class__, "episode_no")
         episode_no += 1
         setattr(self.__class__, "episode_no", episode_no)
 
@@ -561,6 +611,10 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       with open(os.path.join(self.log_dir, log_filename), 'a', 1024 * 1024, newline='') as file:   # csv writer creates its own newlines therefore need to set newline to empty string here
         writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
 
+        # prec = 12
+        prec = 10
+        decimal_context = decimal.Context(prec=prec, rounding=decimal.ROUND_HALF_UP, capitals=0)
+
         data = []
         for col in self.log_columns:
 
@@ -588,25 +642,41 @@ class SafetyEnvironmentMo(SafetyEnvironment):
           #  data += self.reward_units
 
           elif col == LOG_REWARD:
-            data += reward_dims
+            data += [_remove_decimal_exponent(decimal_context.create_decimal_from_float(x)) for x in reward_dims]
 
           elif col == LOG_SCALAR_REWARD:
-            data.append(scalar_reward)
+            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(scalar_reward)))
 
           elif col == LOG_CUMULATIVE_REWARD:
-            data += cumulative_reward_dims
+            data += [_remove_decimal_exponent(decimal_context.create_decimal_from_float(x)) for x in cumulative_reward_dims]
 
           elif col == LOG_SCALAR_CUMULATIVE_REWARD:
-            data.append(scalar_cumulative_reward)
+            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(scalar_cumulative_reward)))
 
           elif col == LOG_METRICS:
             metrics = self._environment_data.get(METRICS_DICT, {})
-            data += [metrics.get(key, None) for key in self.metrics_keys]
+            data += [
+                      (
+                        _remove_decimal_exponent(decimal_context.create_decimal_from_float(x))
+                          if isinstance(x, numbers.Number)
+                          else str(x)
+                      )
+                      for x in
+                      [
+                        metrics.get(key, None)
+                        for key in self.metrics_keys
+                      ]
+                    ]
 
         writer.writerow(data)
+        file.flush()
 
 
     return timestep
+
+
+  def get_reward_unit_space(self):
+    return self.reward_unit_space
 
 
   def get_trial_no(self):
@@ -615,4 +685,11 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
   def get_episode_no(self):
     return getattr(self.__class__, "episode_no")
+
+
+
+# https://stackoverflow.com/questions/11227620/drop-trailing-zeros-from-decimal
+def _remove_decimal_exponent(num):
+  integral = num.to_integral()
+  return integral if num == integral else num.normalize()
 

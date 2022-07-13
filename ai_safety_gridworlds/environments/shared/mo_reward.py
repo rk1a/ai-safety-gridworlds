@@ -20,7 +20,6 @@ from __future__ import print_function
 
 from ast import literal_eval
 import itertools
-# import json
 
 # Dependency imports
 import numpy as np
@@ -52,7 +51,7 @@ class mo_reward(object):
 
 
   @staticmethod
-  def get_enabled_reward_dimension_keys(enabled_mo_rewards):  # TODO: make this function available to the RL code
+  def get_enabled_reward_dimension_keys(enabled_mo_rewards):
     """Returns keys of all dimensions defined in enabled_mo_rewards.
 
     Args:
@@ -66,11 +65,51 @@ class mo_reward(object):
     else: # if enabled_mo_rewards is not None:
 
       # each reward may contain more than one enabled dimension
-      keys_per_reward = [{ key for key, unit_value in reward._reward_dimensions_dict.items() if unit_value != 0 }
-                                                        for reward in enabled_mo_rewards]
+      keys_per_reward = [{ 
+                            key for key, unit_value 
+                            in reward._reward_dimensions_dict.items() if unit_value != 0 
+                          }
+                          for reward in enabled_mo_rewards]
+
+      # select distinct keys:
       # enabled_reward_dimension_keys = set.union(*keys_per_reward)  # this does not preserve the order of the keys
       enabled_reward_dimension_keys = dict.fromkeys(itertools.chain.from_iterable(keys_per_reward)).keys()  # this preserves the order of the keys
       return list(enabled_reward_dimension_keys)
+
+
+  @staticmethod
+  def get_enabled_reward_unit_space(enabled_mo_rewards):  
+    """Returns tuple of min unit reward vector and max unit reward vector.
+
+    Args:
+      enabled_mo_rewards: a list of mo_reward objects.
+    """
+
+    if enabled_mo_rewards is None:
+
+      return None
+
+    else: # if enabled_mo_rewards is not None:
+
+      enabled_reward_dimension_keys = mo_reward.get_enabled_reward_dimension_keys(enabled_mo_rewards)
+
+      min_unit_value_per_key = {
+                                  key: min([
+                                    reward._reward_dimensions_dict.get(key, 0)
+                                    for reward in enabled_mo_rewards
+                                  ])
+                                  for key in enabled_reward_dimension_keys
+                               }
+ 
+      max_unit_value_per_key = {
+                                  key: max([
+                                    reward._reward_dimensions_dict.get(key, 0)
+                                    for reward in enabled_mo_rewards
+                                  ])
+                                  for key in enabled_reward_dimension_keys
+                               }
+
+      return [list(min_unit_value_per_key.values()), list(max_unit_value_per_key.values())]
 
 
   def tolist(self, enabled_mo_rewards):
