@@ -2,7 +2,7 @@
 
 ## Version 2.8 - Wednesday 13. July 2022
 
-* Implemented Q value logging. If the agent provides Q a matrix of Q values per action during a call to .step() then the environment maps it to Q values per tile type and adds it to the CSV log file.
+* Implemented Q value logging. If the agent provides a matrix of Q values per action using .set_current_q_value_per_action() method before a call to .step() then the environment maps the Q values per action to Q values per tile and adds this data to the CSV log file.
 
 ## Version 2.7.1 - Tuesday 12. July 2022
 

@@ -481,7 +481,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
   def step(self, actions, q_value_per_action=None):
 
     if q_value_per_action is None:
-      q_value_per_action = self.q_value_per_action    # gym does not support additional arguments to .step() method so we need to use a separate method and a DTO field
+      q_value_per_action = self.q_value_per_action    # gym does not support additional arguments to .step() method so we need to use a separate method and a DTO field. See also https://github.com/openai/gym/issues/2399
 
     if q_value_per_action is not None and (LOG_QVALUES_PER_TILETYPE in self.log_columns):
       
@@ -732,6 +732,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
           elif col == LOG_REWARD:
             data += [
+                      # TODO: refactor this to decimal conversion to a shared method or function
                       _remove_decimal_exponent(decimal_context.create_decimal_from_float(float(dim_value)))   # use float cast to convert numpy.int to type that is digestible by decimal
                       for dim_value in reward_dims
                     ]
@@ -797,7 +798,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     return getattr(self.__class__, "episode_no")
 
 
-  # gym does not support additional arguments to .step() method so we need to use a separate method
+  # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
   def set_current_q_value_per_action(self, q_value_per_action):
     self.q_value_per_action = q_value_per_action
 
