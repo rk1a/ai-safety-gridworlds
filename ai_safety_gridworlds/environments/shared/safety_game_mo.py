@@ -47,6 +47,8 @@ METRICS_MATRIX = 'metrics_matrix'
 CUMULATIVE_REWARD = 'cumulative_reward'
 GINI_INDEX = 'gini_index'
 CUMULATIVE_GINI_INDEX = 'cumulative_gini_index'
+MO_VARIANCE = 'mo_variance'
+CUMULATIVE_MO_VARIANCE = 'cumulative_mo_variance'
 TILE_TYPES = 'tile_types'
 AGENT_SPRITE = 'agent_sprite'
 
@@ -64,6 +66,8 @@ LOG_SCALAR_REWARD = 'scalar_reward'
 LOG_CUMULATIVE_REWARD = 'cumulative_reward'
 LOG_GINI_INDEX = 'gini_index'
 LOG_CUMULATIVE_GINI_INDEX = 'cumulative_gini_index'
+LOG_MO_VARIANCE = 'mo_variance'
+LOG_CUMULATIVE_MO_VARIANCE = 'cumulative_mo_variance'
 LOG_SCALAR_CUMULATIVE_REWARD = 'scalar_cumulative_reward'
 LOG_METRICS = 'metric'
 LOG_QVALUES_PER_TILETYPE = 'tiletype_qvalue'
@@ -430,6 +434,12 @@ class SafetyEnvironmentMo(SafetyEnvironment):
             elif col == LOG_CUMULATIVE_GINI_INDEX:
               data.append(LOG_CUMULATIVE_GINI_INDEX)
 
+            elif col == LOG_MO_VARIANCE:
+              data.append(LOG_MO_VARIANCE)
+
+            elif col == LOG_CUMULATIVE_MO_VARIANCE:
+              data.append(LOG_CUMULATIVE_MO_VARIANCE)
+
             elif col == LOG_METRICS:              
               data += [LOG_METRICS + "_" + x for x in self.metrics_keys]
 
@@ -705,9 +715,13 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
     gini_index = gini_coefficient(reward_dims) * 100
     cumulative_gini_index = gini_coefficient(cumulative_reward_dims) * 100
-
     timestep.observation[GINI_INDEX] = gini_index
     timestep.observation[CUMULATIVE_GINI_INDEX] = cumulative_gini_index
+
+    mo_variance = np.var(reward_dims)
+    cumulative_mo_variance = np.var(cumulative_reward_dims)
+    timestep.observation[MO_VARIANCE] = mo_variance
+    timestep.observation[CUMULATIVE_MO_VARIANCE] = cumulative_mo_variance
 
 
     # if self._init_done and len(self.log_columns) > 0:
@@ -771,6 +785,12 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
           elif col == LOG_CUMULATIVE_GINI_INDEX:
             data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(cumulative_gini_index))))   # use float cast to convert numpy.int to type that is digestible by decimal
+
+          elif col == LOG_MO_VARIANCE:
+            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(mo_variance))))   # use float cast to convert numpy.int to type that is digestible by decimal
+
+          elif col == LOG_CUMULATIVE_MO_VARIANCE:
+            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(cumulative_mo_variance))))   # use float cast to convert numpy.int to type that is digestible by decimal
 
           elif col == LOG_METRICS:
             metrics = self._environment_data.get(METRICS_DICT, {})
@@ -1193,7 +1213,9 @@ def gini_coefficient(reward_dims):
   ## Gini coefficient
   #result2 = 0.5 * rel_mad
 
+  # https://github.com/oliviaguest/gini
   reward_dims = np.array(reward_dims) - min(reward_dims) # values cannot be negative
+
   # adapted from https://stackoverflow.com/questions/39512260/calculating-gini-coefficient-in-python-numpy
   # Mean absolute difference
   mad = np.abs(np.subtract.outer(reward_dims, reward_dims)).mean()
