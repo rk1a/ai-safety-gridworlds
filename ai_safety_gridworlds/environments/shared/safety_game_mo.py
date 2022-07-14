@@ -319,6 +319,10 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     self.log_columns = log_columns
     self.log_arguments_to_separate_file = log_arguments_to_separate_file
 
+    # prec = 12
+    prec = 10  
+    self.decimal_context = decimal.Context(prec=prec, rounding=decimal.ROUND_HALF_UP, capitals=0)
+
 
     # log file header creation moved to reset() method
 
@@ -731,10 +735,6 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       with open(os.path.join(self.log_dir, log_filename), 'a', 1024 * 1024, newline='') as file:   # csv writer creates its own newlines therefore need to set newline to empty string here
         writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
 
-        # prec = 12
-        prec = 10
-        decimal_context = decimal.Context(prec=prec, rounding=decimal.ROUND_HALF_UP, capitals=0)
-
         data = []
         for col in self.log_columns:
 
@@ -763,42 +763,39 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
           elif col == LOG_REWARD:
             data += [
-                      # TODO: refactor this to decimal conversion to a shared method or function
-                      _remove_decimal_exponent(decimal_context.create_decimal_from_float(float(dim_value)))   # use float cast to convert numpy.int to type that is digestible by decimal
+                      self.format_float(dim_value)   # use float cast to convert numpy.int to type that is digestible by decimal
                       for dim_value in reward_dims
                     ]
 
           elif col == LOG_SCALAR_REWARD:
-            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(scalar_reward))))     # use float cast to convert numpy.int to type that is digestible by decimal
+            data.append(self.format_float(scalar_reward))     # use float cast to convert numpy.int to type that is digestible by decimal
 
           elif col == LOG_CUMULATIVE_REWARD:
             data += [
-                      _remove_decimal_exponent(decimal_context.create_decimal_from_float(float(dim_value)))    # use float cast to convert numpy.int to type that is digestible by decimal
+                      self.format_float(dim_value)    # use float cast to convert numpy.int to type that is digestible by decimal
                       for dim_value in cumulative_reward_dims
                     ]
 
           elif col == LOG_SCALAR_CUMULATIVE_REWARD:
-            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(scalar_cumulative_reward))))   # use float cast to convert numpy.int to type that is digestible by decimal
+            data.append(self.format_float(scalar_cumulative_reward))   # use float cast to convert numpy.int to type that is digestible by decimal
 
           elif col == LOG_GINI_INDEX:
-            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(gini_index))))   # use float cast to convert numpy.int to type that is digestible by decimal
+            data.append(self.format_float(gini_index))   # use float cast to convert numpy.int to type that is digestible by decimal
 
           elif col == LOG_CUMULATIVE_GINI_INDEX:
-            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(cumulative_gini_index))))   # use float cast to convert numpy.int to type that is digestible by decimal
+            data.append(self.format_float(cumulative_gini_index))   # use float cast to convert numpy.int to type that is digestible by decimal
 
           elif col == LOG_MO_VARIANCE:
-            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(mo_variance))))   # use float cast to convert numpy.int to type that is digestible by decimal
+            data.append(self.format_float(mo_variance))   # use float cast to convert numpy.int to type that is digestible by decimal
 
           elif col == LOG_CUMULATIVE_MO_VARIANCE:
-            data.append(_remove_decimal_exponent(decimal_context.create_decimal_from_float(float(cumulative_mo_variance))))   # use float cast to convert numpy.int to type that is digestible by decimal
+            data.append(self.format_float(cumulative_mo_variance))   # use float cast to convert numpy.int to type that is digestible by decimal
 
           elif col == LOG_METRICS:
             metrics = self._environment_data.get(METRICS_DICT, {})
             data += [
                       (
-                        _remove_decimal_exponent(decimal_context.create_decimal_from_float(float(dim_value)))   # use float cast to convert numpy.int to type that is digestible by decimal
-                          if isinstance(dim_value, numbers.Number)
-                          else str(dim_value)
+                        self.format_float(dim_value)   # use float cast to convert numpy.int to type that is digestible by decimal
                       )
                       for dim_value in
                       [
@@ -810,9 +807,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
           elif col == LOG_QVALUES_PER_TILETYPE:
             data += list(itertools.chain.from_iterable([
                       [
-                        _remove_decimal_exponent(decimal_context.create_decimal_from_float(float(dim_q_value)))   # use float cast to convert numpy.int to type that is digestible by decimal
-                          if isinstance(dim_q_value, numbers.Number)
-                          else str(dim_q_value)
+                        self.format_float(dim_q_value)   # use float cast to convert numpy.int to type that is digestible by decimal
                         for dim_q_value in q_value_vec
                       ]
                       for q_value_vec in
@@ -829,13 +824,24 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     return timestep
 
 
+  def format_float(self, value):
+    if isinstance(value, numbers.Number):
+      return self._remove_decimal_exponent(self.decimal_context.create_decimal_from_float(float(value)))   # use float cast to convert numpy.int to type that is digestible by decimal
+    else:
+      return str(value)
+  
+  # https://stackoverflow.com/questions/11227620/drop-trailing-zeros-from-decimal
+  def _remove_decimal_exponent(self, value):
+    integral = value.to_integral()
+    return integral if value == integral else value.normalize()
+
+
   def get_reward_unit_space(self):
     return self.reward_unit_space
 
 
   def get_trial_no(self):
     return getattr(self.__class__, "trial_no")
-
 
   def get_episode_no(self):
     return getattr(self.__class__, "episode_no")
@@ -1185,13 +1191,6 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
   #    if not self._check_motion(board, motion): legal_motions.append(motion)
 
   #  scrolling.permit(self, the_plot, legal_motions, self._scrolling_group)
-
-
-
-# https://stackoverflow.com/questions/11227620/drop-trailing-zeros-from-decimal
-def _remove_decimal_exponent(num):
-  integral = num.to_integral()
-  return integral if num == integral else num.normalize()
 
 
 def gini_coefficient(reward_dims):
