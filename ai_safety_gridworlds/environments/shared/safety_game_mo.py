@@ -51,6 +51,7 @@ GINI_INDEX = 'gini_index'
 CUMULATIVE_GINI_INDEX = 'cumulative_gini_index'
 MO_VARIANCE = 'mo_variance'
 CUMULATIVE_MO_VARIANCE = 'cumulative_mo_variance'
+AVERAGE_MO_VARIANCE = 'average_mo_variance'
 TILE_TYPES = 'tile_types'
 AGENT_SPRITE = 'agent_sprite'
 
@@ -720,7 +721,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
 
     cumulative_reward_dims = self._episode_return.tolist(self.enabled_mo_rewards)
-    average_reward_dims = cumulative_reward_dims / (iteration + 1)
+    average_reward_dims = [x / (iteration + 1) for x in cumulative_reward_dims]
     scalar_cumulative_reward = sum(cumulative_reward_dims)
 
     if self.scalarise:
