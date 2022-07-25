@@ -24,6 +24,7 @@ from __future__ import print_function
 import csv
 import datetime
 import decimal
+import gzip
 import itertools
 import numbers
 import os
@@ -42,6 +43,11 @@ from ai_safety_gridworlds.environments.shared.termination_reason_enum import Ter
 import numpy as np
 
 import six
+
+
+
+log_compresslevel = 6   # 6 is default level for gzip: https://linux.die.net/man/1/gzip
+# https://github.com/ebiggers/libdeflate
 
 
 METRICS_DICT = 'metrics_dict'
@@ -147,6 +153,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
                #max_iterations=100,
                FLAGS=None,
                scalarise=False,
+               gzip_log=False,
                log_columns=[],
                log_dir="logs",
                log_filename_comment="",
@@ -314,13 +321,13 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       # use a different random number sequence for each trial
       # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same
       np.random.seed(int(trial_no) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
-      # np.random.seed(int(time.time() * 10000000) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
     
     if episode_no is not None:
       setattr(self.__class__, "episode_no", episode_no)  # use static attribute so that the value survives re-construction of the environment
 
 
 
+    self.gzip_log = gzip_log
     self.log_dir = log_dir
     self.log_filename_comment = log_filename_comment
     self.log_columns = log_columns
@@ -350,6 +357,15 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       setattr(self.__class__, "create_new_log_file", True)
 
 
+    if getattr(self.__class__, "create_new_log_file", False):
+      prev_file = getattr(self.__class__, "log_file_handle", None)
+      if prev_file:
+        prev_file.flush()
+        prev_file.close()
+        setattr(self.__class__, "log_file_handle", None)
+        setattr(self.__class__, "log_filename", None)
+
+
     # self._state == None means that the parent class is calling reset() for the purpose of computing observation spec and the current class has not completed its constructor yet, nor has the agent sprite constructed yet.
     # self._state == environment.StepType.MID or self._state == environment.StepType.LAST means start_new_experiment is called at the end of previous experiment. Then do not create a new log file yet, just leave a flag that it is to be created next time. Still need to run rest of the reset code because various libraries might depend on the reset code being run fully once it is called.
     if self._state == environment.StepType.FIRST:   
@@ -376,7 +392,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
 
           if self.log_arguments_to_separate_file:
-            with open(os.path.join(self.log_dir, arguments_filename), 'w', 1024 * 1024) as file:
+            with open(os.path.join(self.log_dir, arguments_filename), mode='wt', buffering=1024 * 1024, encoding='utf-8') as file:
               print("{", file=file)   # using print() automatically generate newlines
             
               for key, arg in self.log_arguments.items():
@@ -403,81 +419,24 @@ class SafetyEnvironmentMo(SafetyEnvironment):
               file.flush()
 
 
-          with open(os.path.join(self.log_dir, log_filename), 'a', 1024 * 1024, newline='') as file:   # csv writer creates its own newlines therefore need to set newline to empty string here
-            writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
+          prev_file = getattr(self.__class__, "log_file_handle", None)
+          if prev_file:
+            prev_file.flush()
+            prev_file.close()
 
-            data = []
-            for col in self.log_columns:
 
-              if col == LOG_TIMESTAMP:
-                data.append(LOG_TIMESTAMP)
+          if self.gzip_log:
+            #with open(os.path.join(self.log_dir, log_filename + ".gz"), mode='wb', buffering=1024 * 1024) as raw_file:
+            #  with gzip.GzipFile(fileobj=raw_file, filename=log_filename, mode='wt', encoding='utf-8', compresslevel=log_compresslevel) as file:  # TODO: newline='' for gzip
+            #    self._write_log_header(file)
+            #  raw_file.flush()
+            file = gzip.open(os.path.join(self.log_dir, log_filename + ".gz"), mode='wt', newline='', encoding='utf-8', compresslevel=log_compresslevel)   # csv writer creates its own newlines therefore need to set newline to empty string here     # TODO: buffering for gzip    
+          else:
+            file = open(os.path.join(self.log_dir, log_filename), mode='wt', buffering=1024 * 1024, newline='', encoding='utf-8')   # csv writer creates its own newlines therefore need to set newline to empty string here        
 
-              elif col == LOG_ENVIRONMENT:
-                data.append(LOG_ENVIRONMENT)
+          self._write_log_header(file)
+          setattr(self.__class__, "log_file_handle", file)
 
-              elif col == LOG_TRIAL:
-                data.append(LOG_TRIAL)
-
-              elif col == LOG_EPISODE:
-                data.append(LOG_EPISODE)
-
-              elif col == LOG_ITERATION:
-                data.append(LOG_ITERATION)
-
-              elif col == LOG_ARGUMENTS:
-                data.append(LOG_ARGUMENTS)
-
-              #elif col == LOG_REWARD_UNITS:      # TODO
-              #  data += [LOG_REWARD_UNITS + "_" + x for x in self.enabled_reward_dimension_keys]
-
-              elif col == LOG_REWARD:
-                data += [LOG_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
-
-              elif col == LOG_SCALAR_REWARD:
-                data.append(LOG_SCALAR_REWARD)
-
-              elif col == LOG_CUMULATIVE_REWARD:
-                data += [LOG_CUMULATIVE_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
-
-              elif col == LOG_AVERAGE_REWARD:
-                data += [LOG_AVERAGE_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
-
-              elif col == LOG_SCALAR_CUMULATIVE_REWARD:
-                data.append(LOG_SCALAR_CUMULATIVE_REWARD)
-
-              elif col == LOG_SCALAR_AVERAGE_REWARD:
-                data.append(LOG_SCALAR_AVERAGE_REWARD)
-
-              elif col == LOG_GINI_INDEX:
-                data.append(LOG_GINI_INDEX)
-
-              elif col == LOG_CUMULATIVE_GINI_INDEX:
-                data.append(LOG_CUMULATIVE_GINI_INDEX)
-
-              elif col == LOG_MO_VARIANCE:
-                data.append(LOG_MO_VARIANCE)
-
-              elif col == LOG_CUMULATIVE_MO_VARIANCE:
-                data.append(LOG_CUMULATIVE_MO_VARIANCE)
-
-              elif col == LOG_AVERAGE_MO_VARIANCE:
-                data.append(LOG_AVERAGE_MO_VARIANCE)
-
-              elif col == LOG_METRICS:              
-                data += [LOG_METRICS + "_" + x for x in self.metrics_keys]
-
-              elif col == LOG_QVALUES_PER_TILETYPE:
-                data += list(itertools.chain.from_iterable([
-                          [
-                            LOG_QVALUES_PER_TILETYPE + "_" + tile_type.strip() + "_" + dim_key    # NB! strip to replace the gap tile space character with an empty string 
-                            for dim_key in self.enabled_reward_dimension_keys
-                          ]
-                          for tile_type in self._environment_data[TILE_TYPES]
-                        ]))
-
-            writer.writerow(data)
-            file.flush()
-        
         else:   #/ if len(self.log_columns) > 0: 
 
           # NB! this still has to be inside 'if getattr(self.__class__, "create_new_log_file")' condition
@@ -508,7 +467,6 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same
         # TODO: seed random number generator for each trial AND episode?
         np.random.seed(int(trial_no) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
-        # np.random.seed(int(time.time() * 10000000) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
 
     else:
       if self._state is not None and self._state != environment.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
@@ -535,6 +493,83 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     # end of code adapted from from Environment.reset()
 
     return self._process_timestep(timestep)  # adapted from SafetyEnvironment.reset()
+
+
+  def _write_log_header(self, file):
+
+    writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
+
+    data = []
+    for col in self.log_columns:
+
+      if col == LOG_TIMESTAMP:
+        data.append(LOG_TIMESTAMP)
+
+      elif col == LOG_ENVIRONMENT:
+        data.append(LOG_ENVIRONMENT)
+
+      elif col == LOG_TRIAL:
+        data.append(LOG_TRIAL)
+
+      elif col == LOG_EPISODE:
+        data.append(LOG_EPISODE)
+
+      elif col == LOG_ITERATION:
+        data.append(LOG_ITERATION)
+
+      elif col == LOG_ARGUMENTS:
+        data.append(LOG_ARGUMENTS)
+
+      #elif col == LOG_REWARD_UNITS:      # TODO
+      #  data += [LOG_REWARD_UNITS + "_" + x for x in self.enabled_reward_dimension_keys]
+
+      elif col == LOG_REWARD:
+        data += [LOG_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
+
+      elif col == LOG_SCALAR_REWARD:
+        data.append(LOG_SCALAR_REWARD)
+
+      elif col == LOG_CUMULATIVE_REWARD:
+        data += [LOG_CUMULATIVE_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
+
+      elif col == LOG_AVERAGE_REWARD:
+        data += [LOG_AVERAGE_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
+
+      elif col == LOG_SCALAR_CUMULATIVE_REWARD:
+        data.append(LOG_SCALAR_CUMULATIVE_REWARD)
+
+      elif col == LOG_SCALAR_AVERAGE_REWARD:
+        data.append(LOG_SCALAR_AVERAGE_REWARD)
+
+      elif col == LOG_GINI_INDEX:
+        data.append(LOG_GINI_INDEX)
+
+      elif col == LOG_CUMULATIVE_GINI_INDEX:
+        data.append(LOG_CUMULATIVE_GINI_INDEX)
+
+      elif col == LOG_MO_VARIANCE:
+        data.append(LOG_MO_VARIANCE)
+
+      elif col == LOG_CUMULATIVE_MO_VARIANCE:
+        data.append(LOG_CUMULATIVE_MO_VARIANCE)
+
+      elif col == LOG_AVERAGE_MO_VARIANCE:
+        data.append(LOG_AVERAGE_MO_VARIANCE)
+
+      elif col == LOG_METRICS:              
+        data += [LOG_METRICS + "_" + x for x in self.metrics_keys]
+
+      elif col == LOG_QVALUES_PER_TILETYPE:
+        data += list(itertools.chain.from_iterable([
+                  [
+                    LOG_QVALUES_PER_TILETYPE + "_" + tile_type.strip() + "_" + dim_key    # NB! strip to replace the gap tile space character with an empty string 
+                    for dim_key in self.enabled_reward_dimension_keys
+                  ]
+                  for tile_type in self._environment_data[TILE_TYPES]
+                ]))
+
+    writer.writerow(data)
+    file.flush()
 
 
   def step(self, actions, q_value_per_action=None):
@@ -781,110 +816,126 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
     # if self._init_done and len(self.log_columns) > 0:
     if self._current_game.the_plot.frame > 0 and len(self.log_columns) > 0:
+      #log_filename = getattr(self.__class__, "log_filename")
 
-      log_filename = getattr(self.__class__, "log_filename")
-      with open(os.path.join(self.log_dir, log_filename), 'a', 1024 * 1024, newline='') as file:   # csv writer creates its own newlines therefore need to set newline to empty string here
-        writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
+      #if self.gzip_log:
+      #  #with open(os.path.join(self.log_dir, log_filename + ".gz"), mode='ab', buffering=1024 * 1024) as raw_file:
+      #  #  with gzip.GzipFile(fileobj=raw_file, filename=log_filename, mode='at', encoding='utf-8', compresslevel=log_compresslevel) as file:  # TODO: newline='' for gzip
+      #  #    self._write_log_row(file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance)
+      #  #  raw_file.flush()
+      #  with gzip.open(os.path.join(self.log_dir, log_filename + ".gz"), mode='at', newline='', encoding='utf-8', compresslevel=log_compresslevel) as file:   # csv writer creates its own newlines therefore need to set newline to empty string here     # TODO: buffering for gzip    
+      #    self._write_log_row(file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance)
+      #else:
+      #  with open(os.path.join(self.log_dir, log_filename), mode='at', buffering=1024 * 1024, newline='', encoding='utf-8') as file:   # csv writer creates its own newlines therefore need to set newline to empty string here
+      #    self._write_log_row(file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance)
 
-        data = []
-        for col in self.log_columns:
-
-          if col == LOG_TIMESTAMP:
-            timestamp = datetime.datetime.now()
-            timestamp_str = datetime.datetime.strftime(timestamp, '%Y.%m.%d-%H.%M.%S')
-            data.append(timestamp_str)
-
-          elif col == LOG_ENVIRONMENT:
-            data.append(self.__class__.__name__)
-
-          elif col == LOG_TRIAL:
-            data.append(self.get_trial_no())
-
-          elif col == LOG_EPISODE:
-            data.append(self.get_episode_no())
-
-          elif col == LOG_ITERATION:
-            data.append(iteration)
-
-          elif col == LOG_ARGUMENTS:
-            data.append(str(self.log_arguments))  # option to log log_arguments as json   # TODO: stringify once in constructor only?
-
-          #elif col == LOG_REWARD_UNITS:      # TODO
-          #  data += self.reward_units
-
-          elif col == LOG_REWARD:
-            data += [
-                      self.format_float(dim_value) 
-                      for dim_value in reward_dims
-                    ]
-
-          elif col == LOG_SCALAR_REWARD:
-            data.append(self.format_float(scalar_reward)) 
-
-          elif col == LOG_CUMULATIVE_REWARD:
-            data += [
-                      self.format_float(dim_value) 
-                      for dim_value in cumulative_reward_dims
-                    ]
-
-          elif col == LOG_AVERAGE_REWARD:
-            data += [
-                      self.format_float(dim_value) 
-                      for dim_value in average_reward_dims
-                    ]
-
-          elif col == LOG_SCALAR_CUMULATIVE_REWARD:
-            data.append(self.format_float(scalar_cumulative_reward))
-
-          elif col == LOG_SCALAR_AVERAGE_REWARD:
-            data.append(self.format_float(scalar_average_reward))
-
-          elif col == LOG_GINI_INDEX:
-            data.append(self.format_float(gini_index))
-
-          elif col == LOG_CUMULATIVE_GINI_INDEX:
-            data.append(self.format_float(cumulative_gini_index)) 
-
-          elif col == LOG_MO_VARIANCE:
-            data.append(self.format_float(mo_variance))
-
-          elif col == LOG_CUMULATIVE_MO_VARIANCE:
-            data.append(self.format_float(cumulative_mo_variance))
-
-          elif col == LOG_AVERAGE_MO_VARIANCE:
-            data.append(self.format_float(average_mo_variance))
-
-          elif col == LOG_METRICS:
-            metrics = self._environment_data.get(METRICS_DICT, {})
-            data += [
-                      (
-                        self.format_float(dim_value) 
-                      )
-                      for dim_value in
-                      [
-                        metrics.get(key, None)
-                        for key in self.metrics_keys
-                      ]
-                    ]
-
-          elif col == LOG_QVALUES_PER_TILETYPE:
-            data += list(itertools.chain.from_iterable([
-                      [
-                        self.format_float(dim_q_value)
-                        for dim_q_value in q_value_vec
-                      ]
-                      for q_value_vec in
-                      [
-                        self.q_value_per_tiletype.get(key, np.zeros([len(reward_dims)]))
-                        for key in self._environment_data[TILE_TYPES]
-                      ]
-                    ]))
-
-        writer.writerow(data)
-        file.flush()
+      file = getattr(self.__class__, "log_file_handle")
+      self._write_log_row(file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance)
 
 
     return timestep
+
+
+  def _write_log_row(self, file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance):
+
+    writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
+
+    data = []
+    for col in self.log_columns:
+
+      if col == LOG_TIMESTAMP:
+        timestamp = datetime.datetime.now()
+        timestamp_str = datetime.datetime.strftime(timestamp, '%Y.%m.%d-%H.%M.%S')
+        data.append(timestamp_str)
+
+      elif col == LOG_ENVIRONMENT:
+        data.append(self.__class__.__name__)
+
+      elif col == LOG_TRIAL:
+        data.append(self.get_trial_no())
+
+      elif col == LOG_EPISODE:
+        data.append(self.get_episode_no())
+
+      elif col == LOG_ITERATION:
+        data.append(iteration)
+
+      elif col == LOG_ARGUMENTS:
+        data.append(str(self.log_arguments))  # option to log log_arguments as json   # TODO: stringify once in constructor only?
+
+      #elif col == LOG_REWARD_UNITS:      # TODO
+      #  data += self.reward_units
+
+      elif col == LOG_REWARD:
+        data += [
+                  self.format_float(dim_value) 
+                  for dim_value in reward_dims
+                ]
+
+      elif col == LOG_SCALAR_REWARD:
+        data.append(self.format_float(scalar_reward)) 
+
+      elif col == LOG_CUMULATIVE_REWARD:
+        data += [
+                  self.format_float(dim_value) 
+                  for dim_value in cumulative_reward_dims
+                ]
+
+      elif col == LOG_AVERAGE_REWARD:
+        data += [
+                  self.format_float(dim_value) 
+                  for dim_value in average_reward_dims
+                ]
+
+      elif col == LOG_SCALAR_CUMULATIVE_REWARD:
+        data.append(self.format_float(scalar_cumulative_reward))
+
+      elif col == LOG_SCALAR_AVERAGE_REWARD:
+        data.append(self.format_float(scalar_average_reward))
+
+      elif col == LOG_GINI_INDEX:
+        data.append(self.format_float(gini_index))
+
+      elif col == LOG_CUMULATIVE_GINI_INDEX:
+        data.append(self.format_float(cumulative_gini_index)) 
+
+      elif col == LOG_MO_VARIANCE:
+        data.append(self.format_float(mo_variance))
+
+      elif col == LOG_CUMULATIVE_MO_VARIANCE:
+        data.append(self.format_float(cumulative_mo_variance))
+
+      elif col == LOG_AVERAGE_MO_VARIANCE:
+        data.append(self.format_float(average_mo_variance))
+
+      elif col == LOG_METRICS:
+        metrics = self._environment_data.get(METRICS_DICT, {})
+        data += [
+                  (
+                    self.format_float(dim_value) 
+                  )
+                  for dim_value in
+                  [
+                    metrics.get(key, None)
+                    for key in self.metrics_keys
+                  ]
+                ]
+
+      elif col == LOG_QVALUES_PER_TILETYPE:
+        data += list(itertools.chain.from_iterable([
+                  [
+                    self.format_float(dim_q_value)
+                    for dim_q_value in q_value_vec
+                  ]
+                  for q_value_vec in
+                  [
+                    self.q_value_per_tiletype.get(key, np.zeros([len(reward_dims)]))
+                    for key in self._environment_data[TILE_TYPES]
+                  ]
+                ]))
+
+    writer.writerow(data)
+    file.flush()
 
 
   def format_float(self, value):

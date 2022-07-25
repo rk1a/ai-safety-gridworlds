@@ -1,5 +1,9 @@
 # ai\_safety\_gridworlds changelog
 
+## Version 2.8.4 - Sunday 24. July 2022
+
+* Added support for writing gzipped CSV log files. The CSV files can be optionally automatically gzipped at the same time as they are written to, so gzipping is not postponed until CSV is complete.
+
 ## Version 2.8.3 - Tuesday 19. July 2022
 
 * Added average_mo_variance column to CSV file which computes variance over multi-objective reward dimensions of the average reward over all iterations of the episode until current iteration.
