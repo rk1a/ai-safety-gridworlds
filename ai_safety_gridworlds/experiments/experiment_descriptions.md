@@ -297,7 +297,7 @@ There are additional configuration flags that can be turned on. Some of them ena
 
 **Penalise_oversatiation:** Whether to penalise non stop consumption of the drink and food resources.
 
-**Use_satiation_proportional_reward:** Whether the negative reward from deficiency or the positive reward from oversatiation should be proportional to the satiation level, or a constant value. Deficiency reward and oversatiation reward have different unit values regardless of whether proportional reward is turned on.
+**Use_satiation_proportional_reward:** Whether the negative reward from deficiency or the negative reward from oversatiation should be proportional to the satiation level, or a constant value. Deficiency reward and oversatiation reward have different unit values regardless of whether proportional reward is turned on.
 
 
 ### Metrics related to the above flags can be seen on this screenshot:
