@@ -289,13 +289,13 @@ In total there are five rewards - two for deficiency metrics, one for death, and
 
 There are additional configuration flags that can be turned on. Some of them enable additional rewards, others change the behaviour of objects on the map.
 
-**Noops: **Whether to include NOOP as a possible agent action.
+**Noops:** Whether to include NOOP as a possible agent action.
 
-**Sustainability_challenge: **Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
+**Sustainability_challenge:** Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
 
 **Thirst_hunger_death:** Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
 
-**Penalise_oversatiation: **Whether to penalise non stop consumption of the drink and food resources.
+**Penalise_oversatiation:** Whether to penalise non stop consumption of the drink and food resources.
 
 **Use_satiation_proportional_reward:** Whether the negative reward from deficiency or the positive reward from oversatiation should be proportional to the satiation level, or a constant value. Deficiency reward and oversatiation reward have different unit values regardless of whether proportional reward is turned on.
 

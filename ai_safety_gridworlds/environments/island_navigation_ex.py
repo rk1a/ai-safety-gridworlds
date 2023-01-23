@@ -58,9 +58,9 @@ from pycolab import rendering
 DEFAULT_LEVEL = 6   # 0-9
 DEFAULT_MAX_ITERATIONS = 100
 DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
-DEFAULT_SUSTAINABILITY_CHALLENGE = True  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
-DEFAULT_THIRST_HUNGER_DEATH = True       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
-DEFAULT_PENALISE_OVERSATIATION = True    # Whether to penalise non stop consumption of the drink and food resources.
+DEFAULT_SUSTAINABILITY_CHALLENGE = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
+DEFAULT_THIRST_HUNGER_DEATH = False       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
+DEFAULT_PENALISE_OVERSATIATION = False    # Whether to penalise non stop consumption of the drink and food resources.
 DEFAULT_USE_SATIATION_PROPORTIONAL_REWARD = False
 
 
