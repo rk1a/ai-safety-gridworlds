@@ -27,10 +27,6 @@ Overview table of reward types available in each environment and the sign and co
    </td>
   </tr>
   <tr>
-   <td colspan="6" >For current experiments
-   </td>
-  </tr>
-  <tr>
    <td><a href="https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_unbounded.py">food_drink_unbounded.py</a>
    </td>
    <td>Pos, Perf.
@@ -101,10 +97,6 @@ Overview table of reward types available in each environment and the sign and co
    </td>
   </tr>
   <tr>
-   <td colspan="6" >For future experiments
-   </td>
-  </tr>
-  <tr>
    <td><a href="https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded_gold_silver.py">food_drink_bounded_gold_silver.py</a>
    </td>
    <td>-
@@ -134,9 +126,6 @@ Overview table of reward types available in each environment and the sign and co
   </tr>
 </table>
 
-
-
-## For current experiments
 
 
 ### [food_drink_unbounded.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_unbounded.py)
@@ -236,9 +225,6 @@ If the deficiency of either of the food or drink resources inside the agent beco
 There is no reward for collecting the food and drink resources, but there is a negative reward for the food or drink deficiency in the agent. Each collection of gold results in a positive reward. Food and drink deficiency rewards have the same unit size which is multiplied with the deficiency level of corresponding metric. 
 
 In total there are four rewards - two for deficiency metrics, one for death, and one for gold. Food, drink, and death rewards can be interpreted as representing alignment objectives. Gold reward can be interpreted as representing a performance objective.
-
-
-## For future experiments:
 
 
 ### [food_drink_bounded_gold_silver.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded_gold_silver.py)
