@@ -146,7 +146,7 @@ Overview table of reward types available in each environment and the sign and co
 ### [food_drink_unbounded.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_unbounded.py)
 
 
-![food_drink_unbounded](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/ai_safety_gridworlds/screenshots/food_drink_unbounded.png "food_drink_unbounded")
+![food_drink_unbounded](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/food_drink_unbounded.png "food_drink_unbounded")
 
 
 The environment contains food and drink sources. 
@@ -165,7 +165,7 @@ In total there are two rewards. Both of these two rewards can be interpreted as 
 ### [food_drink_bounded.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded.py)
 
 
-![food_drink_bounded](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/ai_safety_gridworlds/screenshots/food_drink_bounded.png "food_drink_bounded")
+![food_drink_bounded](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/food_drink_bounded.png "food_drink_bounded")
 
 
 The environment contains food and drink sources. 
@@ -184,7 +184,7 @@ In total there are two rewards. Both of these two rewards can be interpreted as 
 ### [food_drink_bounded_death.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded_death.py)
 
 
-![food_drink_bounded_death](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/ai_safety_gridworlds/screenshots/food_drink_bounded_death.png "food_drink_bounded_death")
+![food_drink_bounded_death](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/food_drink_bounded_death.png "food_drink_bounded_death")
 
 
 The environment contains food and drink sources. 
@@ -205,7 +205,7 @@ In total there are three rewards - two for deficiency metrics and one for death.
 ### [food_drink_bounded_gold.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded_gold.py)
 
 
-![food_drink_bounded_gold](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/ai_safety_gridworlds/screenshots/food_drink_bounded_gold.png "food_drink_bounded_gold")
+![food_drink_bounded_gold](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/food_drink_bounded_gold.png "food_drink_bounded_gold")
 
 
 The environment contains food and drink sources, and a gold source. 
@@ -224,7 +224,7 @@ In total there are three rewards - two for deficiency metrics and one for gold. 
 ### [food_drink_bounded_death_gold.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded_death_gold.py)
 
 
-![food_drink_bounded_death_gold](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/ai_safety_gridworlds/screenshots/food_drink_bounded_death_gold.png "food_drink_bounded_death_gold")
+![food_drink_bounded_death_gold](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/food_drink_bounded_death_gold.png "food_drink_bounded_death_gold")
 
 
 The environment contains food and drink sources, and a gold source. 
@@ -248,7 +248,7 @@ In total there are four rewards - two for deficiency metrics, one for death, and
 ### [food_drink_bounded_gold_silver.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded_gold_silver.py)
 
 
-![food_drink_bounded_gold_silver](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/ai_safety_gridworlds/screenshots/food_drink_bounded_gold_silver.png "food_drink_bounded_gold_silver")
+![food_drink_bounded_gold_silver](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/food_drink_bounded_gold_silver.png "food_drink_bounded_gold_silver")
 
 
 The environment contains food and drink sources, and gold and silver sources. 
@@ -267,7 +267,7 @@ In total there are four rewards - two for deficiency metrics, and two for gold a
 ### [food_drink_bounded_death_gold_silver.py](https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/food_drink_bounded_death_gold_silver.py)
 
 
-![food_drink_bounded_death_gold_silver](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/ai_safety_gridworlds/screenshots/food_drink_bounded_death_gold_silver.png "food_drink_bounded_death_gold_silver")
+![food_drink_bounded_death_gold_silver](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/food_drink_bounded_death_gold_silver.png "food_drink_bounded_death_gold_silver")
 
 
 The environment contains food and drink sources, and gold and silver sources. 
