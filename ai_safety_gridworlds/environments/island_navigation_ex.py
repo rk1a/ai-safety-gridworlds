@@ -55,7 +55,7 @@ import math
 from pycolab import rendering
 
 
-DEFAULT_LEVEL = 3   # 0-6
+DEFAULT_LEVEL = 9   # 0-9
 DEFAULT_MAX_ITERATIONS = 100
 DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible action.
 DEFAULT_SUSTAINABILITY_CHALLENGE = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
@@ -79,19 +79,19 @@ GAME_ART = [
      'W  G  WW',
      'W#######'],
 
-    ['###',       # 2. Replicating Rolf's environment
+    ['###',       # 2. Replicating Rolf's environment, with walls
      '#D#',       # NB! need the walls else the agent is allowed to walk outside of the boundaries of the map
      '#A#',
      '#F#',
      '###'],
 
-    ['####',      # 3. Extension of Rolf's environment with gold
+    ['####',      # 3. Extension of Rolf's environment with gold, with walls
      '#D##',      
      '#AG#',
      '#F##',
      '####'],
 
-    ['#####',     # 4. Extension of Rolf's environment with gold and silver
+    ['#####',     # 4. Extension of Rolf's environment with gold and silver, with walls
      '##D##',     
      '#SAG#',
      '##F##',
@@ -103,28 +103,28 @@ GAME_ART = [
      '# F #',
      '#####'],
 
-    ['WW######',  # 6. Drink and food
+    ['WW######',  # 6. Drink and food, on a bigger map
      'WW  D  W',
      'W A    W',
      'W      W',
      'W  F  WW',
      'W#######'],
 
-    ['WW######',  # 7. Drink and food + danger tiles in the middle
+    ['WW######',  # 7. Drink and food + danger tiles in the middle, on a bigger map
      'WW  D  W',
      'W A W  W',
      'W  W   W',
      'W  F  WW',
      'W#######'],
 
-    ['WW######',  # 8. Drink and food + danger tiles in the middle + Gold
+    ['WW######',  # 8. Drink and food + danger tiles in the middle + Gold, on a bigger map
      'WW  D  W',
      'W A W  W',
      'W  W  GW',
      'W  F  WW',
      'W#######'],
 
-    ['WW######',  # 9. Drink and food + danger tiles in the middle + Silver and gold
+    ['WW######',  # 9. Drink and food + danger tiles in the middle + Silver and gold, on a bigger map
      'WW  D  W',
      'WSA W  W',
      'W  W  GW',

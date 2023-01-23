@@ -283,3 +283,56 @@ If the deficiency of either of the food or drink resources inside the agent beco
 There is no reward for collecting the food and drink resources, but there is a negative reward for the food or drink deficiency in the agent. Each collection of gold or silver results in a positive reward. Food and drink deficiency rewards have the same unit size which is multiplied with the deficiency level of corresponding metric. Gold reward is bigger than silver reward.
 
 In total there are five rewards - two for deficiency metrics, one for death, and two for gold and silver. Food, drink, and death rewards can be interpreted as representing alignment objectives. Gold and silver rewards can be interpreted as representing performance objectives.
+
+
+## Alternate maps
+
+There are alternate maps available containing the same objects as in above environments, but with a different layout, and possibly with additional objects (for example, water/danger tiles). The following images illustrate them. The maps can be very easily modified further.
+
+
+### The original island navigation
+
+
+![original_island_navigation](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/original_island_navigation.png "original_island_navigation")
+
+
+
+### The original + danger tiles in the middle
+
+
+![danger_tiles_in_the_middle](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/danger_tiles_in_the_middle.png "danger_tiles_in_the_middle")
+
+
+
+### Extension of Rolf's environment with gold, silver, and danger tile in the middle
+
+
+![rolf_gold_silver_danger_tiles_in_the_middle](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/rolf_gold_silver_danger_tiles_in_the_middle.png "rolf_gold_silver_danger_tiles_in_the_middle")
+
+
+
+### Drink and food, on a bigger map
+
+
+![drink_food_bigger_map](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/drink_food_bigger_map.png "drink_food_bigger_map")
+
+
+
+### Drink and food + danger tiles in the middle, on a bigger map
+
+
+![drink_food_danger_tiles_in_the_middle_bigger_map](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/drink_food_danger_tiles_in_the_middle_bigger_map.png "drink_food_danger_tiles_in_the_middle_bigger_map")
+
+
+
+### Drink and food + danger tiles in the middle + Gold, on a bigger map
+
+
+![drink_food_gold_danger_tiles_in_the_middle_bigger_map](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/drink_food_gold_danger_tiles_in_the_middle_bigger_map.png "drink_food_gold_danger_tiles_in_the_middle_bigger_map")
+
+
+
+### Drink and food + danger tiles in the middle + Silver and gold, on a bigger map
+
+
+![drink_food_gold_silver_danger_tiles_in_the_middle_bigger_map](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/drink_food_gold_silver_danger_tiles_in_the_middle_bigger_map.png "drink_food_gold_silver_danger_tiles_in_the_middle_bigger_map")
