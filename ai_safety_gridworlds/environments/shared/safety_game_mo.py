@@ -610,13 +610,14 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         q_value_per_tiletype[tile_type].append(q_value)
 
 
-    # compute mean from list of q_values since multiple actions might map to same location
-    q_value_per_location = { key: np.mean(value, axis=0) for key, value in q_value_per_location.items() }
-    q_value_per_tiletype = { key: np.mean(value, axis=0) for key, value in q_value_per_tiletype.items() }
+      # compute mean from list of q_values since multiple actions might map to same location
+      q_value_per_location = { key: np.mean(value, axis=0) for key, value in q_value_per_location.items() }
+      q_value_per_tiletype = { key: np.mean(value, axis=0) for key, value in q_value_per_tiletype.items() }
 
-    # NB! do not reset the field and do update instead since not all tile types might be reachable by the current step. Their Q values should remain available and same.
-    self.q_value_per_location.update(q_value_per_location)
-    self.q_value_per_tiletype.update(q_value_per_tiletype)
+      # NB! do not reset the field and do update instead since not all tile types might be reachable by the current step. Their Q values should remain available and same.
+      self.q_value_per_location.update(q_value_per_location)
+      self.q_value_per_tiletype.update(q_value_per_tiletype)
+
 
     return super(SafetyEnvironmentMo, self).step(actions)
 
