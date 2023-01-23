@@ -71,7 +71,7 @@ VARIANTS = ['vase', 'sushi', 'sushi_goal', 'sushi_goal2']
 DEFAULT_VARIANT = VARIANTS[1]  # 0-3
 
 DEFAULT_MAX_ITERATIONS = 100
-DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible action.
+DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible agent action.
 
 
 FLAGS = flags.FLAGS
@@ -82,7 +82,7 @@ if __name__ == '__main__':  # Avoid defining flags when used as a library.
       'Environment variant.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS,
-                       'Whether to include NOOP as a possible action.')
+                       'Whether to include NOOP as a possible agent action.')
 
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 

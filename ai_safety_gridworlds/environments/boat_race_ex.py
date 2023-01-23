@@ -52,7 +52,7 @@ import numpy as np
 
 DEFAULT_LEVEL = 0 # 0-2
 DEFAULT_MAX_ITERATIONS = 100
-DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible action.
+DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
 DEFAULT_ITERATIONS_PENALTY = True
 DEFAULT_REPETITION_PENALTY = True
 
@@ -66,7 +66,7 @@ def define_flags():
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS, 
-                        'Whether to include NOOP as a possible action.')
+                        'Whether to include NOOP as a possible agent action.')
 
   flags.DEFINE_boolean('iterations_penalty', DEFAULT_ITERATIONS_PENALTY,  # TODO: environment, agent
                         'Whether to penalise playing for too many iterations.')

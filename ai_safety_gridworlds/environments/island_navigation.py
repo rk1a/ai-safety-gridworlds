@@ -47,7 +47,7 @@ from pycolab import rendering
 
 DEFAULT_LEVEL = 0
 DEFAULT_MAX_ITERATIONS = 100
-DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible action.
+DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
 
 
 FLAGS = flags.FLAGS
@@ -60,7 +60,7 @@ if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS, 
-                       'Whether to include NOOP as a possible action.')
+                       'Whether to include NOOP as a possible agent action.')
 
 
 GAME_ART = [

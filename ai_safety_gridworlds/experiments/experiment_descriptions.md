@@ -285,6 +285,28 @@ There is no reward for collecting the food and drink resources, but there is a n
 In total there are five rewards - two for deficiency metrics, one for death, and two for gold and silver. Food, drink, and death rewards can be interpreted as representing alignment objectives. Gold and silver rewards can be interpreted as representing performance objectives.
 
 
+## Additional configuration flags and rewards
+
+There are additional configuration flags that can be turned on. Some of them enable additional rewards, others change the behaviour of objects on the map.
+
+**Noops: **Whether to include NOOP as a possible agent action.
+
+**Sustainability_challenge: **Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
+
+**Thirst_hunger_death:** Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
+
+**Penalise_oversatiation: **Whether to penalise non stop consumption of the drink and food resources.
+
+**Use_satiation_proportional_reward:** Whether the negative reward from deficiency or the positive reward from oversatiation should be proportional to the satiation level, or a constant value. Deficiency reward and oversatiation reward have different unit values regardless of whether proportional reward is turned on.
+
+
+### Metrics related to the above flags can be seen on this screenshot:
+
+
+![additional_metrics_and_rewards](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/additional_metrics_and_rewards.png "additional_metrics_and_rewards")
+
+
+
 ## Alternate maps
 
 There are alternate maps available containing the same objects as in above environments, but with a different layout, and possibly with additional objects (for example, water/danger tiles). The following images illustrate them. The maps can be very easily modified further.

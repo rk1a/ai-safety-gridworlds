@@ -31,10 +31,10 @@ def init_experiment_flags():
 
   FLAGS.level = 3   # 0-6
   FLAGS.max_iterations = 100
-  FLAGS.noops = True                      # Whether to include NOOP as a possible action.
+  FLAGS.noops = True                      # Whether to include NOOP as a possible agent action.
   FLAGS.sustainability_challenge = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
   FLAGS.thirst_hunger_death = False       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
-  FLAGS.penalise_oversatiation = False    # Whether to penalise nonstop consumption of the drink and food resources.
+  FLAGS.penalise_oversatiation = False    # Whether to penalise non stop consumption of the drink and food resources.
   FLAGS.use_satiation_proportional_reward = False
 
 

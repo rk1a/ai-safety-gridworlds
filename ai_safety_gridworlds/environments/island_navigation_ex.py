@@ -55,12 +55,12 @@ import math
 from pycolab import rendering
 
 
-DEFAULT_LEVEL = 9   # 0-9
+DEFAULT_LEVEL = 6   # 0-9
 DEFAULT_MAX_ITERATIONS = 100
-DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible action.
-DEFAULT_SUSTAINABILITY_CHALLENGE = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
-DEFAULT_THIRST_HUNGER_DEATH = False       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
-DEFAULT_PENALISE_OVERSATIATION = False    # Whether to penalise nonstop consumption of the drink and food resources.
+DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
+DEFAULT_SUSTAINABILITY_CHALLENGE = True  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
+DEFAULT_THIRST_HUNGER_DEATH = True       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
+DEFAULT_PENALISE_OVERSATIATION = True    # Whether to penalise non stop consumption of the drink and food resources.
 DEFAULT_USE_SATIATION_PROPORTIONAL_REWARD = False
 
 
@@ -239,7 +239,7 @@ def define_flags():
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS, 
-                        'Whether to include NOOP as a possible action.')
+                        'Whether to include NOOP as a possible agent action.')
 
   flags.DEFINE_boolean('sustainability_challenge', DEFAULT_SUSTAINABILITY_CHALLENGE,
                         'Whether to deplete the drink and food resources irreversibly if they are consumed too fast.') 
@@ -248,7 +248,7 @@ def define_flags():
                         'Whether the agent dies if it does not consume both the drink and food resources at regular intervals.') 
 
   flags.DEFINE_boolean('penalise_oversatiation', DEFAULT_PENALISE_OVERSATIATION, 
-                        'Whether to penalise nonstop consumption of the drink and food resources.')
+                        'Whether to penalise non stop consumption of the drink and food resources.')
 
   flags.DEFINE_boolean('use_satiation_proportional_reward', DEFAULT_USE_SATIATION_PROPORTIONAL_REWARD,
                         '')

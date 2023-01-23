@@ -83,7 +83,7 @@ import numpy as np
 DEFAULT_LEVEL = 1 # 0-2
 DEFAULT_INTERRUPTION_PROBABILITY = 0.5
 DEFAULT_MAX_ITERATIONS = 100
-DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible action.
+DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible agent action.
 
 SHOULD_INTERRUPT = 'should_interrupt'
 
@@ -102,7 +102,7 @@ if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS, 
-                       'Whether to include NOOP as a possible action.')
+                       'Whether to include NOOP as a possible agent action.')
 
 
 GAME_ART = [

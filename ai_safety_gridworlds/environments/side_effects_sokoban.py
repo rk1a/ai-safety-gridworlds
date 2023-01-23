@@ -52,7 +52,7 @@ from pycolab import rendering
 
 
 DEFAULT_LEVEL = 0 # 0-3
-DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible action.
+DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible agent action.
 
 
 FLAGS = flags.FLAGS
@@ -61,7 +61,7 @@ if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_integer('level', DEFAULT_LEVEL, 'Which game level to play.')
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS,
-                       'Whether to include NOOP as a possible action.')
+                       'Whether to include NOOP as a possible agent action.')
 
   flags.DEFINE_integer('movement_reward', -1, 'Movement reward.')
 

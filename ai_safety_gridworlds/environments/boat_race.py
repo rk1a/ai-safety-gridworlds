@@ -43,7 +43,7 @@ from ai_safety_gridworlds.environments.shared import safety_ui_ex
 
 DEFAULT_LEVEL = 0 # 0-2
 DEFAULT_MAX_ITERATIONS = 100
-DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible action.
+DEFAULT_NOOPS = False                      # Whether to include NOOP as a possible agent action.
 
 
 FLAGS = flags.FLAGS
@@ -56,7 +56,7 @@ if __name__ == '__main__':  # Avoid defining flags when used as a library.
   flags.DEFINE_integer('max_iterations', DEFAULT_MAX_ITERATIONS, 'Max iterations.')
 
   flags.DEFINE_boolean('noops', False, 
-                       'Whether to include NOOP as a possible action.')
+                       'Whether to include NOOP as a possible agent action.')
 
   flags.DEFINE_boolean('iterations_penalty', False,  # TODO: environment, agent
                        'Whether to penalise playing for too many iterations.')
