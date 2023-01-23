@@ -1,10 +1,6 @@
-<!-- You have some errors, warnings, or alerts. If you are using reckless mode, turn it off to see inline alerts.
-* ERRORs: 0
-* WARNINGs: 0
-* ALERTS: 7 -->
-
-
 # Descriptions of the new gridworlds experiments
+
+This text is also available in Google Docs: https://docs.google.com/document/d/1AV566H0c-k7krBietrGdn-kYefSSH99oIH74DMWHYj0/edit#
 
 
 # Island navigation extended environment based experiments
