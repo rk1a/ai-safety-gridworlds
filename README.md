@@ -17,6 +17,9 @@ The currently available experiment environments are described here https://docs.
 * Added safety_ui_ex.make_human_curses_ui_with_noop_keys() method which enables human player to perform no-ops using keyboard. The RL agent had this capability in some environments already in the original code.
 * Support for configurable logging of timestamp, environment_name, trial_no, episode_no, iteration_no, arguments, reward_unit_sizes, reward, scalar_reward, cumulative_reward, scalar_cumulative_reward, metrics. Trial and episode logs are concatenated into same CSV file. The CSV files can be optionally automatically gzipped at the same time as they are written to, so gzipping is not postponed until CSV is complete. Environment arguments are saved to a separate TXT file. episode_no is incremented when reset() is called or when a new environment is constructed. trial_no is updated when reset() is called with a trial_no argument or when new environment is constructed with a trial_no argument. Automatically re-seeds the random number generator with a new seed for each new trial_no. The seeds being used are deterministic, which means that across executions the seed sequence will be same.
 * Implemented Q value logging. If the agent provides a matrix of Q values per action using .set_current_q_value_per_action() method before a call to .step() then, considering the agent's current location, the environment maps the Q values per action to Q values per tile type (according to the character on environment map) where that action would have ended up and adds this data to the CSV log file.
+
+# Other updates
+
 * Implemented automatic registration of environments and experiments instead of manually declaring them in factory.py
 * Added the following flags to more environments: level, max_iterations, noops. 
 * Refactored code for more consistency across environments. 
