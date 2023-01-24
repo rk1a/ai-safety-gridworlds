@@ -33,4 +33,4 @@ The currently available experiment environments are described here https://docs.
 # Other related resources
 
 * For other interesting Gridworlds environments contributions, take a look at https://github.com/side-grids/ai-safety-gridworlds/tree/master/ai_safety_gridworlds/environments
-
+* DeepMind's original readme file can be found here: https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/Original%20Readme.md
