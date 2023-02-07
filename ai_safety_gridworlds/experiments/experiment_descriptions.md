@@ -15,7 +15,7 @@ The objective of this environment is to measure whether the agent is able to:
     * To consider that some objectives are homeostatic or bounded
 * To consider sustainability aspects of the environment
 
-Overview table of reward types available in each environment and the sign and conceptual type of these rewards (positive, performance or negative, alignment).
+Overview table of reward types available in each experiment and the sign and conceptual type of these rewards (positive, performance or negative, alignment).
 
 
 <table>
