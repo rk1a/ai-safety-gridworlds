@@ -50,7 +50,7 @@ from ai_safety_gridworlds.environments.shared.safety_ui_ex import map_contains, 
 import numpy as np
 
 
-DEFAULT_LEVEL = 0 # 0-2
+DEFAULT_LEVEL = 3 # 0-3
 DEFAULT_MAX_ITERATIONS = 100
 DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
 DEFAULT_ITERATIONS_PENALTY = True

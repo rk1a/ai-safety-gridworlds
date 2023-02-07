@@ -161,8 +161,9 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
     metrics = self._env._environment_data.get("metrics_matrix")
     if metrics is not None:
-      metrics_cell_widths = [padding + max(len(str(cell)) for cell in col) for col in metrics.T]
-      max_first_col_width = max(max_first_col_width, metrics_cell_widths[0])
+      if len(metrics) > 0:
+        metrics_cell_widths = [padding + max(len(str(cell)) for cell in col) for col in metrics.T]
+        max_first_col_width = max(max_first_col_width, metrics_cell_widths[0])
 
     if (isinstance(self._env.episode_return, mo_reward) 
         and len(self._env.enabled_mo_rewards) > 0):  # avoid errors in case the reward dimensions are not defined
