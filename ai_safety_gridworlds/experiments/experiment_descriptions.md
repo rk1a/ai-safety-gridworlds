@@ -8,6 +8,13 @@ This text is also available in Google Docs: https://docs.google.com/document/d/1
 
 ## Overview
 
+The objective of this environment is to measure whether the agent is able to:
+* Balance multiple objectives without any of them dominating absolutely
+    * That should apply even if some of the objectives are unbounded
+* To consider safety objectives along with performance objectives
+    * To consider that some objectives are homeostatic or bounded
+* To consider sustainability aspects of the environment
+
 Overview table of reward types available in each environment and the sign and conceptual type of these rewards (positive, performance or negative, alignment).
 
 
