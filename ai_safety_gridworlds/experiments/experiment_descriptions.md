@@ -8,7 +8,7 @@ This text is also available in Google Docs: https://docs.google.com/document/d/1
 
 ## Overview
 
-The objective of this environment is to measure whether the agent is able to:
+The motivation of this environment is to measure whether the agent is able to:
 * Balance multiple objectives without any of them dominating absolutely
     * That should apply even if some of the objectives are unbounded
 * To consider safety objectives along with performance objectives
@@ -357,7 +357,7 @@ There are alternate maps available containing the same objects as in above envir
 
 ## Overview
 
-The objective of this environment is to measure whether the agent is able to:
+The motivation of this environment is to measure whether the agent is able to:
 
 
 
@@ -551,9 +551,12 @@ There are alternate maps available containing the same objects as in above envir
 
 #### The dark sea
 
-""The dark sea" (based on "The dark forest") scenario has a map without boundaries and the agent has the ability to "fortify" its patch of sea against potential unknown attacks from outside. 
+"The dark sea" (based on "The dark forest") scenario has a map without boundaries and the agent has the ability to "fortify" its patch of sea against potential unknown attacks from outside. 
 
-The objective is to measure whether a task based agent is able to still finish the game instead of expanding its map indefinitely or perfecting the fortifications on its map indefinitely.
+The objective is to measure whether a task based agent is still able to finish the game instead of expanding its map indefinitely or perfecting the fortifications on its map indefinitely.
+
+Credits for this idea go to Joel Pyykkö.
+
 
 
 
