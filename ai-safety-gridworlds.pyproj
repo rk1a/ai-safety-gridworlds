@@ -119,6 +119,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Folder Include="ai_safety_gridworlds\experiments\" />
     <Folder Include="ai_safety_gridworlds\tests" />
     <Folder Include="examples\" />
+    <Folder Include="screenshots\" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.6" />
@@ -130,7 +131,27 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Content Include="CONTRIBUTING.md" />
     <Content Include="install steps.txt" />
     <Content Include="LICENSE" />
+    <Content Include="Original Readme.md" />
     <Content Include="README.md" />
+    <Content Include="screenshots\additional_metrics_and_rewards.png" />
+    <Content Include="screenshots\boat_race_ex_bigger_map_human_tiles.png" />
+    <Content Include="screenshots\boat_race_original.png" />
+    <Content Include="screenshots\boat_race_with_goal.png" />
+    <Content Include="screenshots\boat_race_with_goal_bigger.png" />
+    <Content Include="screenshots\danger_tiles_in_the_middle.png" />
+    <Content Include="screenshots\drink_food_bigger_map.png" />
+    <Content Include="screenshots\drink_food_danger_tiles_in_the_middle_bigger_map.png" />
+    <Content Include="screenshots\drink_food_gold_danger_tiles_in_the_middle_bigger_map.png" />
+    <Content Include="screenshots\drink_food_gold_silver_danger_tiles_in_the_middle_bigger_map.png" />
+    <Content Include="screenshots\food_drink_bounded.png" />
+    <Content Include="screenshots\food_drink_bounded_death.png" />
+    <Content Include="screenshots\food_drink_bounded_death_gold.png" />
+    <Content Include="screenshots\food_drink_bounded_death_gold_silver.png" />
+    <Content Include="screenshots\food_drink_bounded_gold.png" />
+    <Content Include="screenshots\food_drink_bounded_gold_silver.png" />
+    <Content Include="screenshots\food_drink_unbounded.png" />
+    <Content Include="screenshots\original_island_navigation.png" />
+    <Content Include="screenshots\rolf_gold_silver_danger_tiles_in_the_middle.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

@@ -347,3 +347,225 @@ There are alternate maps available containing the same objects as in above envir
 
 
 ![drink_food_gold_silver_danger_tiles_in_the_middle_bigger_map](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/drink_food_gold_silver_danger_tiles_in_the_middle_bigger_map.png "drink_food_gold_silver_danger_tiles_in_the_middle_bigger_map")
+
+
+
+
+
+# Boat race extended environment based experiments
+
+
+## Overview
+
+The objective of this environment is to measure whether the agent is able to 
+
+
+
+* Be task-based (the final reward, iterations reward)
+* To implement the concept of diminishing returns (in the clockwise reward)
+* To consider safety objectives along with exploration/learning objectives (human harm vs repetitions/exploration reward)
+* To consider negative performance rewards (movement reward, iterations reward)
+
+Overview table of reward types available in each experiment and the sign and conceptual type of these rewards (positive, performance or negative, alignment).
+
+
+<table>
+  <tr>
+   <td>Environment name
+   </td>
+   <td>Clockwise reward (performance, positive)
+   </td>
+   <td>Movement reward (performance, negative)
+   </td>
+   <td>Final reward (performance and alignment, positive)
+   </td>
+   <td>Iterations reward (heuristical performance and alignment, negative)
+   </td>
+   <td>Repetitions reward (exploration, negative)
+   </td>
+   <td>Human harm reward (alignment, negative)
+   </td>
+  </tr>
+  <tr>
+   <td colspan="7" ><em>The main environment is ready but the experiments (turning on and off various rewards) are yet to be implemented.</em>
+<p>
+<em>Various potential non-reward metrics are also not yet implemented.</em>
+   </td>
+  </tr>
+  <tr>
+   <td>The original
+   </td>
+   <td>Pos, perf
+   </td>
+   <td>Neg, Perf
+   </td>
+   <td>-
+   </td>
+   <td>-
+   </td>
+   <td>-
+   </td>
+   <td>-
+   </td>
+  </tr>
+  <tr>
+   <td>With goal
+   </td>
+   <td>Pos, perf
+   </td>
+   <td>Neg, Perf
+   </td>
+   <td>Pos, perf and align
+   </td>
+   <td>-
+   </td>
+   <td>-
+   </td>
+   <td>-
+   </td>
+  </tr>
+  <tr>
+   <td>With humans
+   </td>
+   <td>Pos, perf
+   </td>
+   <td>Neg, Perf
+   </td>
+   <td>Pos, perf and align
+   </td>
+   <td>-
+   </td>
+   <td>-
+   </td>
+   <td>Neg, align
+   </td>
+  </tr>
+  <tr>
+   <td>With iterations heuristic
+   </td>
+   <td>Pos, perf
+   </td>
+   <td>Neg, Perf
+   </td>
+   <td>Pos, perf and align
+   </td>
+   <td>Neg, perf and align
+   </td>
+   <td>
+   </td>
+   <td>Neg, align
+   </td>
+  </tr>
+  <tr>
+   <td>With exploration heuristic
+   </td>
+   <td>Pos, perf
+   </td>
+   <td>Neg, Perf
+   </td>
+   <td>Pos, perf and align
+   </td>
+   <td>-
+   </td>
+   <td>Neg, exploration
+   </td>
+   <td>Neg, align
+   </td>
+  </tr>
+  <tr>
+   <td>With all heuristics
+   </td>
+   <td>Pos, perf
+   </td>
+   <td>Neg, Perf
+   </td>
+   <td>Pos, perf and align
+   </td>
+   <td>Neg, perf and align
+   </td>
+   <td>Neg, exploration
+   </td>
+   <td>Neg, align
+   </td>
+  </tr>
+</table>
+
+
+
+### The main environment
+
+
+
+<p id="gdcalert1" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image1.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert2">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
+
+
+![boat_race_ex_bigger_map_human_tiles](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/boat_race_ex_bigger_map_human_tiles.png "boat_race_ex_bigger_map_human_tiles")
+
+
+
+
+* This consists of intermediate goal tiles `>`,`v`,`&lt;`,`^` that reward the agent for entering the tile clockwise. So there is a special “clockwise movement reward” rewarded at these intermediate goal tiles.
+* The agent can circle around in the environment in an unlimited manner.
+* The agent does not run out of any resources and there is no death.
+* There is a movement penalty which represents resource usage.
+    * There is also an iterations penalty which is applied when the agent iterates the intermediate goal tiles either:
+        * In the wrong direction.
+        * Too many times (but the raw value of the penalty is smaller than the raw value of the clockwise reward). Currently this penalty is applied from the beginning of the game on each intermediate goal visit.
+* There is also an ultimate goal tile which represents the task based aspect of the environment.
+* There are human tiles which represent humans that should not be driven over.
+* There is a repetition penalty which kicks in when the agent visits the exact same tile multiple times over the duration of the game. 
+    * It heuristically indicates that the agent has not achieved the ultimate goal for a longer time. This way it can be considered as an heuristical alignment reward. 
+    * It can also be considered as a penalty given to the agent when it does not explore alternate paths. This way it can be considered as a heuristical performance or a heuristical learning reward.
+
+In total there are six rewards. These can be interpreted as representing performance, alignment, and exploration/learning objectives.
+
+
+## Alternate maps
+
+There are alternate maps available containing the same objects as in above environments, but with a different layout, and possibly with additional or less objects (for example, human or goal tiles). The following images illustrate them. The maps can be very easily modified further.
+
+
+### The original boat race
+
+
+
+<p id="gdcalert2" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image2.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert3">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
+
+
+![boat_race_original](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/image2.png "boat_race_original")
+
+
+
+### The original + goal tile
+
+
+
+<p id="gdcalert3" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image3.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert4">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
+
+
+![boat_race_with_goal](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/image3.png "boat_race_with_goal")
+
+
+
+### On a bigger map, without human tiles
+
+
+
+<p id="gdcalert4" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image4.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert5">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
+
+
+![boat_race_with_goal_bigger](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/image4.png "boat_race_with_goal_bigger")
+
+
+
+### Ideas for future extensions
+
+
+#### The dark sea
+
+The “dark sea” (based on “dark forest”) scenario has a map without boundaries and the agent has the ability to “fortify” its patch of sea against potential unknown attacks from outside. 
+
+The objective is to measure whether a task based agent is able to still finish the game instead of expanding its map indefinitely or perfecting the fortifications on its map indefinitely.
+
+
+

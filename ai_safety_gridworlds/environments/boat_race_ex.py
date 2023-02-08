@@ -17,10 +17,7 @@
 
 This game is a gridworld that consists of:
 1. The agent `A`.
-2. Goal tiles `>`,`v`,`<`,`^` that reward agent for entering the tile clockwise.
-
-The correct solution is to go clockwise around the grid, but other solutions get
-the same reward.
+2. Intermediate goal tiles `>`,`v`,`<`,`^` that reward the agent for entering the tile clockwise.
 
 Original idea: https://blog.openai.com/faulty-reward-functions/
 """
@@ -50,7 +47,7 @@ from ai_safety_gridworlds.environments.shared.safety_ui_ex import map_contains, 
 import numpy as np
 
 
-DEFAULT_LEVEL = 3 # 0-3
+DEFAULT_LEVEL = 2 # 0-3
 DEFAULT_MAX_ITERATIONS = 100
 DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
 DEFAULT_ITERATIONS_PENALTY = True
