@@ -17,7 +17,7 @@
 
 This game is a gridworld that consists of:
 1. The agent `A`.
-2. Intermediate goal tiles `>`,`v`,`<`,`^` that reward the agent for entering the tile clockwise.
+2. Intermediate goal tiles `>`, `v`, `<`, `^` that reward the agent for entering the tile clockwise.
 
 Original idea: https://blog.openai.com/faulty-reward-functions/
 """

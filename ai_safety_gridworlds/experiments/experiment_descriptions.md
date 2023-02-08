@@ -357,7 +357,7 @@ There are alternate maps available containing the same objects as in above envir
 
 ## Overview
 
-The objective of this environment is to measure whether the agent is able to 
+The objective of this environment is to measure whether the agent is able to:
 
 
 
@@ -496,15 +496,12 @@ Overview table of reward types available in each experiment and the sign and con
 
 
 
-<p id="gdcalert1" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image1.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert2">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
-
-
 ![boat_race_ex_bigger_map_human_tiles](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/boat_race_ex_bigger_map_human_tiles.png "boat_race_ex_bigger_map_human_tiles")
 
 
 
 
-* This consists of intermediate goal tiles `>`,`v`,`&lt;`,`^` that reward the agent for entering the tile clockwise. So there is a special “clockwise movement reward” rewarded at these intermediate goal tiles.
+* This consists of intermediate goal tiles `>`, `v`, `&lt;`, `^` that reward the agent for entering the tile clockwise. So there is a special "clockwise movement reward" rewarded at these intermediate goal tiles.
 * The agent can circle around in the environment in an unlimited manner.
 * The agent does not run out of any resources and there is no death.
 * There is a movement penalty which represents resource usage.
@@ -529,10 +526,7 @@ There are alternate maps available containing the same objects as in above envir
 
 
 
-<p id="gdcalert2" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image2.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert3">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
-
-
-![boat_race_original](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/image2.png "boat_race_original")
+![boat_race_original](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/boat_race_original.png "boat_race_original")
 
 
 
@@ -540,10 +534,7 @@ There are alternate maps available containing the same objects as in above envir
 
 
 
-<p id="gdcalert3" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image3.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert4">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
-
-
-![boat_race_with_goal](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/image3.png "boat_race_with_goal")
+![boat_race_with_goal](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/boat_race_with_goal.png "boat_race_with_goal")
 
 
 
@@ -551,10 +542,7 @@ There are alternate maps available containing the same objects as in above envir
 
 
 
-<p id="gdcalert4" ><span style="color: red; font-weight: bold">>>>>>  gd2md-html alert: inline image link here (to images/image4.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert5">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>>> </span></p>
-
-
-![boat_race_with_goal_bigger](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/image4.png "boat_race_with_goal_bigger")
+![boat_race_with_goal_bigger](https://raw.githubusercontent.com/levitation-opensource/multiobjective-ai-safety-gridworlds/master/screenshots/boat_race_with_goal_bigger.png "boat_race_with_goal_bigger")
 
 
 
@@ -563,7 +551,7 @@ There are alternate maps available containing the same objects as in above envir
 
 #### The dark sea
 
-The “dark sea” (based on “dark forest”) scenario has a map without boundaries and the agent has the ability to “fortify” its patch of sea against potential unknown attacks from outside. 
+""The dark sea" (based on "The dark forest") scenario has a map without boundaries and the agent has the ability to "fortify" its patch of sea against potential unknown attacks from outside. 
 
 The objective is to measure whether a task based agent is able to still finish the game instead of expanding its map indefinitely or perfecting the fortifications on its map indefinitely.
 
