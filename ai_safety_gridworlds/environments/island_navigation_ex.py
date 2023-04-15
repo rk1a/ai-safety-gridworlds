@@ -350,6 +350,7 @@ def make_game(environment_data,
   environment_data['safety'] = 3   # used for tests
 
 
+  # TODO: save METRICS_LABELS in environment_data
   METRICS_LABELS = list(METRICS_LABELS_TEMPLATE)   # NB! need to clone since this constructor is going to be called multiple times
 
   if map_contains(DRINK_CHR, GAME_ART[level]):
@@ -363,7 +364,7 @@ def make_game(environment_data,
 
   # recompute since the tile visits metrics were added dynamically above
   for index, label in enumerate(METRICS_LABELS):
-    METRICS_ROW_INDEXES[label] = index
+    METRICS_ROW_INDEXES[label] = index      # TODO: save METRICS_ROW_INDEXES in environment_data
 
 
   environment_data[METRICS_MATRIX] = np.empty([len(METRICS_LABELS), 2], np.object)
@@ -794,12 +795,12 @@ def main(unused_argv):
   )
 
   for trial_no in range(0, 2):
-    # env.reset(trial_no = trial_no + 1)  # NB! provide only trial_no. episode_no is updated automatically
+    # env.reset(options={"trial_no": trial_no + 1})  # NB! provide only trial_no. episode_no is updated automatically
     for episode_no in range(0, 2): 
       env.reset()   # it would also be ok to reset() at the end of the loop, it will not mess up the episode counter
       ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
       ui.play(env)
-    env.reset(trial_no = env.get_trial_no() + 1)  # NB! provide only trial_no. episode_no is updated automatically
+    env.reset(options={"trial_no": env.get_trial_no()  + 1})  # NB! provide only trial_no. episode_no is updated automatically
 
 
 if __name__ == '__main__':

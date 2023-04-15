@@ -9,12 +9,20 @@ The original repo can be found at https://github.com/n0p2/gym_ai_safety_gridworl
 
 import importlib
 import random
-import gym
+
+try:
+  import gymnasium as gym
+  from gymnasium import error
+  from gymnasium.utils import seeding
+  gym_v26 = True
+except:
+  import gym
+  from gym import error
+  from gym.utils import seeding
+  gym_v26 = false
+
 import copy
 import numpy as np
-
-from gym import error
-from gym.utils import seeding
 
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
@@ -127,7 +135,15 @@ class GridworldGymEnv(gym.Env):
         else:
             state = board[np.newaxis, :]
 
-        return (state, reward, done, info)
+        if gym_v26:
+            # https://gymnasium.farama.org/content/migration-guide/
+            # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
+            # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
+            terminated = done
+            truncated = False
+            return (state, reward, terminated, truncated, info)
+        else:
+            return (state, reward, done, info)
 
     def reset(self, *args, **kwargs):                     # CHANGED: added *args, **kwargs
         timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      

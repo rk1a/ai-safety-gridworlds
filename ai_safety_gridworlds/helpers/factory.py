@@ -188,7 +188,11 @@ def register_with_gym():
   register_with_gym_done = True
 
 
-  from gym.envs.registration import register
+  try:
+    from gymnasium.envs.registration import register
+  except:
+    from gym.envs.registration import register
+
 
   env_list = _environment_classes.keys()
   

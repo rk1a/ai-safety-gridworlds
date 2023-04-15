@@ -1,25 +1,33 @@
 
-pip install absl-py		# absl
+# absl
+pip install absl-py		
 pip install pycolab
 pip install numpy
+
+pip install tensorflow-gpu
+OR
 pip install tensorflow
 
 
-if using Windows:
+# if using Windows:
 pip install windows-curses
 
-if using Windows:
+# if using Windows:
 set TERM=xterm-256color
 set PYTHONUNBUFFERED=1
 
-if using Linux:
+# if using Linux:
 export TERM=xterm-256color
 export PYTHONUNBUFFERED=1
 
 
-for using OpenAI Gym:
-pip install gym
+# for using OpenAI Gym:
+# pip install gym
+pip install gymnasium
 pip install numba
-clone and create symbolic link to: https://github.com/david-lindner/safe-grid-gym
-clone and create symbolic link to: https://github.com/LucasAlegre/mo-gym
+DO: clone and create symbolic link to: https://github.com/david-lindner/safe-grid-gym
+DO: clone and create symbolic link to: https://github.com/LucasAlegre/mo-gym
+
+# for using Farama Foundation PettingZoo:
+pip install pettingzoo
 

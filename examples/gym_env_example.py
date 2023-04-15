@@ -7,7 +7,12 @@ This was adapted from https://github.com/n0p2/gym_ai_safety_gridworlds
 """
 
 import argparse
-import gym
+
+try:
+  import gymnasium as gym
+except:
+  import gym
+
 import logging
 
 from ai_safety_gridworlds.demonstrations import demonstrations

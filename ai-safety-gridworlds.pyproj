@@ -5,14 +5,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{93673ff7-335a-4ab6-ade5-1fe9a40c0bfe}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>ai_safety_gridworlds\environments\boat_race_ex.py</StartupFile>
+    <StartupFile>ai_safety_gridworlds\tests\gridworld_gym_env_test.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId>Global|PythonCore|3.6</InterpreterId>
+    <InterpreterId>Global|PythonCore|3.10</InterpreterId>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <Environment>TERM=xterm-256color
 PYTHONUNBUFFERED=1
@@ -88,6 +88,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     </Compile>
     <Compile Include="ai_safety_gridworlds\helpers\agent_viewer.py" />
     <Compile Include="ai_safety_gridworlds\helpers\factory.py" />
+    <Compile Include="ai_safety_gridworlds\helpers\gridworld_zoo_env.py" />
     <Compile Include="ai_safety_gridworlds\helpers\gridworld_gym_env.py" />
     <Compile Include="ai_safety_gridworlds\helpers\__init__.py" />
     <Compile Include="ai_safety_gridworlds\tests\absent_supervisor_test.py" />
@@ -95,6 +96,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\tests\conveyor_belt_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\distributional_shift_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\friend_foe_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_env_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\island_navigation_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\rocks_diamonds_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\safe_interruptibility_test.py" />
@@ -122,10 +124,12 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Folder Include="screenshots\" />
   </ItemGroup>
   <ItemGroup>
+    <InterpreterReference Include="Global|PythonCore|3.10" />
     <InterpreterReference Include="Global|PythonCore|3.6" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".gitignore" />
+    <Content Include="ai_safety_gridworlds\experiments\experiment_descriptions.md" />
     <Content Include="AUTHORS" />
     <Content Include="CHANGES.md" />
     <Content Include="CONTRIBUTING.md" />

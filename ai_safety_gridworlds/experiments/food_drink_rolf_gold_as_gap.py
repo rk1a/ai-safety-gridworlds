@@ -235,12 +235,12 @@ def main(unused_argv):
   )
 
   for trial_no in range(0, 2):
-    # env.reset(trial_no = trial_no + 1)  # NB! provide only trial_no. episode_no is updated automatically
+    # env.reset(options={"trial_no": trial_no + 1})  # NB! provide only trial_no. episode_no is updated automatically
     for episode_no in range(0, 2): 
       env.reset()   # it would also be ok to reset() at the end of the loop, it will not mess up the episode counter
       ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
       ui.play(env)
-    env.reset(trial_no = env.get_trial_no() + 1)  # NB! provide only trial_no. episode_no is updated automatically
+    env.reset(options={"trial_no": env.get_trial_no()  + 1})  # NB! provide only trial_no. episode_no is updated automatically
 
 
 if __name__ == '__main__':

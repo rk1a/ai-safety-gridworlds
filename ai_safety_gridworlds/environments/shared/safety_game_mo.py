@@ -162,6 +162,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
                trial_no=1,
                episode_no=None,
                disable_env_checker=None,  # The presence of that parameter just means the gym.make() method did not capture it. It happens when gym version < 24.
+               seed=None,   # By default equals to trial_no.
                **kwargs):
     """Initialize a Python v2 environment for a pycolab game factory.
 
@@ -189,6 +190,8 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       trial_no: trial number.
       episode_no: episode number. Use when you need to reset episode_no counter
         manually for some reason (for example, when changing flags).
+        trial_no: trial number. If not specified then previous trial_no is reused.
+      seed: by default equals to trial_no.
       default_reward: defined in Pycolab interface, is currently ignored and 
         overridden to mo_reward({})
       game_factory: a function that returns a new pycolab `Engine`
@@ -320,7 +323,9 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       setattr(self.__class__, "episode_no", 1)  # use static attribute so that the value survives re-construction of the environment
       # use a different random number sequence for each trial
       # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same
-      np.random.seed(int(trial_no) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
+      if seed is None:
+        seed = trial_no
+      np.random.seed(int(seed) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
     
     if episode_no is not None:
       setattr(self.__class__, "episode_no", episode_no)  # use static attribute so that the value survives re-construction of the environment
@@ -343,12 +348,22 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
-  def reset(self, trial_no=None, start_new_experiment=False):
+  def reset(self, trial_no=None, start_new_experiment=False, seed=None, options=None):  # seed, options: for Gym 0.26+ compatibility
     """Start a new episode. 
     Increment the episode counter if the previous game was played.
     
     trial_no: trial number. If not specified then previous trial_no is reused.
+
+    start_new_experiment: instruct the environment to start a new log file.
+
+    seed: for Gym 0.26+ compatibility. By default equals to trial_no.
     """
+
+    if options:   # for Gym 0.26+ compatibility
+      trial_no = options.get("trial_no", trial_no)
+      start_new_experiment = options.get("start_new_experiment", start_new_experiment)
+
+
     # Environment._compute_observation_spec() -> Environment.reset() -> Engine.its_showtime() -> Engine.play() -> Engine._update_and_render() is called straight from the constructor of Environment therefore need to overwrite _the_plot variable here. Overwriting it in SafetyEnvironmentMo.__init__ would be too late
 
     if start_new_experiment:  # instruct the environment to start a new log file
@@ -466,7 +481,9 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         # use a different random number sequence for each trial
         # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same
         # TODO: seed random number generator for each trial AND episode?
-        np.random.seed(int(trial_no) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
+        if seed is None:
+          seed = trial_no
+        np.random.seed(int(seed) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
 
     else:
       if self._state is not None and self._state != environment.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
@@ -1309,6 +1326,9 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
 
 
 def gini_coefficient(reward_dims):
+
+  if len(reward_dims) == 0:
+    return np.float64(0.0)  # NB! need np.float64, not float in order for the _compute_observation_spec code to work
 
   #num_dims = len(reward_dims)
   #numerator = np.sum([

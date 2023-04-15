@@ -1,4 +1,8 @@
-import gym
+try:
+  import gymnasium as gym
+except:
+  import gym
+
 import safe_grid_gym_orig
 
 # TODO: this does not seem to work
