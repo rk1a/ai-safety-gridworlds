@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{93673ff7-335a-4ab6-ade5-1fe9a40c0bfe}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>ai_safety_gridworlds\tests\gridworld_gym_env_test.py</StartupFile>
+    <StartupFile>examples\zoo_parallel_env_example.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -88,7 +88,8 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     </Compile>
     <Compile Include="ai_safety_gridworlds\helpers\agent_viewer.py" />
     <Compile Include="ai_safety_gridworlds\helpers\factory.py" />
-    <Compile Include="ai_safety_gridworlds\helpers\gridworld_zoo_env.py" />
+    <Compile Include="ai_safety_gridworlds\helpers\gridworld_zoo_aec_env.py" />
+    <Compile Include="ai_safety_gridworlds\helpers\gridworld_zoo_parallel_env.py" />
     <Compile Include="ai_safety_gridworlds\helpers\gridworld_gym_env.py" />
     <Compile Include="ai_safety_gridworlds\helpers\__init__.py" />
     <Compile Include="ai_safety_gridworlds\tests\absent_supervisor_test.py" />
@@ -96,7 +97,8 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\tests\conveyor_belt_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\distributional_shift_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\friend_foe_test.py" />
-    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_env_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\island_navigation_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\rocks_diamonds_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\safe_interruptibility_test.py" />
@@ -107,6 +109,8 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\tests\__init__.py" />
     <Compile Include="ai_safety_gridworlds\__init__.py" />
     <Compile Include="examples\agent_viewer_example.py" />
+    <Compile Include="examples\zoo_aec_env_example.py" />
+    <Compile Include="examples\zoo_parallel_env_example.py" />
     <Compile Include="examples\gym_env_example.py" />
     <Compile Include="examples\toy_gridworlds_example.py" />
     <Compile Include="setup.py" />
