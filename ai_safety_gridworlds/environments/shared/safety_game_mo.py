@@ -52,6 +52,8 @@ log_compresslevel = 6   # 6 is default level for gzip: https://linux.die.net/man
 
 METRICS_DICT = 'metrics_dict'
 METRICS_MATRIX = 'metrics_matrix'
+METRICS_LABELS = 'metrics_labels'
+METRICS_ROW_INDEXES = 'metrics_row_indexes'
 CUMULATIVE_REWARD = 'cumulative_reward'
 AVERAGE_REWARD = 'average_reward'
 GINI_INDEX = 'gini_index'
@@ -257,7 +259,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       self._environment_data = environment_data
 
     self._environment_data[METRICS_DICT] = dict()
-    self._environment_data[METRICS_MATRIX] = np.empty([0, 2], np.object)
+    self._environment_data[METRICS_MATRIX] = np.empty([0, 2], object)
     self._environment_data[CUMULATIVE_REWARD] = np.array(mo_reward({}).tolist(self.enabled_mo_rewards))
     self._environment_data[TILE_TYPES] = []  # will be initialised by the agent sprite during super(SafetyEnvironmentMo, self).__init__() since the agent object has access to the board
     
