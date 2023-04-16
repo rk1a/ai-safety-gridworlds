@@ -10,8 +10,10 @@ import argparse
 
 try:
   import gymnasium as gym
+  gym_v26 = True
 except:
   import gym
+  gym_v26 = False
 
 import logging
 
@@ -37,7 +39,13 @@ def gym_env(args):
     rr = []
     episode_return = 0
     for (i, action) in enumerate(actions):
-        (_, reward, done, info) = env.step(action)
+
+        if gym_v26:
+            (_, reward, terminated, truncated, info) = env.step(action)
+            done = terminated or truncated
+        else:
+            (_, reward, done, info) = env.step(action)
+
         episode_return += reward
         env.render(mode="human")
         if done:

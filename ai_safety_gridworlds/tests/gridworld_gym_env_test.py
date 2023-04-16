@@ -108,6 +108,10 @@ class SafetyGridworldsTestCase(unittest.TestCase):
                 observation = observation_space.sample()
                 assert observation_space.contains(observation)
 
+    def reset(self, env):
+        obs = env.reset()
+        return obs
+
     def step(self, env, action):
         if gym_v26:
             obs, _, _, _, _ = env.step(action)
@@ -124,7 +128,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
         of the board.
         """
         env = GridworldGymEnv("boat_race")
-        obs0 = env.reset()
+        obs0 = self.reset(env)
         obs1 = self.step(env, Actions.RIGHT)
         obs2 = self.step(env, Actions.RIGHT)
         self.assertFalse(np.all(obs0 == obs1))
@@ -133,7 +137,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
         # ADDED
         env = GridworldGymEnv("boat_race_ex")
-        obs0 = env.reset()
+        obs0 = self.reset(env)
         obs1 = self.step(env, Actions.RIGHT)
         obs2 = self.step(env, Actions.RIGHT)
         self.assertFalse(np.all(obs0 == obs1))
@@ -146,7 +150,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
         contains the board of the last two timesteps.
         """
         env = GridworldGymEnv("boat_race", use_transitions=False)
-        board_init = env.reset()
+        board_init = self.reset(env)
         assert board_init.shape == (1, 5, 5)
         obs1 = self.step(env, Actions.RIGHT)
         assert obs1.shape == (1, 5, 5)
@@ -154,7 +158,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
         assert obs2.shape == (1, 5, 5)
 
         env = GridworldGymEnv("boat_race", use_transitions=True)
-        board_init = env.reset()
+        board_init = self.reset(env)
         assert board_init.shape == (2, 5, 5)
         obs1 = self.step(env, Actions.RIGHT)
         assert obs1.shape == (2, 5, 5)
@@ -164,7 +168,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
         assert np.all(obs1[1] == obs2[0])
 
         #env = gym.make("TransitionBoatRace-v0")
-        #board_init = env.reset()
+        #board_init = self.reset(env)
         #assert board_init.shape == (2, 5, 5)
         #obs1 = self.step(env, Actions.RIGHT)
         #assert obs1.shape == (2, 5, 5)
@@ -176,7 +180,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
         # ADDED
         env = GridworldGymEnv("boat_race_ex", level=0, use_transitions=False)
-        board_init = env.reset()
+        board_init = self.reset(env)
         assert board_init.shape == (1, 5, 5)
         obs1 = self.step(env, Actions.RIGHT)
         assert obs1.shape == (1, 5, 5)
@@ -184,7 +188,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
         assert obs2.shape == (1, 5, 5)
 
         env = GridworldGymEnv("boat_race_ex", level=0, use_transitions=True)
-        board_init = env.reset()
+        board_init = self.reset(env)
         assert board_init.shape == (2, 5, 5)
         obs1 = self.step(env, Actions.RIGHT)
         assert obs1.shape == (2, 5, 5)
@@ -194,7 +198,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
         assert np.all(obs1[1] == obs2[0])
 
         #env = gym.make("TransitionBoatRaceEx-v0")
-        #board_init = env.reset()
+        #board_init = self.reset(env)
         #assert board_init.shape == (2, 5, 5)
         #obs1 = self.step(env, Actions.RIGHT)
         #assert obs1.shape == (2, 5, 5)
