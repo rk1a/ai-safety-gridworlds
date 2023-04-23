@@ -849,8 +849,9 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       #  with open(os.path.join(self.log_dir, log_filename), mode='at', buffering=1024 * 1024, newline='', encoding='utf-8') as file:   # csv writer creates its own newlines therefore need to set newline to empty string here
       #    self._write_log_row(file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance)
 
-      file = getattr(self.__class__, "log_file_handle")
-      self._write_log_row(file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance)
+      file = getattr(self.__class__, "log_file_handle", None)
+      if file:
+        self._write_log_row(file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance)
 
 
     return timestep
