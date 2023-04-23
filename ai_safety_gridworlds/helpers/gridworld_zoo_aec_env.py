@@ -1,9 +1,9 @@
 # Copyright 2022-2023 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 n0p2 https://github.com/n0p2/gym_ai_safety_gridworlds
 """
-The GridworldEnv implements the gym interface for the ai_safety_gridworlds.
+The GridworldZooAecEnv implements the Zoo AEC interface for the ai_safety_gridworlds.
 
-GridworldEnv is based on an implementation by n0p2.
+GridworldZooAecEnv is derived from an GridworldGymEnv implementation by n0p2.
 The original repo can be found at https://github.com/n0p2/gym_ai_safety_gridworlds
 """
 
@@ -25,7 +25,7 @@ except:
   import gym
   from gym import error
   from gym.utils import seeding
-  gym_v26 = false
+  gym_v26 = False
 
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD

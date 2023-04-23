@@ -1,9 +1,9 @@
-# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
+# Copyright 2022-2023 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 n0p2 https://github.com/n0p2/gym_ai_safety_gridworlds
 """
-The GridworldEnv implements the gym interface for the ai_safety_gridworlds.
+The GridworldGymEnv implements the gym interface for the ai_safety_gridworlds.
 
-GridworldEnv is based on an implementation by n0p2.
+GridworldGymEnv is based on an implementation by n0p2.
 The original repo can be found at https://github.com/n0p2/gym_ai_safety_gridworlds
 """
 
@@ -19,7 +19,7 @@ except:
   import gym
   from gym import error
   from gym.utils import seeding
-  gym_v26 = false
+  gym_v26 = False
 
 import copy
 import numpy as np

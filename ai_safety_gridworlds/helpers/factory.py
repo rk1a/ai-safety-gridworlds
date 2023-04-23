@@ -179,7 +179,7 @@ def get_environment_obj(name, *args, **kwargs):
 
 
 register_with_gym_done = False
-def register_with_gym():
+def register_with_gym():    # TODO: do we need to implement a register_with_zoo() method as well?
   global register_with_gym_done
 
 
