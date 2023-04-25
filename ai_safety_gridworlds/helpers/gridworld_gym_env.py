@@ -71,7 +71,7 @@ class GridworldGymEnv(gym.Env):
 
     metadata = {"render.modes": ["human", "ansi", "rgb_array"]}
 
-    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, *args, **kwargs):
+    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, *args, **kwargs):
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
@@ -79,9 +79,10 @@ class GridworldGymEnv(gym.Env):
         self._rbg = None
         self._last_hidden_reward = 0
         self._use_transitions = use_transitions
+        self._flatten_observations = flatten_observations
         self._last_board = None
         self.action_space = GridworldsActionSpace(self._env)
-        self.observation_space = GridworldsObservationSpace(self._env, use_transitions)
+        self.observation_space = GridworldsObservationSpace(self._env, use_transitions, flatten_observations)
 
     def close(self):
         if self._viewer is not None:
@@ -135,6 +136,9 @@ class GridworldGymEnv(gym.Env):
         else:
             state = board[np.newaxis, :]
 
+        if self._flatten_observations:
+            state = state.flatten()
+
         if gym_v26:
             # https://gymnasium.farama.org/content/migration-guide/
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
@@ -159,6 +163,9 @@ class GridworldGymEnv(gym.Env):
             self._last_board = board
         else:
             state = board[np.newaxis, :]
+
+        if self._flatten_observations:
+            state = state.flatten()
 
         return state
 
@@ -215,6 +222,7 @@ class GridworldGymEnv(gym.Env):
 
 
 class GridworldsActionSpace(gym.Space):
+
     def __init__(self, env):
         action_spec = env.action_spec()
         assert action_spec.name == "discrete"
@@ -240,13 +248,23 @@ class GridworldsActionSpace(gym.Space):
 
 
 class GridworldsObservationSpace(gym.Space):
-    def __init__(self, env, use_transitions):
+
+    def __init__(self, env, use_transitions, flatten_observations):
         self.observation_spec_dict = env.observation_spec()
         self.use_transitions = use_transitions
-        if self.use_transitions:
-            shape = (2, *self.observation_spec_dict["board"].shape)
+        self.flatten_observations = flatten_observations
+
+        if flatten_observations:
+            if self.use_transitions:
+                shape = (2, np.prod(self.observation_spec_dict["board"].shape))
+            else:
+                shape = (np.prod(self.observation_spec_dict["board"].shape), )
         else:
-            shape = (1, *self.observation_spec_dict["board"].shape)
+            if self.use_transitions:
+                shape = (2, *self.observation_spec_dict["board"].shape)
+            else:
+                shape = (1, *self.observation_spec_dict["board"].shape)
+
         dtype = self.observation_spec_dict["board"].dtype
         super(GridworldsObservationSpace, self).__init__(shape=shape, dtype=dtype)
 
@@ -265,7 +283,10 @@ class GridworldsObservationSpace(gym.Space):
                 observation[key] = {}
             else:
                 observation[key] = spec.generate_value()
-        return observation["board"][np.newaxis, :]
+        result = observation["board"][np.newaxis, :]
+        if self.flatten_observations:
+            result = result.flatten()
+        return result
 
     def contains(self, x):
         if "board" in self.observation_spec_dict.keys():
