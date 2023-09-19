@@ -35,3 +35,7 @@ The currently available experiment environments are described here https://docs.
 
 * For other interesting Gridworlds environments contributions, take a look at https://github.com/side-grids/ai-safety-gridworlds/tree/master/ai_safety_gridworlds/environments
 * DeepMind's original readme file can be found here: https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/Original%20Readme.md
+
+# Papers
+
+* A published research paper based on experiments using this repository: Smith, B.J., Klassert, R. & Pihlakas, R. Using soft maximin for risk averse multi-objective decision-making. Auton Agent Multi-Agent Syst 37, 11 (2023). https://doi.org/10.1007/s10458-022-09586-2 
