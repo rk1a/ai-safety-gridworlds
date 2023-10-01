@@ -92,6 +92,15 @@ class GridworldZooAecEnv(AECEnv):
         self._flatten_observations = flatten_observations
         self._last_board = None
 
+        self.rewards = { agent: None for agent in self.possible_agents }
+        self.infos: { agent: None for agent in self.possible_agents }
+
+        if gym_v26:
+            self.terminations = { agent: False for agent in self.possible_agents }
+            self.truncations = { agent: False for agent in self.possible_agents }
+        else:
+            self.dones = { agent: False for agent in self.possible_agents }
+
         self.action_spaces = {
             agent: GridworldsActionSpace(self._env) for agent in self.possible_agents
         }  
@@ -160,6 +169,12 @@ class GridworldZooAecEnv(AECEnv):
         if self._flatten_observations:
             state = state.flatten()
 
+
+        agent_name = self.possible_agents[0]
+
+        self.rewards[agent_name] = reward
+        self.infos[agent_name] = info
+
         if gym_v26:
             # https://gymnasium.farama.org/content/migration-guide/
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
@@ -167,8 +182,11 @@ class GridworldZooAecEnv(AECEnv):
             terminated = done
             truncated = False
             self.last_step_result = (state, reward, terminated, truncated, info)            
+            self.terminations[agent_name] = terminated
+            self.truncations[agent_name] = truncated
         else:
             self.last_step_result = (state, reward, done, info)
+            self.dones[agent_name] = done
 
         # return self.last_step
 
@@ -193,10 +211,17 @@ class GridworldZooAecEnv(AECEnv):
         # TODO: reward, info 
         reward = None
         info = None
+
+        self.rewards[agent_name] = reward
+        self.infos[agent_name] = info
+
         if gym_v26:
-            self.last_step_result = (state, reward, False, False, info)           
+            self.last_step_result = (state, reward, False, False, info)              
+            self.terminations[agent_name] = False
+            self.truncations[agent_name] = False      
         else:
-            self.last_step_result = (state, reward, False, info)          
+            self.last_step_result = (state, reward, False, info)   
+            self.dones[agent_name] = False     
 
         # return state
 
@@ -213,6 +238,11 @@ class GridworldZooAecEnv(AECEnv):
     def set_current_q_value_per_action(self, q_value_per_action_per_agent: dict):                           # ADDED
         q_value_per_action = next(iter(q_value_per_action_per_agent.items()))[1]
         return self._env.set_current_q_value_per_action(q_value_per_action)
+
+    # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
+    #def set_current_agent(self, current_agent: dict):                           # ADDED
+    #    current_agent = next(iter(current_agent.items()))[1]
+    #    return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)

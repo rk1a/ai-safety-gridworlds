@@ -156,15 +156,16 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._flatten_observations:
             state = state.flatten()
 
+        agent_name = possible_agents[0]
         if gym_v26:
             # https://gymnasium.farama.org/content/migration-guide/
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminated = done
-            truncated = False
-            return ([state], [reward], [terminated], [truncated], [info])
+            truncated = False            
+            return ({agent_name: state}, {agent_name: reward}, {agent_name: terminated}, {agent_name: truncated}, {agent_name: info})
         else:
-            return ([state], [reward], [done], [info])
+            return ({agent_name: state}, {agent_name: reward}, {agent_name: done}, {agent_name: info})
 
     def reset(self, *args, **kwargs):                     # CHANGED: added *args, **kwargs
         timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      
@@ -184,7 +185,8 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._flatten_observations:
             state = state.flatten()
 
-        return [state]
+        agent_name = possible_agents[0]
+        return {agent_name: state}
 
     def get_reward_unit_space(self):                    # ADDED
         return self._env.get_reward_unit_space()
@@ -196,9 +198,14 @@ class GridworldZooParallelEnv(ParallelEnv):
         return self._env.get_episode_no()
 
     # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
-    def set_current_q_value_per_action(self, q_value_per_action_per_agent: dict):                           # ADDED
-        q_value_per_action = next(iter(q_value_per_action_per_agent.items()))[1]
-        return self._env.set_current_q_value_per_action(q_value_per_action)
+    def set_current_q_value_per_action(self, current_agent: dict):                           # ADDED
+        current_agent = next(iter(current_agent.items()))[1]
+        return self._env.set_current_agent(current_agent)
+
+    # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
+    #def set_current_agent(self, current_agent: dict):                           # ADDED
+    #    current_agent = next(iter(current_agent.items()))[1]
+    #    return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)

@@ -28,15 +28,17 @@ import gzip
 import itertools
 import numbers
 import os
+from collections import OrderedDict
 
 from absl import flags
 
 # Dependency imports
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
 from ai_safety_gridworlds.environments.shared.rl import environment
+from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
-from ai_safety_gridworlds.environments.shared.plot_mo import PlotMo
-from ai_safety_gridworlds.environments.shared.safety_game import make_safety_game, SafetyEnvironment, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
+from ai_safety_gridworlds.environments.shared.plot_ma import PlotMa
+from ai_safety_gridworlds.environments.shared.safety_game_ma import make_safety_game, SafetyEnvironmentMa, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
 from ai_safety_gridworlds.environments.shared.termination_reason_enum import TerminationReason
 
 
@@ -128,7 +130,7 @@ flags_to_skip = [
 ]
 
 
-class SafetyEnvironmentMo(SafetyEnvironment):
+class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
   """Base class for multi-objective safety gridworld environments.
 
   Environments implementing this base class initialize the Python environment
@@ -143,7 +145,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
   instantiate the python environment API around the pycolab game.
   """
 
-  def __init__(self, enabled_mo_rewards, 
+  def __init__(self, enabled_ma_rewards, 
                *args, 
                #game_factory,
                #game_bg_colours,
@@ -170,15 +172,16 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     """Initialize a Python v2 environment for a pycolab game factory.
 
     Args:
-      enabled_mo_rewards: list of multi-objective rewards being used in 
+      enabled_ma_rewards: list of multi-objective rewards being used in 
         current map. Providing this list enables reducing the dimensionality of 
-        the reward vector in such a way that unused reward dimensions are left 
+        the reward vector in such a way that unused reward agent keys are left 
         out. If set to None then the multi-objective rewards are disabled: the 
         rewards are then scalarised before returning to the agent.
       scalarise: Makes the get_overall_performance(), get_last_performance(), 
-        and timestep.reward from step() and reset() to return an ordinary scalar 
-        value like non-multi-objective environments do. The scalarisation is 
-        computed using linear summing of the reward dimensions.
+        and timestep.reward from step() and reset() to return a dictionary of 
+        ordinary scalar values like non-multi-objective but multi-agent 
+        environments do. The scalarisation is computed using linear summing of 
+        the reward dimensions per agent key.
       log_columns: turns on CSV logging of specified column types (timestamp, 
         environment_name, trial_no, episode_no, iteration_no, 
         environment_arguments, reward_unit_sizes, reward, scalar_reward, 
@@ -196,7 +199,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         trial_no: trial number. If not specified then previous trial_no is reused.
       seed: by default equals to trial_no.
       default_reward: defined in Pycolab interface, is currently ignored and 
-        overridden to mo_reward({})
+        overridden to ma_reward({})
       game_factory: a function that returns a new pycolab `Engine`
         instance corresponding to the game being played.
       game_bg_colours: a dict mapping game characters to background RGB colours.
@@ -244,12 +247,14 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       self.flags = {}
 
 
-    self.enabled_mo_rewards = enabled_mo_rewards
-    self.enabled_reward_dimension_keys = mo_reward.get_enabled_reward_dimension_keys(self.enabled_mo_rewards)
+    self.enabled_ma_rewards = enabled_ma_rewards
+    self.enabled_agents_reward_dimensions = ma_reward.get_enabled_agent_rewards_keys(self.enabled_ma_rewards)
     
-    self.reward_unit_space = mo_reward.get_enabled_reward_unit_space(self.enabled_mo_rewards)
-    self.reward_unit_space[0] = np.array([float(x) for x in self.reward_unit_space[0]]) # min
-    self.reward_unit_space[1] = np.array([float(x) for x in self.reward_unit_space[1]]) # max
+    # TODO: refactor to a method in ma_reward
+    self.reward_unit_space = ma_reward.get_enabled_reward_unit_space(self.enabled_ma_rewards)
+    for agent_key, agent_reward_unit_space in self.reward_unit_space.items():
+      agent_reward_unit_space[0] = np.array([float(x) for x in agent_reward_unit_space[0]]) # min
+      agent_reward_unit_space[1] = np.array([float(x) for x in agent_reward_unit_space[1]]) # max
 
     self.scalarise = scalarise
 
@@ -261,22 +266,30 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
     self._environment_data[METRICS_DICT] = dict()
     self._environment_data[METRICS_MATRIX] = np.empty([0, 2], object)
-    self._environment_data[CUMULATIVE_REWARD] = np.array(mo_reward({}).tolist(self.enabled_mo_rewards))
-    self._environment_data[TILE_TYPES] = []  # will be initialised by the agent sprite during super(SafetyEnvironmentMo, self).__init__() since the agent object has access to the board
-    
+
+    # TODO: refactor to a method in ma_reward
+    self._environment_data[CUMULATIVE_REWARD] = {}
+    for agent_key, agent_enabled_mo_rewards in self.enabled_ma_rewards.items():
+      self._environment_data[CUMULATIVE_REWARD][agent_key] = np.array(mo_reward({}).tolist(agent_enabled_mo_rewards))
+
+    self._environment_data[TILE_TYPES] = {}  # will be initialised by the agent sprites during super(SafetyEnvironmentMoMa, self).__init__() since the agent object has access to the board
+    for agent_key in self.enabled_ma_rewards.keys():
+      self._environment_data[TILE_TYPES][agent_key] = []
+
     self.q_value_per_location = {}
     self.q_value_per_tiletype = {}  
     self.q_value_per_action = None
+    self.current_agent = None
 
 
 
     # self._init_done = False   # needed in order to skip logging during _compute_observation_spec() call
 
     # NB! do not pass on disable_env_checker parameter since the presence of that parameter just means the gym.make() method did not capture it. It happens when gym version < 24.
-    super(SafetyEnvironmentMo, self).__init__(*args, environment_data=self._environment_data, **kwargs)
+    super(SafetyEnvironmentMoMa, self).__init__(*args, environment_data=self._environment_data, **kwargs)
 
     # parent class safety_game.SafetyEnvironment sets default_reward=0
-    self._default_reward = mo_reward({})  # TODO: consider default_reward argument's value
+    self._default_reward = ma_reward({})  # TODO: consider default_reward argument's value
 
     # self._init_done = True
     
@@ -297,8 +310,8 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     prev_flags = getattr(self.__class__, "flags", {})
     setattr(self.__class__, "flags", self.flags)
 
-    prev_enabled_reward_dimension_keys = getattr(self.__class__, "enabled_reward_dimension_keys", [])
-    setattr(self.__class__, "enabled_reward_dimension_keys", self.enabled_reward_dimension_keys)
+    prev_enabled_reward_agent_keys = getattr(self.__class__, "enabled_agents_reward_dimensions", [])
+    setattr(self.__class__, "enabled_agents_reward_dimensions", self.enabled_agents_reward_dimensions)
 
     prev_metrics_keys = getattr(self.__class__, "metrics_keys", [])
     setattr(self.__class__, "metrics_keys", self.metrics_keys)
@@ -313,7 +326,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       or prev_log_filename_comment != log_filename_comment 
       or prev_log_arguments != self.log_arguments
       or prev_flags != self.flags
-      or prev_enabled_reward_dimension_keys != self.enabled_reward_dimension_keys
+      or prev_enabled_reward_agent_keys != self.enabled_agents_reward_dimensions
       or prev_metrics_keys != self.metrics_keys
     ):
       # prev_trial_no = -1    # this causes a new log file to be created
@@ -347,9 +360,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
     self._agent_perspectives = agent_perspectives
 
-
     # log file header creation moved to reset() method
-
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
@@ -369,7 +380,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       start_new_experiment = options.get("start_new_experiment", start_new_experiment)
 
 
-    # Environment._compute_observation_spec() -> Environment.reset() -> Engine.its_showtime() -> Engine.play() -> Engine._update_and_render() is called straight from the constructor of Environment therefore need to overwrite _the_plot variable here. Overwriting it in SafetyEnvironmentMo.__init__ would be too late
+    # Environment._compute_observation_spec() -> Environment.reset() -> Engine.its_showtime() -> Engine.play() -> Engine._update_and_render() is called straight from the constructor of Environment therefore need to overwrite _the_plot variable here. Overwriting it in SafetyEnvironmentMoMa.__init__ would be too late
 
     if start_new_experiment:  # instruct the environment to start a new log file
       prev_experiment_no = getattr(self.__class__, "prev_experiment_no", 0)
@@ -423,9 +434,12 @@ class SafetyEnvironmentMo(SafetyEnvironment):
                 print("\t\t'" + str(key) + "': " + str(value) + ",", file=file)
               print("\t},", file=file)
 
-              print("\t'reward_dimensions': {", file=file)
-              for index, key in enumerate(self.enabled_reward_dimension_keys):
-                print("\t\t'" + str(key) + "': [" + str(self.reward_unit_space[0][index]) + ", " + str(self.reward_unit_space[1][index]) + "],", file=file)
+              print("\t'agents_reward_dimensions': {", file=file)
+              for agent_key, enabled_agent_reward_dimensions in self.enabled_agents_reward_dimensions.items():
+                print("\t\t'" + agent_key + "': {", file=file)
+                for index, key in enumerate(enabled_agent_reward_dimensions):
+                  print("\t\t\t'" + str(key) + "': [" + str(self.reward_unit_space[agent_key][0][index]) + ", " + str(self.reward_unit_space[agent_key][1][index]) + "],", file=file)
+                print("\t\t},", file=file)
               print("\t},", file=file)
             
               print("\t'metrics_keys': [", file=file)
@@ -501,7 +515,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     # Build a new game and retrieve its first set of state/reward/discount.
     self._current_game = self._game_factory()
 
-    self._current_game._the_plot = PlotMo()    # ADDED: incoming mo_reward argument to add_reward() has to be treated as immutable else rewards across timesteps will be accumulated in per timestep accumulator
+    self._current_game._the_plot = PlotMa()    # ADDED: incoming ma_reward argument to add_reward() has to be treated as immutable else rewards across timesteps will be accumulated in per timestep accumulator
 
     self._state = environment.StepType.FIRST
     # Collect environment returns from starting the game and update state.
@@ -543,19 +557,19 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         data.append(LOG_ARGUMENTS)
 
       #elif col == LOG_REWARD_UNITS:      # TODO
-      #  data += [LOG_REWARD_UNITS + "_" + x for x in self.enabled_reward_dimension_keys]
+      #  data += [LOG_REWARD_UNITS + "_" + x for x in self.enabled_agents_reward_dimensions]
 
       elif col == LOG_REWARD:
-        data += [LOG_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
+        data += [LOG_REWARD + "_" + dim_key for dim_key in self.enabled_agents_reward_dimensions]
 
       elif col == LOG_SCALAR_REWARD:
         data.append(LOG_SCALAR_REWARD)
 
       elif col == LOG_CUMULATIVE_REWARD:
-        data += [LOG_CUMULATIVE_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
+        data += [LOG_CUMULATIVE_REWARD + "_" + dim_key for dim_key in self.enabled_agents_reward_dimensions]
 
       elif col == LOG_AVERAGE_REWARD:
-        data += [LOG_AVERAGE_REWARD + "_" + dim_key for dim_key in self.enabled_reward_dimension_keys]
+        data += [LOG_AVERAGE_REWARD + "_" + dim_key for dim_key in self.enabled_agents_reward_dimensions]
 
       elif col == LOG_SCALAR_CUMULATIVE_REWARD:
         data.append(LOG_SCALAR_CUMULATIVE_REWARD)
@@ -585,7 +599,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         data += list(itertools.chain.from_iterable([
                   [
                     LOG_QVALUES_PER_TILETYPE + "_" + tile_type.strip() + "_" + dim_key    # NB! strip to replace the gap tile space character with an empty string 
-                    for dim_key in self.enabled_reward_dimension_keys
+                    for dim_key in self.enabled_agents_reward_dimensions
                   ]
                   for tile_type in self._environment_data[TILE_TYPES]
                 ]))
@@ -594,67 +608,93 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     file.flush()
 
 
-  def step(self, actions, q_value_per_action=None):
+  def step(self, agents_actions, current_agent=None, q_value_per_action=None):
+
+    #if current_agent is None:
+    #  current_agent = self.current_agent    # gym does not support additional arguments to .step() method so we need to use a separate method and a DTO field. See also https://github.com/openai/gym/issues/2399
 
     if q_value_per_action is None:
       q_value_per_action = self.q_value_per_action    # gym does not support additional arguments to .step() method so we need to use a separate method and a DTO field. See also https://github.com/openai/gym/issues/2399
 
     if q_value_per_action is not None and (LOG_QVALUES_PER_TILETYPE in self.log_columns):
       
-      agent = self._environment_data[AGENT_SPRITE]
+      # for agent in self._environment_data[AGENT_SPRITE]:
+      for agent in agents_actions.keys():
          
-      # adapted from GridworldsActionSpace.__init__() in safe_grid_gym\envs\gridworlds_env.py in https://github.com/n0p2/gym_ai_safety_gridworlds
-      action_spec = self.action_spec()
-      assert action_spec.name == "discrete"
-      assert action_spec.dtype == np.int32
-      assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
+        # TODO: raise error if agents_actions contains an agent that is not initialised in self._environment_data[AGENT_SPRITE]
+        #action = agents_actions.get(agent)
+        #if action is None:
+        #  continue
 
-      q_value_per_location = {}
-      q_value_per_tiletype = {}  
+        # adapted from GridworldsActionSpace.__init__() in safe_grid_gym\envs\gridworlds_env.py in https://github.com/n0p2/gym_ai_safety_gridworlds
+        action_spec = self.action_spec()  # TODO: different action specs per agent?
+        assert action_spec.name == "discrete"
+        assert action_spec.dtype == np.int32
+        assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
 
-      for action_index, q_value in enumerate(q_value_per_action):
+        q_value_per_location = {}
+        q_value_per_tiletype = {}  
 
-        action = action_spec.minimum + action_index
+        for action_index, q_value in enumerate(q_value_per_action[agent]):
 
-        # line adapted from Engine._update_and_render() in pycolab\engine.py
-        target_location = agent.simulate_update(action, self._current_game._board.board, self._current_game._board.layers,
-                      self._current_game._backdrop, self._current_game._sprites_and_drapes, self._current_game._the_plot)
+          action = action_spec.minimum + action_index
 
-        tile_type = chr(self._current_game._board.board[target_location])
+          # line adapted from Engine._update_and_render() in pycolab\engine.py
+          target_location = agent.simulate_update(action, self._current_game._board.board, self._current_game._board.layers,
+                        self._current_game._backdrop, self._current_game._sprites_and_drapes, self._current_game._the_plot)
 
-        if target_location not in q_value_per_location:
-          q_value_per_location[target_location] = []  # create list of q_values since multiple actions might map to same location
-        if tile_type not in q_value_per_tiletype:
-          q_value_per_tiletype[tile_type] = []  # create list of q_values since multiple actions might map to same location
+          tile_type = chr(self._current_game._board.board[target_location])
 
-        # self.q_value_per_location[str(target_location.row) + "_" + str(target_location.col)] = q_value
-        q_value_per_location[target_location].append(q_value)
-        q_value_per_tiletype[tile_type].append(q_value)
+          if target_location not in q_value_per_location:
+            q_value_per_location[target_location] = []  # create list of q_values since multiple actions might map to same location
+          if tile_type not in q_value_per_tiletype:
+            q_value_per_tiletype[tile_type] = []  # create list of q_values since multiple actions might map to same location
 
-
-      # compute mean from list of q_values since multiple actions might map to same location
-      q_value_per_location = { key: np.mean(value, axis=0) for key, value in q_value_per_location.items() }
-      q_value_per_tiletype = { key: np.mean(value, axis=0) for key, value in q_value_per_tiletype.items() }
-
-      # NB! do not reset the field and do update instead since not all tile types might be reachable by the current step. Their Q values should remain available and same.
-      self.q_value_per_location.update(q_value_per_location)
-      self.q_value_per_tiletype.update(q_value_per_tiletype)
+          # self.q_value_per_location[str(target_location.row) + "_" + str(target_location.col)] = q_value
+          q_value_per_location[target_location].append(q_value)
+          q_value_per_tiletype[tile_type].append(q_value)
 
 
-    return super(SafetyEnvironmentMo, self).step(actions)
+        # compute mean from list of q_values since multiple actions might map to same location
+        q_value_per_location = { key: np.mean(value, axis=0) for key, value in q_value_per_location.items() }
+        q_value_per_tiletype = { key: np.mean(value, axis=0) for key, value in q_value_per_tiletype.items() }
+
+        if agent not in self.q_value_per_location:
+          self.q_value_per_location[agent] = {}
+        if agent not in self.q_value_per_tiletype:
+          self.q_value_per_tiletype[agent] = {}
+
+        # NB! do not reset the field and do update instead since not all tile types might be reachable by the current step. Their Q values should remain available and same.
+        self.q_value_per_location[agent].update(q_value_per_location)
+        self.q_value_per_tiletype[agent].update(q_value_per_tiletype)
+
+      #/ for agent in self._environment_data[AGENT_SPRITE]:
+
+
+    return super(SafetyEnvironmentMoMa, self).step(agents_actions)
 
     ## adapted from SafetyEnvironment.step() in ai_safety_gridworlds\environments\shared\safety_game.py
-    #timestep = super(SafetyEnvironment, self).step(actions)   # NB! intentionally calling super of SafetyEnvironment not SafetyEnvironmentMo in order to call the grantparent class and skip the SafetyEnvironment.step() method
+    #timestep = super(SafetyEnvironment, self).step(actions)   # NB! intentionally calling super of SafetyEnvironment not SafetyEnvironmentMoMa in order to call the grantparent class and skip the SafetyEnvironment.step() method
     #return self._process_timestep(timestep)
 
 
   #def _compute_observation_spec(self):
   #  """Helper for `__init__`: compute our environment's observation spec."""
-  #  # Environment._compute_observation_spec() -> Environment.reset() -> Engine.its_showtime() -> Engine.play() -> Engine._update_and_render() is called straight from the constructor of Environment therefore need to overwrite _the_plot variable here. Overwriting it in SafetyEnvironmentMo.__init__ would be too late
+  #  # Environment._compute_observation_spec() -> Environment.reset() -> Engine.its_showtime() -> Engine.play() -> Engine._update_and_render() is called straight from the constructor of Environment therefore need to overwrite _the_plot variable here. Overwriting it in SafetyEnvironmentMoMa.__init__ would be too late
 
-  #  self._current_game._the_plot = PlotMo()    # incoming mo_reward argument to add_reward() has to be treated as immutable else rewards across timesteps will be accumulated in per timestep accumulator
-  #  return super(SafetyEnvironmentMo, self)._compute_observation_spec()
+  #  self._current_game._the_plot = PlotMa()    # incoming ma_reward argument to add_reward() has to be treated as immutable else rewards across timesteps will be accumulated in per timestep accumulator
+  #  return super(SafetyEnvironmentMoMa, self)._compute_observation_spec()
 
+
+  def _ma_observation_spec_helper(self, k, v):
+
+    if isinstance(v, dict):
+      result = {}
+      for agent_key, agent_value in v.items():
+        result[agent_key] = specs.ArraySpec(agent_value.shape, agent_value.dtype, name=k)
+      return result
+    else:
+      return specs.ArraySpec(v.shape, v.dtype, name=k)
 
   # adapted from SafetyEnvironment._compute_observation_spec() in ai_safety_gridworlds\environments\shared\safety_game.py
   def _compute_observation_spec(self):
@@ -665,9 +705,11 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
     timestep = self.reset()
-    observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
+    observation_spec = {k: self._ma_observation_spec_helper(k ,v)
                         for k, v in six.iteritems(timestep.observation)
-                        if k not in [EXTRA_OBSERVATIONS, METRICS_DICT]}                 # CHANGE
+                        if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
+                                     # CUMULATIVE_REWARD, AVERAGE_REWARD    # TODO
+                                    ]}
     observation_spec[EXTRA_OBSERVATIONS] = dict()
        
     observation_spec[METRICS_DICT] = dict()                                             # ADDED
@@ -691,12 +733,17 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     """
     if len(self._episodic_performances) < 1:
       return default
-    # CHANGE: mo_reward is not directly convertible to np.array or float
-    reward_dims = self._calculate_overall_performance().tolist(self.enabled_mo_rewards)
-    if self.scalarise:
-      return float(sum(reward_dims))
-    else:
-      return np.array([float(x) for x in reward_dims])
+    # CHANGE: ma_reward is not directly convertible to np.array or float
+    reward_dims = self._calculate_overall_performance().tolist(self.enabled_ma_rewards)
+
+    result = {}
+    for agent_key, agent_reward_dims in reward_dims.items():
+      if self.scalarise:
+        result[agent_key] = float(sum(agent_reward_dims))
+      else:
+        result[agent_key] = np.array([float(x) for x in agent_reward_dims])
+
+    return result
 
 
   # adapted from SafetyEnvironment.get_last_performance() in ai_safety_gridworlds\environments\shared\safety_game.py
@@ -722,12 +769,17 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     """
     if len(self._episodic_performances) < 1:
       return default
-    # CHANGE: mo_reward is not directly convertible to np.array or float
-    reward_dims = self._episodic_performances[-1].tolist(self.enabled_mo_rewards)
-    if self.scalarise:
-      return float(sum(reward_dims))
-    else:
-      return np.array([float(x) for x in reward_dims])
+    # CHANGE: ma_reward is not directly convertible to np.array or float
+    reward_dims = self._episodic_performances[-1].tolist(self.enabled_ma_rewards)
+
+    result = {}
+    for agent_key, agent_reward_dims in reward_dims.items():
+      if self.scalarise:
+        result[agent_key] = float(sum(reward_dims))
+      else:
+        result[agent_key] = np.array([float(x) for x in reward_dims])
+
+    return result
 
 
   # adapted from safety_game.py SafetyEnvironment._process_timestep(self, timestep)
@@ -749,7 +801,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
     # Reset the cumulative episode reward.
     if timestep.first():
-      self._episode_return = mo_reward({})    # CHANGE: for multi-objective rewards
+      self._episode_return = ma_reward({})    # CHANGE: for multi-agent rewards
       self._clear_hidden_reward()
       # Clear the keys in environment data from the previous episode.
       for key in self._keys_to_clear:
@@ -787,50 +839,89 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     iteration = self._current_game.the_plot.frame
 
 
-    cumulative_reward_dims = self._episode_return.tolist(self.enabled_mo_rewards)
-    average_reward_dims = [x / (iteration + 1) for x in cumulative_reward_dims]
-    scalar_cumulative_reward = sum(cumulative_reward_dims)
-    scalar_average_reward = sum(average_reward_dims)
+    timestep.observation[CUMULATIVE_REWARD] = {}
+    timestep.observation[AVERAGE_REWARD] = {}
+    average_reward_dims = {}
+    cumulative_reward_dims = self._episode_return.tolist(self.enabled_ma_rewards)
+    scalar_cumulative_reward = {}
+    scalar_average_reward = {}
+    for agent_key, agent_cumulative_reward_dims in cumulative_reward_dims.items():
 
-    if self.scalarise:
-      cumulative_reward = float(scalar_cumulative_reward)
-    else:
-      cumulative_reward = np.array([float(x) for x in cumulative_reward_dims])
+      agent_average_reward_dims = [x / (iteration + 1) for x in agent_cumulative_reward_dims]
+      agent_scalar_cumulative_reward = sum(agent_cumulative_reward_dims)
+      agent_scalar_average_reward = sum(agent_average_reward_dims)
+      scalar_cumulative_reward[agent_key] = agent_scalar_cumulative_reward
+      scalar_average_reward[agent_key] = agent_scalar_average_reward
 
-    if self.scalarise:
-      average_reward = float(scalar_average_reward)
-    else:
-      average_reward = np.array([float(x) for x in average_reward_dims])
+      if self.scalarise:
+        agent_cumulative_reward = float(agent_scalar_cumulative_reward)
+      else:
+        agent_cumulative_reward = np.array([float(x) for x in agent_cumulative_reward_dims])
 
-    timestep.observation[CUMULATIVE_REWARD] = cumulative_reward
-    timestep.observation[AVERAGE_REWARD] = average_reward
+      if self.scalarise:
+        agent_average_reward = float(agent_scalar_average_reward)
+      else:
+        agent_average_reward = np.array([float(x) for x in agent_average_reward_dims])
+
+      timestep.observation[CUMULATIVE_REWARD][agent_key] = agent_cumulative_reward
+      timestep.observation[AVERAGE_REWARD][agent_key] = agent_average_reward
+      average_reward_dims[agent_key] = agent_average_reward_dims
+
+    #/ for agent_key, agent_cumulative_reward_dims in cumulative_reward_dims.items():
 
 
-    # conversion of mo_reward to a np.array or float
+    # conversion of ma_reward to a np.array or float
     if timestep.reward is not None:
-      reward_dims = timestep.reward.tolist(self.enabled_mo_rewards)      
+      reward_dims = timestep.reward.tolist(self.enabled_ma_rewards)      
     else: # NB! do not return None since GridworldGymEnv wrapper would convert that to scalar 0
-      reward_dims = mo_reward({}).tolist(self.enabled_mo_rewards)
-    scalar_reward = sum(reward_dims)
+      reward_dims = ma_reward({}).tolist(self.enabled_ma_rewards)
 
-    if self.scalarise:
-      reward = float(scalar_reward)
-    else:
-      reward = np.array([float(x) for x in reward_dims])
+
+    scalar_reward = {}
+    reward = {}
+    for agent_key, agent_reward_dims in reward_dims.items():
+
+      agent_scalar_reward = sum(agent_reward_dims)
+      scalar_reward[agent_key] = agent_scalar_reward
+
+      if self.scalarise:
+        agent_reward = float(agent_scalar_reward)
+      else:
+        agent_reward = np.array([float(x) for x in agent_reward_dims])
+
+      reward[agent_key] = agent_reward
+
+    #/ for agent_key, agent_reward_dims in reward_dims.items():
 
     timestep = timestep._replace(reward=reward)
+    
+    
+    gini_index = {}
+    cumulative_gini_index = {}
+    timestep.observation[GINI_INDEX] = {}
+    timestep.observation[CUMULATIVE_GINI_INDEX] = {}
+    mo_variance = {}
+    cumulative_mo_variance = {}
+    average_mo_variance = {}
+    for agent_key, agent_reward_dims in reward_dims.items():
+
+      agent_cumulative_reward_dims = cumulative_reward_dims[agent_key]
+      agent_average_reward_dims = average_reward_dims[agent_key]
+
+      agent_gini_index = gini_coefficient(agent_reward_dims) * 100
+      agent_cumulative_gini_index = gini_coefficient(agent_cumulative_reward_dims) * 100
+      gini_index[agent_key] = agent_gini_index
+      cumulative_gini_index[agent_key]= agent_cumulative_gini_index
+      timestep.observation[GINI_INDEX][agent_key] = agent_gini_index
+      timestep.observation[CUMULATIVE_GINI_INDEX][agent_key] = agent_cumulative_gini_index
 
 
-    gini_index = gini_coefficient(reward_dims) * 100
-    cumulative_gini_index = gini_coefficient(cumulative_reward_dims) * 100
-    timestep.observation[GINI_INDEX] = gini_index
-    timestep.observation[CUMULATIVE_GINI_INDEX] = cumulative_gini_index
+      # If, however, ddof is specified, the divisor N - ddof is used instead. In standard statistical practice, ddof=1 provides an unbiased estimator of the variance of a hypothetical infinite population. ddof=0 provides a maximum likelihood estimate of the variance for normally distributed variables.
+      mo_variance[agent_key] = np.var(agent_reward_dims, ddof=0)
+      cumulative_mo_variance[agent_key] = np.var(agent_cumulative_reward_dims, ddof=0)
+      average_mo_variance[agent_key] = np.var(agent_average_reward_dims, ddof=0)
 
-
-    # If, however, ddof is specified, the divisor N - ddof is used instead. In standard statistical practice, ddof=1 provides an unbiased estimator of the variance of a hypothetical infinite population. ddof=0 provides a maximum likelihood estimate of the variance for normally distributed variables.
-    mo_variance = np.var(reward_dims, ddof=0)
-    cumulative_mo_variance = np.var(cumulative_reward_dims, ddof=0)
-    average_mo_variance = np.var(average_reward_dims, ddof=0)
+    #/ for agent_key, agent_reward_dims in reward_dims.items():
 
     timestep.observation[MO_VARIANCE] = mo_variance
     timestep.observation[CUMULATIVE_MO_VARIANCE] = cumulative_mo_variance
@@ -989,6 +1080,10 @@ class SafetyEnvironmentMo(SafetyEnvironment):
   def set_current_q_value_per_action(self, q_value_per_action):
     self.q_value_per_action = q_value_per_action
 
+  # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
+  def set_current_agent(self, current_agent):
+    self.current_agent = self._env[AGENT_SPRITE][current_agent]
+
 
 
 class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpriteEx
@@ -1018,7 +1113,9 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
         corner, position, character, environment_data, original_board,
         impassable=impassable)
 
-    environment_data[AGENT_SPRITE] = self
+    if AGENT_SPRITE not in environment_data:      # ADDED
+      environment_data[AGENT_SPRITE] = OrderedDict()         # ADDED
+    environment_data[AGENT_SPRITE][character] = self   # CHANGED
 
     gap_chr = environment_data.get("what_lies_beneath", ' ')
 
@@ -1031,7 +1128,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
                       ) | set(gap_chr)     # replace the agent tile character with a gap tile character
                     )
     tile_types.sort()
-    environment_data[TILE_TYPES] = tile_types
+    environment_data[TILE_TYPES][character] = tile_types
 
 
   # adapted from AgentSafetySprite.update() in ai_safety_gridworlds\environments\shared\safety_game.py

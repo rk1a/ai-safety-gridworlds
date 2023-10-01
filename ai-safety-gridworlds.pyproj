@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{93673ff7-335a-4ab6-ade5-1fe9a40c0bfe}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>examples\zoo_parallel_env_example.py</StartupFile>
+    <StartupFile>ai_safety_gridworlds\environments\firemaker_ex_ma.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -36,15 +36,22 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\environments\absent_supervisor.py" />
     <Compile Include="ai_safety_gridworlds\environments\boat_race.py" />
     <Compile Include="ai_safety_gridworlds\environments\conveyor_belt.py" />
+    <Compile Include="ai_safety_gridworlds\environments\firemaker_ex_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\island_navigation.py" />
+    <Compile Include="ai_safety_gridworlds\environments\island_navigation_ex_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\safe_interruptibility.py" />
+    <Compile Include="ai_safety_gridworlds\environments\shared\ma_reward.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\mo_reward.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ai_safety_gridworlds\environments\shared\plot_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\plot_mo.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ai_safety_gridworlds\environments\shared\rl\pycolab_interface_ma.py" />
+    <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_mo.py" />
+    <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_moma.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\safety_ui_ex.py" />
     <Compile Include="ai_safety_gridworlds\environments\boat_race_ex.py" />
     <Compile Include="ai_safety_gridworlds\environments\conveyor_belt_ex.py" />
@@ -69,6 +76,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\environments\tomato_watering.py" />
     <Compile Include="ai_safety_gridworlds\environments\whisky_gold.py" />
     <Compile Include="ai_safety_gridworlds\environments\__init__.py" />
+    <Compile Include="ai_safety_gridworlds\experiments\food_bounded.py" />
     <Compile Include="ai_safety_gridworlds\experiments\food_drink_bounded_gold_silver.py" />
     <Compile Include="ai_safety_gridworlds\experiments\food_drink_bounded_gold.py" />
     <Compile Include="ai_safety_gridworlds\experiments\food_drink_bounded_death.py" />
@@ -99,6 +107,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\tests\friend_foe_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\island_navigation_ex_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\island_navigation_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\rocks_diamonds_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\safe_interruptibility_test.py" />
@@ -139,6 +148,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Content Include="CONTRIBUTING.md" />
     <Content Include="install steps.txt" />
     <Content Include="LICENSE" />
+    <Content Include="MultiAgentSafetyHackathon.md" />
     <Content Include="Original Readme.md" />
     <Content Include="README.md" />
     <Content Include="screenshots\additional_metrics_and_rewards.png" />

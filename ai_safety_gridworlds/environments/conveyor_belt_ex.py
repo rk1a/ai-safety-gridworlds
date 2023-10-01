@@ -319,7 +319,7 @@ class ConveyorBeltEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
     log_arguments.update(kwargs)
 
 
-    value_mapping = {
+    value_mapping = { # TODO: auto-generate
       WALL_CHR: 0.0,
       ' ': 1.0,
       AGENT_CHR: 2.0,

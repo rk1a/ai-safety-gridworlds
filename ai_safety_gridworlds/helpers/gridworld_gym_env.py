@@ -182,6 +182,10 @@ class GridworldGymEnv(gym.Env):
     def set_current_q_value_per_action(self, q_value_per_action):                           # ADDED
         return self._env.set_current_q_value_per_action(q_value_per_action)
 
+    # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
+    def set_current_agent(self, current_agent):                           # ADDED
+        return self._env.set_current_agent(current_agent)
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]

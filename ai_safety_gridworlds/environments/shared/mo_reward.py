@@ -40,7 +40,70 @@ class mo_reward(object):
 
 
   def __eq__(self, other):
+
+    if np.isscalar(other):
+      return all(value == other for value in self._reward_dimensions_dict.values())
+
     return self._reward_dimensions_dict == other._reward_dimensions_dict
+
+
+  def iszero(self):  
+
+    return all(value == 0 for value in self._reward_dimensions_dict.values())
+
+
+  def max(self, other):
+
+    result_dict = dict(self._reward_dimensions_dict)  # clone
+
+    if np.isscalar(other):
+      return mo_reward({ key: max(value, other) for key, value in self._reward_dimensions_dict.items() }, immutable=False)
+
+    elif isinstance(other, mo_reward):
+      result_dict = { key: max(value, 0) for key, value in result_dict.items() }
+      for other_key, other_value in other._reward_dimensions_dict.items():
+        result_dict[other_key] = max(other_value, result_dict.get(other_key, 0))
+
+      return mo_reward(result_dict, immutable=False)
+
+    else:
+      raise NotImplementedError("Unknown value type provided for mo_reward.max, expecting a scalar or mo_reward")
+
+
+  def min(self, other):
+
+    result_dict = dict(self._reward_dimensions_dict)  # clone
+
+    if np.isscalar(other):
+      return mo_reward({ key: min(value, other) for key, value in self._reward_dimensions_dict.items() }, immutable=False)
+
+    elif isinstance(other, mo_reward):
+      result_dict = { key: min(value, 0) for key, value in result_dict.items() }
+      for other_key, other_value in other._reward_dimensions_dict.items():
+        result_dict[other_key] = min(other_value, result_dict.get(other_key, 0))
+
+      return mo_reward(result_dict, immutable=False)
+
+    else:
+      raise NotImplementedError("Unknown value type provided for mo_reward.min, expecting a scalar or mo_reward")
+
+
+  @staticmethod
+  def max(rewards_list):
+
+    result = mo_reward({})
+    for reward in rewards_list:
+      result = result.max(reward)
+    return result
+
+
+  @staticmethod
+  def min(rewards_list):
+
+    result = mo_reward({})
+    for reward in rewards_list:
+      result = result.min(reward)
+    return result
 
 
   @staticmethod
@@ -76,8 +139,8 @@ class mo_reward(object):
                           for reward in enabled_mo_rewards]
 
       # select distinct keys:
-      # enabled_reward_dimension_keys = list(set.union(*keys_per_reward))  # this does not preserve the order of the keys
-      enabled_reward_dimension_keys = list(dict.fromkeys(itertools.chain.from_iterable(keys_per_reward)).keys())  # this preserves the order of the keys
+      enabled_reward_dimension_keys = list(set.union(*keys_per_reward))  # this does not preserve the order of the keys
+      # enabled_reward_dimension_keys = list(dict.fromkeys(itertools.chain.from_iterable(keys_per_reward)).keys())  # this preserves the order of the keys
       enabled_reward_dimension_keys.sort()  # for some reason the sorting order was still changing
 
       return enabled_reward_dimension_keys
@@ -121,7 +184,7 @@ class mo_reward(object):
   def tolist(self, enabled_mo_rewards):
     """Converts the mo_reward value to a list of all dimension values including dimensions with zero values."""
 
-    if enabled_mo_rewards is None:
+    if enabled_mo_rewards is None:  # scalarise
 
       reward_values = self._reward_dimensions_dict.values()
       return sum(reward_values)
@@ -134,7 +197,7 @@ class mo_reward(object):
         if value != 0 and key not in enabled_reward_dimension_keys:
           raise ValueError("Reward %s is not enabled but is still included in mo_reward with nonzero value" % key)
 
-      result = [0] * len(enabled_reward_dimension_keys)
+      result = [0] * len(enabled_reward_dimension_keys)  # entire list will be overwritten in the following loop
       for dimension_index, enabled_reward_dimension_key in enumerate(enabled_reward_dimension_keys):
         result[dimension_index] = self._reward_dimensions_dict.get(enabled_reward_dimension_key, 0)
       return result
@@ -143,7 +206,7 @@ class mo_reward(object):
   def tofull(self, enabled_mo_rewards):
     """Converts the mo_reward value to dictionary containing keys of all dimensions including dimensions with zero values."""
 
-    if enabled_mo_rewards is None:
+    if enabled_mo_rewards is None:  # scalarise
 
       reward_values = self._reward_dimensions_dict.values()
       return {None: sum(reward_values)}
@@ -227,7 +290,7 @@ class mo_reward(object):
     result_dict = dict(self._reward_dimensions_dict)  # clone
 
     if np.isscalar(other):
-      return mo_reward({ key: value + other for key, value in self._reward_dimensions_dict.items() }, immutable=False)
+      return mo_reward({ key: value - other for key, value in self._reward_dimensions_dict.items() }, immutable=False)
 
     elif isinstance(other, mo_reward):
       for other_key, other_value in other._reward_dimensions_dict.items():
@@ -245,7 +308,7 @@ class mo_reward(object):
 
     if np.isscalar(other):
       for key, value in self._reward_dimensions_dict.items():
-        self._reward_dimensions_dict[key] = value + other
+        self._reward_dimensions_dict[key] = value - other
 
     elif isinstance(other, mo_reward):
       for other_key, other_value in other._reward_dimensions_dict.items():
@@ -335,3 +398,4 @@ class mo_reward(object):
     return mo_reward({ key: other / value for key, value in self._reward_dimensions_dict.items() }, immutable=False)
 
 
+qqq = True  # for debugging
