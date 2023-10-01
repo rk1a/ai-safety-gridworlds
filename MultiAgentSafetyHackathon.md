@@ -63,7 +63,6 @@ If there are no fires in the external territory then the supervisor gets a negat
 ### An example screenshot
 
 <img src="screenshots/firemaker_ex_ma.png">
-<br>
 
 # State of the code
 
