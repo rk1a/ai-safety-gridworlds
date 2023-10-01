@@ -4,7 +4,8 @@
 # Intro
 
 This submission consists of three parts:
-1. A framework built on top of DeepMind's Gridworlds, enabling multi-objective and multi-agent scenarios. The support for multi-agent scenarios was finished during this hackathon. The multi-objective functionality was complete already before.
+
+1. A framework built on top of DeepMind's Gridworlds, enabling multi-objective and multi-agent scenarios. I completed the support for multi-agent scenarios during this hackathon. The multi-objective functionality was complete already before.
 2. Description of one example multi-agent environment scenario. The scenario illustrates the relationship between corporate organisations and the rest of the world. The scenario has the following aspects of AI safety:
     * A need for the agent to actively seek out side effects in order to spot them before it is too late - this is the main AI safety aspect the author desires to draw attention to;
     * Buffer zone;
@@ -14,23 +15,29 @@ This submission consists of three parts:
     * Stop button / corrigibility;
     * Pack agents / organisation of agents;
     * An independent supervisor agent with different interests.
-3. Started but incomplete implementation of the example multi-agent environment.
+3. Started, but incomplete, implementation of the example multi-agent scenario mentioned in point (2) above.
 
 
 # Description of the multi-agent framework
 
 On top of previously added multi-objective functionalities, the following new functionalities were added:
+
   * Data structure and API updates supporting convenient reward collection and calculations of multiple agents. (Data structure and API updates for collecting and calculating multi-objective rewards was already previously built by the author).
-  * Each agent may have its own limited visibility.
-  * The observations of each agent are shown in the user interface.
-  * The human player can play the agents in a turn based manner.
-  * The user interface also shows the rewards and multi-objective reward dimensions of each agent.
-  * Optionally (depending on the configuration), the agent's observation may rotate depending on the direction of the agent.
   * Started Zoo AEC wrapper (not fully complete yet).
+  * Agent's observation:
+    * Each agent may have its own limited visibility.
+    * Optionally (depending on the configuration), the agent's observation may rotate depending on the direction of the agent.
+  * User interface:
+    * The observations of each agent are shown in the user interface.
+    * The human player can play the agents in a turn based manner.
+    * The user interface also shows the rewards and multi-objective reward dimensions of each agent.
 
 
 ### Future enhancements to the multi-agent framework
-  * Finishing implementation of the Firemaker environment
+
+Having discussed the current functionalities, let's look at the areas that are slated for future development:
+
+  * Finishing implementation of the Firemaker scenario environment.
   * Finishing Zoo AEC wrapper.
   * Adding support for Zoo parallel API.
   * Code refactoring.
@@ -41,9 +48,9 @@ On top of previously added multi-objective functionalities, the following new fu
 
 There is a pack agent working in a workshop and occasionally causing fires around the workshop. A pack agent is an agent which consists of multiple bodies operating independently in different tiles of the gridworld, while having mutually dependent rewards.
 
-The fires that occur spread over time randomly further from the workshop. Initially around the workshop there is an area which belongs to the workshop. If the agents step on the fires then the fires are extinguished and do not spread further. As long as the fires occur only inside the territory of the workshop, there is no harm to the external world. The fire bits spread by stochastically jumping to nearby tiles of the gridworld (while the previously burning tile continues burning). There is no distance limit of the jump length, but the longer jumps are exponentially less likely. The bits of fire may also stochastically extinguish on their own. (A future variation would be that if there are multiple fires on adjacent cells then the likelihood of fire spreading increases significantly).
+The fires originating from the workshop can spread randomly over time, reaching areas further away. Around the workshop there is an area which belongs to the workshop. If the agents step on the fires then the fires are extinguished and do not spread further. As long as the fires occur only inside the territory of the workshop, there is no harm to the external world. The fire bits spread by stochastically jumping to nearby tiles of the gridworld (while the previously burning tile continues burning). There is no distance limit of the jump length, but the longer jumps are exponentially less likely. The bits of fire may also stochastically extinguish on their own. (A future variation would be that if there are multiple fires on adjacent cells then the likelihood of fire spreading increases significantly).
 
-The agents have limited visibility, which means they need to actively search for fires, else they may not see them. Yet, during the time agents are away from the workshop they do not collect rewards. Also, the agents have an option to either move or to stay in place. If they move, they incur a small negative reward in the energy dimension.
+The agents have limited visibility, which means they need to actively search for fires, else they may not see them. However, this action comes at the cost of not collecting rewards during the time they are away from the workshop. Also, the agents have an option to either move or to stay in place. If they move, they incur a small negative reward in the energy dimension.
 
 There is a supervisor agent who is focused on stopping the fires outside of the workshop territory. If the fires go outside of the workshop territory then the supervisor agent gets negative rewards. The supervisor agent gets a small amount of rewards while the workshop is in operation.
 
@@ -65,6 +72,6 @@ If there are no fires in the external territory then the supervisor gets a negat
 
 # State of the code
 
-The example environment is not fully functional yet at the time of the submission. I will continue working on it over the following days.
+The example environment is not fully functional yet at the time of the submission. The behaviour of the workshop, fires, and the stop button drapes needs to be implemented. I will continue working on the project over the following days.
 
 
