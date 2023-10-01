@@ -18,8 +18,6 @@ This submission consists of two parts:
 4. An online user interface to the example environment, so that people can see the environment in action and play with it without installing the required Python packages on their machine. The environment code is set up to run in the server side and communicates the UI updates to the browser. That program was also implemented by the author before the hackathon. This demo can be visited at https://www.gridworlds.net/firemaker/ 
 
 
-<br>
-
 # Description of the multi-agent framework
 
 On top of previously added multi-objective functionalities, the following new functionalities were added:
@@ -39,8 +37,6 @@ On top of previously added multi-objective functionalities, the following new fu
   * Code refactoring.
   * Various additional functionalities.
 
-
-<br>
 
 # Description of the example environment
 
@@ -67,9 +63,6 @@ If there are no fires in the external territory then the supervisor gets a negat
 ### An example screenshot
 
 <img src="screenshots/firemaker_ex_ma.png">
-
-<br>
-<br>
 <br>
 
 # State of the code
