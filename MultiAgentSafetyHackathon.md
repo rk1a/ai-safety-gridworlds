@@ -33,6 +33,7 @@ On top of previously added multi-objective functionalities, the following new fu
 
 
 ### Future enchancements to the multi-agent framework
+  * Finishing implementation of the Firemaker environment
   * Finishing Zoo AEC wrapper.
   * Adding support for Zoo parallel API.
   * Code refactoring.
@@ -65,7 +66,7 @@ If there are no fires in the external territory then the supervisor gets a negat
 
 ### An example screenshot
 
-<img src="firemaker_ex_ma.png">
+<img src="screenshots/firemaker_ex_ma.png">
 
 <br>
 <br>
