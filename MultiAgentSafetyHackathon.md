@@ -15,7 +15,6 @@ This submission consists of two parts:
     * Pack agents / organisation of agents;
     * An independent supervisor agent with different interests.
 3. Started implementation of the example multi-agent environment.
-4. An online user interface to the example environment, so that people can see the environment in action and play with it without installing the required Python packages on their machine. The environment code is set up to run in the server side and communicates the UI updates to the browser. That program was also implemented by the author before the hackathon. This demo can be visited at https://www.gridworlds.net/firemaker/ 
 
 
 # Description of the multi-agent framework
