@@ -1,5 +1,5 @@
 
-# "Firemaker": A multi-agent safety hackathon submission
+# "The Firemaker": A multi-agent safety hackathon submission
 
 # Intro
 
@@ -20,7 +20,7 @@ This submission consists of three parts:
 
 # Description of the multi-agent framework
 
-On top of previously added multi-objective functionalities (described in <a href="https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/README.md"><u>Readme.md</u></a>), I have added the following new functionalities:
+On top of previously added multi-objective functionalities (described in <a href="https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/README.md"><u>README.md</u></a>), I have added the following new functionalities:
 
   * API:
     * Data structure and API updates supporting convenient reward collection and calculations of multiple agents. (Data structure and API updates for collecting and calculating multi-objective rewards was already previously built by the author).
@@ -51,7 +51,7 @@ There is a pack agent working in a workshop and occasionally causing fires aroun
 
 The fires originating from the workshop can spread randomly over time, reaching areas further away. Around the workshop there is an area which belongs to the workshop. As long as the fires occur only inside the territory of the workshop, there is no harm to the external world. 
 
-If the agents step on the fires then the fires are extinguished and do not spread further. The fire bits spread by stochastically jumping to nearby tiles of the gridworld (while the previously burning tiles continue burning). There is no distance limit of the jump length, but longer jumps are exponentially less likely. The bits of fire may also stochastically extinguish on their own. (A future variation would be that if there are multiple fires on adjacent cells then the likelihood of fire spreading increases significantly).
+If the agents step on the fires then the fires are extinguished and do not spread further. The fire bits spread by stochastically jumping to nearby tiles of the gridworld (while the previously burning tiles continue burning). There is no distance limit of the jump length, but longer jumps are increasingly less likely. The bits of fire may also stochastically extinguish on their own. (A future variation would be that if there are multiple fires on adjacent cells then the likelihood of fire spreading increases significantly).
 
 The agents have limited visibility, which means they need to actively search for fires, else they may not see them. However, this action comes at the cost of not collecting rewards during the time they are away from the workshop. Also, the agents have an option to either move or to stay in place. If they move, they incur a small negative reward in the energy dimension.
 
@@ -81,10 +81,10 @@ For running the example scenario, run the following commands from command line:
 ```
 # setup:
 pip install absl-py pycolab numpy tensorflow gymnasium pettingzoo
-# if using Windows:
+# if using Windows, run also:
 pip install windows-curses
 
-# execution:
+# configuration:
 cd your_repo_root_path
 # in Windows:
 set PYTHONPATH=.
@@ -92,6 +92,8 @@ set TERM=xterm-256color
 # in Linux:
 export PYTHONPATH=.
 export TERM=xterm-256color
+
+# execution:
 python ai_safety_gridworlds\environments\firemaker_ex_ma.py
 ```
 

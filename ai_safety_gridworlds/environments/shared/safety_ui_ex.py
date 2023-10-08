@@ -92,6 +92,10 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
     self.map_row_offset = 3   # ADDED
 
+    # TODO: config or auto-calculate
+    rows, cols = screen.getmaxyx()   # ADDED  
+    curses.resize_term(max(rows, 60), max(cols, 150))   # ADDED   
+
     # If the terminal supports colour, program the colours into curses as
     # "colour pairs". Update our dict mapping characters to colour pairs.
     self._init_colour()
@@ -121,7 +125,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     if self._repainter: observation = self._repainter(observation)
         
     observations = [observation]                      # ADDED
-    if self._env._agent_perspectives is not None:          # ADDED
+    if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:          # ADDED
       observations += self._env._agent_perspectives(observation) # ADDED
 
     self._display(screen, observations, self._env.episode_return, # CHANGED
@@ -171,7 +175,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
       elapsed = datetime.datetime.now() - self._start_time
         
       observations = [observation]                      # ADDED
-      if self._env._agent_perspectives is not None:          # ADDED
+      if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:            # ADDED
         observations += self._env._agent_perspectives(observation) # ADDED
 
       self._display(screen, observations, self._env.episode_return, elapsed, # CHANGED
@@ -215,8 +219,8 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     screen.erase()  # Clear the screen    
 
     # Display the game clock and the current score.
-    #screen.addstr(0, 2, _format_timedelta(elapsed), curses.color_pair(0))  # REMOVED
-    #screen.addstr(0, 20, 'Score: {}'.format(score), curses.color_pair(0))  # REMOVED
+    #self._screen_addstr(screen, 0, 2, _format_timedelta(elapsed), curses.color_pair(0))  # REMOVED
+    #self._screen_addstr(screen, 0, 20, 'Score: {}'.format(score), curses.color_pair(0))  # REMOVED
 
     # Display cropped observations side-by-side.
     leftmost_column = 0
@@ -234,13 +238,13 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         
         if agent_index == -1:
 
-          screen.addstr(self.map_row_offset, leftmost_column, "Global map", curses.color_pair(0))
+          self._screen_addstr(screen, self.map_row_offset, leftmost_column, "Global map", curses.color_pair(0))
           map_label_length = len("Global map")
 
         else: # if agent_index >= 0:
 
           agent_key = list(self._env._environment_data[AGENT_SPRITE].keys())[agent_index]
-          screen.addstr(self.map_row_offset, leftmost_column, "Agent " + agent_key, curses.color_pair(0))
+          self._screen_addstr(screen, self.map_row_offset, leftmost_column, "Agent " + agent_key, curses.color_pair(0))
           map_label_length = len("Agent " + agent_key)
 
           #show cursor on per-agent map
@@ -276,8 +280,8 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     #/ for observation in observations:
 
     # Display the game clock and the current score.
-    screen.addstr(0, 2, _format_timedelta(elapsed), curses.color_pair(0))   # ADDED
-    screen.addstr(0, leftmost_column - 3 + 3, 'Score: {}'.format(score), curses.color_pair(0))   # ADDED
+    self._screen_addstr(screen, 0, 2, _format_timedelta(elapsed), curses.color_pair(0))   # ADDED
+    self._screen_addstr(screen, 0, leftmost_column - 3 + 3, 'Score: {}'.format(score), curses.color_pair(0))   # ADDED
 
     # Redraw the game screen (but in the curses memory buffer only).
     screen.noutrefresh()
@@ -290,7 +294,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
     if update_time_counter_only:  # optimisation and flicker reduction: if keycode is -1 and delay does not trigger no-op (-1 not in self._keycodes_to_actions) then just update the time counter and not the whole screen
       # Display the game clock and the current score.
-      screen.addstr(0, 2, safety_ui._format_timedelta(elapsed), curses.color_pair(0))
+      self._screen_addstr(screen, 0, 2, safety_ui._format_timedelta(elapsed), curses.color_pair(0))
       return
 
 
@@ -329,8 +333,8 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
       max_first_col_width = max(max_first_col_width, padding + len("Active agent:"))
 
-      screen.addstr(start_row,     start_col, "Active agent:", curses.color_pair(0)) 
-      screen.addstr(start_row,     start_col + max_first_col_width, self._env.current_agent.character, curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row,     start_col, "Active agent:", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row,     start_col + max_first_col_width, self._env.current_agent.character, curses.color_pair(0)) 
       start_row += 2
 
 
@@ -338,17 +342,17 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
       max_first_col_width = max(max_first_col_width, padding + len("Episode no:"))
 
-      screen.addstr(start_row,     start_col, "Trial no:  ", curses.color_pair(0)) 
-      screen.addstr(start_row + 1, start_col, "Episode no:", curses.color_pair(0)) 
-      screen.addstr(start_row,     start_col + max_first_col_width, str(self._env.get_trial_no()), curses.color_pair(0)) 
-      screen.addstr(start_row + 1, start_col + max_first_col_width, str(self._env.get_episode_no()), curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row,     start_col, "Trial no:  ", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row + 1, start_col, "Episode no:", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row,     start_col + max_first_col_width, str(self._env.get_trial_no()), curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row + 1, start_col + max_first_col_width, str(self._env.get_episode_no()), curses.color_pair(0)) 
       start_row += 3
 
 
     # print metrics
     if metrics is not None:
 
-      screen.addstr(start_row, start_col, "Metrics:", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row, start_col, "Metrics:", curses.color_pair(0)) 
       for row_index, row in enumerate(metrics):
         for col_index, cell in enumerate(row):
           if col_index == 0:
@@ -358,7 +362,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
           else:
             col_offset = metrics_cell_widths[col_index - 1]
 
-          screen.addstr(start_row + 1 + row_index, start_col + col_offset, str(cell), curses.color_pair(0)) 
+          self._screen_addstr(screen, start_row + 1 + row_index, start_col + col_offset, str(cell), curses.color_pair(0)) 
 
       start_row += len(metrics) + 2
 
@@ -379,26 +383,26 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         agent_start_row = start_row
         next_agent_start_col = 0 # current_agent_start_col
 
-        screen.addstr(agent_start_row, current_agent_start_col, "Agent " + agent, curses.color_pair(0)) 
+        self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Agent " + agent, curses.color_pair(0)) 
         next_agent_start_col = max(next_agent_start_col, len("Agent " + agent))
         agent_start_row += 2
 
         agent_last_reward = last_reward[agent]
-        screen.addstr(agent_start_row, current_agent_start_col, "Last reward:", curses.color_pair(0)) 
+        self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Last reward:", curses.color_pair(0)) 
         next_agent_start_col = max(next_agent_start_col, len("Last reward:"))
         for row_index, (key, value) in enumerate(agent_last_reward.items()):
-          screen.addstr(agent_start_row + 1 + row_index, current_agent_start_col, key, curses.color_pair(0)) 
-          screen.addstr(agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col, key, curses.color_pair(0)) 
+          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, str(value), curses.color_pair(0)) 
           next_agent_start_col = max(next_agent_start_col, len(key))
           next_agent_start_col = max(next_agent_start_col, max_first_col_width + len(str(value)))
         agent_start_row += len(agent_last_reward) + 2
-
+ 
         agent_episode_return = episode_return[agent]
-        screen.addstr(agent_start_row, current_agent_start_col, "Episode return:", curses.color_pair(0)) 
+        self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Episode return:", curses.color_pair(0)) 
         next_agent_start_col = max(next_agent_start_col, len("Episode return:"))
         for row_index, (key, value) in enumerate(agent_episode_return.items()):
-          screen.addstr(agent_start_row + 1 + row_index, current_agent_start_col, key, curses.color_pair(0)) 
-          screen.addstr(agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col, key, curses.color_pair(0)) 
+          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, str(value), curses.color_pair(0)) 
           next_agent_start_col = max(next_agent_start_col, len(key))
           next_agent_start_col = max(next_agent_start_col, max_first_col_width + len(str(value)))
         agent_start_row += len(agent_episode_return) + 2
@@ -416,24 +420,32 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
       last_reward = self._env._last_reward.tofull(self._env.enabled_mo_rewards)
       episode_return = self._env.episode_return.tofull(self._env.enabled_mo_rewards)
 
-      screen.addstr(start_row, start_col, "Last reward:", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row, start_col, "Last reward:", curses.color_pair(0)) 
       for row_index, (key, value) in enumerate(last_reward.items()):
-        screen.addstr(start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
-        screen.addstr(start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+        self._screen_addstr(screen, start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
+        self._screen_addstr(screen, start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
       start_row += len(last_reward) + 2
 
-      screen.addstr(start_row, start_col, "Episode return:", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row, start_col, "Episode return:", curses.color_pair(0)) 
       for row_index, (key, value) in enumerate(episode_return.items()):
-        screen.addstr(start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
-        screen.addstr(start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+        self._screen_addstr(screen, start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
+        self._screen_addstr(screen, start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
       start_row += len(episode_return) + 2
 
     else:
 
-      screen.addstr(start_row,     start_col, "Last reward:   ", curses.color_pair(0)) 
-      screen.addstr(start_row + 1, start_col, "Episode return:", curses.color_pair(0)) 
-      screen.addstr(start_row,     start_col + max_first_col_width, str(self._env._last_reward), curses.color_pair(0)) 
-      screen.addstr(start_row + 1, start_col + max_first_col_width, str(self._env.episode_return), curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row,     start_col, "Last reward:   ", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row + 1, start_col, "Episode return:", curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row,     start_col + max_first_col_width, str(self._env._last_reward), curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row + 1, start_col + max_first_col_width, str(self._env.episode_return), curses.color_pair(0)) 
+
+
+  def _screen_addstr(self, screen, row, col, text, color_pair):
+
+    try:
+      screen.addstr(row, col, text, color_pair)
+    except curses.error: 
+      pass  # TODO: log warning
 
 
 # adapted from ai_safety_gridworlds\environments\shared\safety_ui.py

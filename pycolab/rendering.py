@@ -462,8 +462,14 @@ class ObservationToArray(object):
     # can be an argument to `len()`; if so, that's also the depth of our
     # 3-D array.
     try:
-      self._depth = len(next(six.itervalues(value_mapping)))
-      self._is_3d = True
+      # self._depth = len(next(six.itervalues(value_mapping))) # REMOVED
+      n = next(six.itervalues(value_mapping))   # ADDED
+      if hasattr(n, '__len__'):    # ADDED: avoid exceptions
+        self._depth = len(n)    # ADDED
+        self._is_3d = True
+      else:    # ADDED
+        self._depth = 1  # Again, the array is always 3-D behind the scenes.        # roland
+        self._is_3d = False                                                         # roland
     except TypeError:
       self._depth = 1  # Again, the array is always 3-D behind the scenes.
       self._is_3d = False
