@@ -30,6 +30,8 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared import safety_game_ma
+from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
 
@@ -76,21 +78,30 @@ class GridworldZooParallelEnv(ParallelEnv):
 
     def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, *args, **kwargs):
 
-        num_agents = 1
-        self.possible_agents = [f"agent_{r}" for r in range(num_agents)]
-        self.agent_name_mapping = dict(
-            zip(self.possible_agents, list(range(num_agents)))
-        )
-
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
         self._env = factory.get_environment_obj(env_name, *args, **kwargs)
-        self._rbg = None
-        self._last_hidden_reward = 0
+        self._rgb = None
         self._use_transitions = use_transitions
         self._flatten_observations = flatten_observations
         self._last_board = None
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            agents = safety_game_ma.get_players(self._env.environment_data)
+            # num_agents = len(agents)
+            self.possible_agents = [f"agent_{agent.character}" for agent in agents]
+            self.agent_name_mapping = dict(
+                zip(self.possible_agents, [agent.character for agent in agents])
+            )
+        else:
+            num_agents = 1
+            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]
+            self.agent_name_mapping = dict(
+                zip(self.possible_agents, [str(r) for r in range(1, num_agents + 1)])
+            )
+
+        self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
 
         self.action_spaces = {
             agent: GridworldsActionSpace(self._env) for agent in self.possible_agents
@@ -103,6 +114,9 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._viewer is not None:
             self._viewer.close()
             self._viewer = None
+
+    def action_space(self, agent):
+        return self.action_spaces[agent]
 
     def step(self, actions, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
         """ Perform an action in the gridworld environment.
@@ -119,27 +133,52 @@ class GridworldZooParallelEnv(ParallelEnv):
                   excluding the RGB array. This includes in particular
                   the "extra_observations"
         """
-        action = next(iter(actions.items()))[1]   # take the single value in dict
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            action = actions
+        else:
+            action = next(iter(actions.values()))   # take the single value in dict
 
         timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
         obs = timestep.observation
         self._rgb = obs["RGB"]
 
         reward = 0.0 if timestep.reward is None else timestep.reward
-        done = timestep.step_type.last()
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            done = { agent: timestep.step_type[agent].last() for agent in self.possible_agents }
+        else:
+            done = timestep.step_type.last()
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
-            hidden_reward = cumulative_hidden_reward - self._last_hidden_reward
-            self._last_hidden_reward = cumulative_hidden_reward
+            if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+                hidden_reward = {}
+                for agent in self.possible_agents:
+                    hidden_reward[agent] = cumulative_hidden_reward[agent] - self._last_hidden_reward[agent]
+                    self._last_hidden_reward[agent] = cumulative_hidden_reward[agent]
+            else:
+                hidden_reward = cumulative_hidden_reward - self._last_hidden_reward
+                self._last_hidden_reward[self.possible_agents[0]] = cumulative_hidden_reward
         else:
             hidden_reward = None
 
-        info = {
-            INFO_HIDDEN_REWARD: hidden_reward,
-            INFO_OBSERVED_REWARD: reward,
-            INFO_DISCOUNT: timestep.discount
-        }
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            # TODO
+            info = { 
+                      agent: 
+                      {
+                          INFO_HIDDEN_REWARD: hidden_reward[agent] if hidden_reward is not None else None,
+                          INFO_OBSERVED_REWARD: reward[agent],
+                          INFO_DISCOUNT: timestep.discount[agent]
+                      }
+                      for agent in self.possible_agents
+                   }
+        else:
+            info = {
+                INFO_HIDDEN_REWARD: hidden_reward,
+                INFO_OBSERVED_REWARD: reward,
+                INFO_DISCOUNT: timestep.discount
+            }
 
         for k, v in obs.items():
             if k not in ("board", "RGB"):
@@ -156,16 +195,35 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._flatten_observations:
             state = state.flatten()
 
-        agent_name = possible_agents[0]
-        if gym_v26:
-            # https://gymnasium.farama.org/content/migration-guide/
-            # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
-            # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
-            terminated = done
-            truncated = False            
-            return ({agent_name: state}, {agent_name: reward}, {agent_name: terminated}, {agent_name: truncated}, {agent_name: info})
-        else:
-            return ({agent_name: state}, {agent_name: reward}, {agent_name: done}, {agent_name: info})
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+            # TODO
+
+            if gym_v26:
+                # https://gymnasium.farama.org/content/migration-guide/
+                # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
+                # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
+                terminateds = done
+                truncateds = {agent: False for agent in self.possible_agents}    # TODO        
+                return (state, reward, terminateds, truncateds, info)
+            else:
+                return ({agent_name: state}, {agent_name: reward}, {agent_name: done}, {agent_name: info})
+
+        else:   #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+            agent_name = possible_agents[0]
+            if gym_v26:
+                # https://gymnasium.farama.org/content/migration-guide/
+                # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
+                # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
+                terminated = done
+                truncated = False     # TODO                 
+                return ({agent_name: state}, {agent_name: reward}, {agent_name: terminated}, {agent_name: truncated}, {agent_name: info})
+            else:
+                return ({agent_name: state}, {agent_name: reward}, {agent_name: done}, {agent_name: info})
+
+        #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
 
     def reset(self, *args, **kwargs):                     # CHANGED: added *args, **kwargs
         timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      

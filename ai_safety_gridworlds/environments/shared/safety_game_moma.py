@@ -608,7 +608,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     file.flush()
 
 
-  def step(self, agents_actions, current_agent=None, q_value_per_action=None):
+  def step(self, agents_actions, q_value_per_action=None):
 
     #if current_agent is None:
     #  current_agent = self.current_agent    # gym does not support additional arguments to .step() method so we need to use a separate method and a DTO field. See also https://github.com/openai/gym/issues/2399

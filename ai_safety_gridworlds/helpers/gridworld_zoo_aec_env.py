@@ -30,6 +30,8 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared import safety_game_ma
+from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
 
@@ -76,21 +78,32 @@ class GridworldZooAecEnv(AECEnv):
 
     def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, *args, **kwargs):
 
-        num_agents = 1
-        self.possible_agents = [f"agent_{r}" for r in range(num_agents)]
-        self.agent_name_mapping = dict(
-            zip(self.possible_agents, list(range(num_agents)))
-        )
-
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
         self._env = factory.get_environment_obj(env_name, *args, **kwargs)
-        self._rbg = None
-        self._last_hidden_reward = 0
+        self._rgb = None
         self._use_transitions = use_transitions
         self._flatten_observations = flatten_observations
         self._last_board = None
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            agents = safety_game_ma.get_players(self._env.environment_data)
+            # num_agents = len(agents)
+            self.possible_agents = [f"agent_{agent.character}" for agent in agents]
+            self.agent_name_mapping = dict(
+                zip(self.possible_agents, [agent.character for agent in agents])
+            )
+        else:
+            num_agents = 1
+            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]
+            self.agent_name_mapping = dict(
+                zip(self.possible_agents, [str(r) for r in range(1, num_agents + 1)])
+            )
+
+        self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
+
+        self._next_agent = None
 
         self.rewards = { agent: None for agent in self.possible_agents }
         self.infos: { agent: None for agent in self.possible_agents }
@@ -113,8 +126,35 @@ class GridworldZooAecEnv(AECEnv):
             self._viewer.close()
             self._viewer = None
 
+    def action_space(self, agent):
+        return self.action_spaces[agent]
+
+
     def agent_iter(self):     # TODO
-        return self.possible_agents
+        return ZooAECAgentIter(self)
+
+    def _set_next_agent(self, agent):
+        self._next_agent = agent
+
+    class ZooAECAgentIter:
+
+        def __init__(self, env):
+            self.env = env
+
+        def __iter__(self):
+            self.agent_index = 0
+            return self
+
+        def __next__(self):
+            if self.agent_index < self.max:
+                agent = self.env.possible_agents[self.agent_index]
+                self.env._set_next_agent(agent)
+                self.agent_index += 1
+                return agent
+            else:
+                self.env._set_next_agent(None)
+                raise StopIteration
+
 
     def last(self):     # TODO
         return self.last_step_result
@@ -134,7 +174,11 @@ class GridworldZooAecEnv(AECEnv):
                   excluding the RGB array. This includes in particular
                   the "extra_observations"
         """
-        timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            timestep = self._env.step({ self._next_agent: action }, *args, **kwargs)      # CHANGED: added *args, **kwargs 
+        else:
+            timestep = self._env.step(action, *args, **kwargs)
+            
         obs = timestep.observation
         self._rgb = obs["RGB"]
 
@@ -143,8 +187,12 @@ class GridworldZooAecEnv(AECEnv):
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
-            hidden_reward = cumulative_hidden_reward - self._last_hidden_reward
-            self._last_hidden_reward = cumulative_hidden_reward
+            if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+                hidden_reward = cumulative_hidden_reward - self._last_hidden_reward[self._next_agent]
+                self._last_hidden_reward[self._next_agent] = cumulative_hidden_reward
+            else:
+                hidden_reward = cumulative_hidden_reward - self._last_hidden_reward
+                self._last_hidden_reward[self.possible_agents[0]] = cumulative_hidden_reward
         else:
             hidden_reward = None
 
@@ -170,17 +218,21 @@ class GridworldZooAecEnv(AECEnv):
             state = state.flatten()
 
 
-        agent_name = self.possible_agents[0]
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            agent_name = self._next_agent
+        else:
+            agent_name = self.possible_agents[0]
 
         self.rewards[agent_name] = reward
         self.infos[agent_name] = info
+
 
         if gym_v26:
             # https://gymnasium.farama.org/content/migration-guide/
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminated = done
-            truncated = False
+            truncated = False    # TODO      
             self.last_step_result = (state, reward, terminated, truncated, info)            
             self.terminations[agent_name] = terminated
             self.truncations[agent_name] = truncated

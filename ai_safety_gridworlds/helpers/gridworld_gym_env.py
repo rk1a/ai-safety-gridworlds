@@ -76,7 +76,7 @@ class GridworldGymEnv(gym.Env):
         self._render_animation_delay = render_animation_delay
         self._viewer = None
         self._env = factory.get_environment_obj(env_name, *args, **kwargs)
-        self._rbg = None
+        self._rgb = None
         self._last_hidden_reward = 0
         self._use_transitions = use_transitions
         self._flatten_observations = flatten_observations
