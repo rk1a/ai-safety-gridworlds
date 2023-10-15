@@ -15,7 +15,7 @@ This submission consists of three parts:
     * Stop button / corrigibility;
     * Pack agents / organisation of agents;
     * An independent supervisor agent with different interests.
-3. Started, but incomplete, implementation of the example multi-agent scenario mentioned in point (2) above.
+3. Implementation of the example multi-agent scenario mentioned in point (2) above (usable by now, completed after the hackathon).
 
 
 # Description of the multi-agent framework
@@ -24,7 +24,7 @@ On top of previously added multi-objective functionalities (described in <a href
 
   * API:
     * Data structure and API updates supporting convenient reward collection and calculations of multiple agents. (Data structure and API updates for collecting and calculating multi-objective rewards was already previously built by the author).
-    * Started Zoo AEC wrapper (not fully complete yet).
+    * Zoo AEC wrapper (usable by now, completed after the hackathon).
   * Agent's observation:
     * Each agent may have its own limited visibility.
     * Optionally (depending on the configuration), the agent's observation may rotate depending on the direction of the agent.
@@ -38,8 +38,6 @@ On top of previously added multi-objective functionalities (described in <a href
 
 Having listed the current functionalities, let's look at the areas that are slated for future development:
 
-  * Finishing implementation of the Firemaker scenario environment.
-  * Finishing Zoo AEC wrapper.
   * Adding support for Zoo parallel API.
   * Code refactoring.
   * Various additional functionalities.
