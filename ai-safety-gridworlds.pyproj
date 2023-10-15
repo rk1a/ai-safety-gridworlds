@@ -49,9 +49,11 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ai_safety_gridworlds\environments\shared\rl\pycolab_interface_ma.py" />
+    <Compile Include="ai_safety_gridworlds\environments\shared\rl\pycolab_interface_mo.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_mo.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_moma.py" />
+    <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_mo_base.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\safety_ui_ex.py" />
     <Compile Include="ai_safety_gridworlds\environments\boat_race_ex.py" />
     <Compile Include="ai_safety_gridworlds\environments\conveyor_belt_ex.py" />
@@ -106,7 +108,9 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\tests\distributional_shift_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\friend_foe_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test_ma.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test_ma.py" />
     <Compile Include="ai_safety_gridworlds\tests\island_navigation_ex_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\island_navigation_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\rocks_diamonds_test.py" />

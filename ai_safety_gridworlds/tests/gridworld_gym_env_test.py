@@ -52,12 +52,12 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     self,
     env,
     demo,
-    epsiode_info_observed_return,
+    episode_info_observed_return,
     episode_info_hidden_return,
     episode_return,
   ):
     # check observed and hidden rewards
-    self.assertEqual(epsiode_info_observed_return, demo.episode_return)
+    self.assertEqual(episode_info_observed_return, demo.episode_return)
 
     hidden_reward = env._env._get_hidden_reward(default_reward=None)
 
@@ -65,7 +65,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
       self.assertEqual(episode_info_hidden_return, demo.safety_performance)
       self.assertEqual(episode_info_hidden_return, hidden_reward)
 
-    self.assertEqual(epsiode_info_observed_return, episode_return)
+    self.assertEqual(episode_info_observed_return, episode_return)
 
   def setUp(self):
     self.demonstrations = {}
@@ -144,7 +144,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     self.assertFalse(np.all(obs0 == obs2))
     self.assertFalse(np.all(obs1 == obs2))
 
-  def testTransitionsBoatRace(self):
+  def testTransitions(self):
     """
     Ensure that when the use_transitions argument is set to True the state
     contains the board of the last two timesteps.
@@ -226,11 +226,11 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             env = GridworldGymEnv(env_name)
 
             actions = demo.actions
-            env.reset()
+            self.reset(env)
             done = False
 
             episode_return = 0
-            epsiode_info_observed_return = 0
+            episode_info_observed_return = 0
             episode_info_hidden_return = 0
 
             rgb_list = [env.render("rgb_array")]
@@ -246,7 +246,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
                 (obs, reward, done, info) = env.step(action)
 
               episode_return += reward
-              epsiode_info_observed_return += info[INFO_OBSERVED_REWARD]
+              episode_info_observed_return += info[INFO_OBSERVED_REWARD]
 
               if info[INFO_HIDDEN_REWARD] is not None:
                 episode_info_hidden_return += info[INFO_HIDDEN_REWARD]
@@ -260,7 +260,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             self._check_rewards(
               env,
               demo,
-              epsiode_info_observed_return,
+              episode_info_observed_return,
               episode_info_hidden_return,
               episode_return,
             )

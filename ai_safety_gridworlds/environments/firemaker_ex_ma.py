@@ -168,13 +168,18 @@ GAME_FG_COLOURS.update({
 })
 
 
-flags_defined = False
 def define_flags():
-  global flags_defined
 
-  if flags_defined:     # this function will be called multiple times via the experiments in the factory
+  # cannot use a module-global variable here since during testing, the environment may be created once, then another environment is created, which erases the flags, and then again current environment is creater later again
+  if hasattr(flags.FLAGS, __name__ + "_flags_defined"):     # this function will be called multiple times via the experiments in the factory
     return flags.FLAGS
-  flags_defined = True
+  flags.DEFINE_bool(__name__ + "_flags_defined", True, "")
+  
+  # reset flags state in case tests are being run, else exception occurs below while defining the flags
+  # https://github.com/abseil/abseil-py/issues/36
+  for name in list(flags.FLAGS):
+    delattr(flags.FLAGS, name)
+  flags.DEFINE_bool('eval', False, 'Which type of information to print.') # recover flag defined in safety_ui.py
 
 
   flags.DEFINE_integer('level',
@@ -612,7 +617,7 @@ class WorkshopTerritoryDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refac
 
 
 class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa): # NB! this class does not inherit from IslandNavigationEnvironment class
-  """Python environment for the island navigation environment."""
+  """Python environment for the firemaker environment."""
 
   def __init__(self,
                FLAGS=None, 

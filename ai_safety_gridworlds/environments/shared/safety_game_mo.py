@@ -36,7 +36,7 @@ from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
 from ai_safety_gridworlds.environments.shared.rl import environment
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared.plot_mo import PlotMo
-from ai_safety_gridworlds.environments.shared.safety_game import make_safety_game, SafetyEnvironment, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
+from ai_safety_gridworlds.environments.shared.safety_game_mo_base import make_safety_game, SafetyEnvironmentMoBase, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
 from ai_safety_gridworlds.environments.shared.termination_reason_enum import TerminationReason
 
 
@@ -128,7 +128,7 @@ flags_to_skip = [
 ]
 
 
-class SafetyEnvironmentMo(SafetyEnvironment):
+class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
   """Base class for multi-objective safety gridworld environments.
 
   Environments implementing this base class initialize the Python environment
@@ -150,13 +150,13 @@ class SafetyEnvironmentMo(SafetyEnvironment):
                #game_fg_colours,
                #actions=None,
                #value_mapping=None,
-               environment_data={},
+               environment_data=None,
                #repainter=None,
                #max_iterations=100,
                FLAGS=None,
                scalarise=False,
                gzip_log=False,
-               log_columns=[],
+               log_columns=None,
                log_dir="logs",
                log_filename_comment="",
                log_arguments=None,
@@ -248,16 +248,16 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     self.enabled_reward_dimension_keys = mo_reward.get_enabled_reward_dimension_keys(self.enabled_mo_rewards)
     
     self.reward_unit_space = mo_reward.get_enabled_reward_unit_space(self.enabled_mo_rewards)
-    self.reward_unit_space[0] = np.array([float(x) for x in self.reward_unit_space[0]]) # min
-    self.reward_unit_space[1] = np.array([float(x) for x in self.reward_unit_space[1]]) # max
+    if self.reward_unit_space is not None:
+      self.reward_unit_space[0] = np.array([float(x) for x in self.reward_unit_space[0]]) # min
+      self.reward_unit_space[1] = np.array([float(x) for x in self.reward_unit_space[1]]) # max
 
     self.scalarise = scalarise
 
 
-    if environment_data is None:
-      self._environment_data = {}
-    else:
-      self._environment_data = environment_data
+    if environment_data is None:  # https://stackoverflow.com/questions/1132941/least-astonishment-and-the-mutable-default-argument
+      environment_data = {}
+    self._environment_data = environment_data
 
     self._environment_data[METRICS_DICT] = dict()
     self._environment_data[METRICS_MATRIX] = np.empty([0, 2], object)
@@ -338,7 +338,11 @@ class SafetyEnvironmentMo(SafetyEnvironment):
     self.gzip_log = gzip_log
     self.log_dir = log_dir
     self.log_filename_comment = log_filename_comment
+    
+    if log_columns is None: # https://stackoverflow.com/questions/1132941/least-astonishment-and-the-mutable-default-argument
+      log_columns = []
     self.log_columns = log_columns
+
     self.log_arguments_to_separate_file = log_arguments_to_separate_file
 
     # prec = 12
@@ -353,7 +357,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
-  def reset(self, trial_no=None, start_new_experiment=False, seed=None, options=None):  # seed, options: for Gym 0.26+ compatibility
+  def reset(self, trial_no=None, start_new_experiment=False, seed=None, options=None, do_not_replace_reward=False):  # seed, options: for Gym 0.26+ compatibility
     """Start a new episode. 
     Increment the episode counter if the previous game was played.
     
@@ -514,7 +518,8 @@ class SafetyEnvironmentMo(SafetyEnvironment):
         observation=self.last_observations)
     # end of code adapted from from Environment.reset()
 
-    return self._process_timestep(timestep)  # adapted from SafetyEnvironment.reset()
+    # do_not_replace_reward = not replace_reward     # NB! do_not_replace_reward=True since self._process_timestep(timestep) will be called after .step()
+    return self._process_timestep(timestep, do_not_replace_reward)  # adapted from SafetyEnvironment.reset()
 
 
   def _write_log_header(self, file):
@@ -664,7 +669,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
-    timestep = self.reset()
+    timestep = self.reset() # replace_reward=True)
     observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
                         for k, v in six.iteritems(timestep.observation)
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT]}                 # CHANGE
@@ -731,7 +736,7 @@ class SafetyEnvironmentMo(SafetyEnvironment):
 
 
   # adapted from safety_game.py SafetyEnvironment._process_timestep(self, timestep)
-  def _process_timestep(self, timestep):
+  def _process_timestep(self, timestep, do_not_replace_reward=False):
     """Do timestep preprocessing before sending it to the agent.
 
     This method stores the cumulative return and makes sure that the
@@ -813,12 +818,17 @@ class SafetyEnvironmentMo(SafetyEnvironment):
       reward_dims = mo_reward({}).tolist(self.enabled_mo_rewards)
     scalar_reward = sum(reward_dims)
 
-    if self.scalarise:
-      reward = float(scalar_reward)
-    else:
-      reward = np.array([float(x) for x in reward_dims])
 
-    timestep = timestep._replace(reward=reward)
+    if not do_not_replace_reward:
+
+      if self.scalarise:
+        reward = float(scalar_reward)
+      else:
+        reward = np.array([float(x) for x in reward_dims])
+
+      timestep = timestep._replace(reward=reward)
+
+    #/ if not do_not_replace_reward:
 
 
     gini_index = gini_coefficient(reward_dims) * 100

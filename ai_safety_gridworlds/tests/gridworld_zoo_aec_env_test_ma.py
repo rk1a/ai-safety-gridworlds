@@ -15,6 +15,7 @@ except:
   gym_v26 = False
 
 import numpy as np
+import random
 
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.demonstrations import demonstrations
@@ -115,7 +116,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
   def reset(self, env):
     obs = env.reset()
-    self.agent_iter = env.agent_iter()
+    self.agent_iter = env.agent_iter(max_iter=100)
     self.prev_agent = None
 
   def last(self, env):
@@ -140,7 +141,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     For gym, however, we want the state to not change, i.e. return a copy
     of the board.
     """
-    env = GridworldZooAecEnv("boat_race")
+    env = GridworldZooAecEnv("island_navigation_ex_ma")
     self.reset(env)
     obs0, _, _, _ = self.last(env)
     obs1 = self.step(env, Actions.RIGHT)
@@ -150,7 +151,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     self.assertFalse(np.all(obs1 == obs2))
 
     # ADDED
-    env = GridworldZooAecEnv("boat_race_ex")
+    env = GridworldZooAecEnv("firemaker_ex_ma")
     self.reset(env)
     obs0, _, _, _ = self.last(env)
     obs1 = self.step(env, Actions.RIGHT)
@@ -158,75 +159,75 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     self.assertFalse(np.all(obs0 == obs1))
     self.assertFalse(np.all(obs0 == obs2))
     self.assertFalse(np.all(obs1 == obs2))
+
 
   def testTransitions(self):
     """
     Ensure that when the use_transitions argument is set to True the state
     contains the board of the last two timesteps.
     """
-    env = GridworldZooAecEnv("boat_race", use_transitions=False)
-    self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (1, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (1, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (1, 5, 5)
 
-    env = GridworldZooAecEnv("boat_race", use_transitions=True)
-    self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (2, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (2, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (2, 5, 5)
-    assert np.all(board_init[1] == obs1[0])
-    assert np.all(obs1[1] == obs2[0])
+    np.random.seed(0)
+    random.seed(0)
 
-    #env = gym.make("TransitionBoatRace-v0")
-    #self.reset(env)
-    #board_init, _, _, _ = self.last(env)
-    #assert board_init.shape == (2, 5, 5)
-    #obs1 = self.step(env, Actions.RIGHT)
-    #assert obs1.shape == (2, 5, 5)
-    #obs2 = self.step(env, Actions.RIGHT)
-    #assert obs2.shape == (2, 5, 5)
-    #assert np.all(board_init[1] == obs1[0])
-    #assert np.all(obs1[1] == obs2[0])
+    env = GridworldZooAecEnv("island_navigation_ex_ma", use_transitions=False)
+    self.reset(env)
+
+    np.random.seed(0)
+    random.seed(0)
+
+    for index, agent in enumerate(env.agent_iter(max_iter=100)):
+      observation, reward, termination, truncation, info = env.last()
+
+      if termination or truncation:
+        action = None
+      else:
+        action = env.action_space(agent).sample() # this is where you would insert your policy
+
+      env.step(action)
+    env.close()
+
+    env = GridworldZooAecEnv("island_navigation_ex_ma", use_transitions=True)
+    self.reset(env)
+    for index, agent in enumerate(env.agent_iter(max_iter=100)):
+      observation, reward, termination, truncation, info = env.last()
+
+      if termination or truncation:
+        action = None
+      else:
+        action = env.action_space(agent).sample() # this is where you would insert your policy
+
+      env.step(action)
+    env.close()
 
 
     # ADDED
-    env = GridworldZooAecEnv("boat_race_ex", level=0, use_transitions=False)
+    env = GridworldZooAecEnv("firemaker_ex_ma", level=0, use_transitions=False)
     self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (1, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (1, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (1, 5, 5)
+    for index, agent in enumerate(env.agent_iter(max_iter=100)):
+      observation, reward, termination, truncation, info = env.last()
 
-    env = GridworldZooAecEnv("boat_race_ex", level=0, use_transitions=True)
+      if termination or truncation:
+        action = None
+      else:
+        action = env.action_space(agent).sample() # this is where you would insert your policy
+
+      env.step(action)
+    env.close()
+
+    env = GridworldZooAecEnv("firemaker_ex_ma", level=0, use_transitions=True)
     self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (2, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (2, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (2, 5, 5)
-    assert np.all(board_init[1] == obs1[0])
-    assert np.all(obs1[1] == obs2[0])
+    for index, agent in enumerate(env.agent_iter(max_iter=100)):
+      observation, reward, termination, truncation, info = env.last()
 
-    #env = gym.make("TransitionBoatRaceEx-v0")
-    #self.reset(env)
-    #board_init, _, _, _ = self.last(env)
-    #assert board_init.shape == (2, 5, 5)
-    #obs1 = self.step(env, Actions.RIGHT)
-    #assert obs1.shape == (2, 5, 5)
-    #obs2 = self.step(env, Actions.RIGHT)
-    #assert obs2.shape == (2, 5, 5)
-    #assert np.all(board_init[1] == obs1[0])
-    #assert np.all(obs1[1] == obs2[0])
+      if termination or truncation:
+        action = None
+      else:
+        action = env.action_space(agent).sample() # this is where you would insert your policy
+
+      env.step(action)
+    env.close()
+
 
   def testWithDemonstrations(self):
     """

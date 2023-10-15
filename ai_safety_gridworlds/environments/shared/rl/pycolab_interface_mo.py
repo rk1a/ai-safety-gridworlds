@@ -30,7 +30,7 @@ import six
 from six.moves import zip
 
 
-class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.SafetyEnvironment as base class to avoid type check exceptions in safety_ui   # TODO: override only methods that need to be overridden
+class EnvironmentMo(safety_game.SafetyEnvironment):
   """A generic Python interface for pycolab games."""
 
   def __init__(self, game_factory, discrete_actions, default_reward,
@@ -113,8 +113,8 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     self._observation_distiller = observation_distiller
     self._max_iterations = max_iterations
 
-    # These slots comprise an EnvironmentMa's internal state. They are:
-    self._state = None              # Current EnvironmentMa game step state.
+    # These slots comprise an Environment's internal state. They are:
+    self._state = None              # Current Environment game step state.
     self._current_game = None       # Current pycolab game instance.
     self._game_over = None          # Whether the instance's game has ended.
     self._last_observations = None  # Last observation received from the game.
@@ -145,37 +145,33 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
         discount=None,
         observation=self.last_observations)
 
-  def step(self, agents_actions):
+  def step(self, action):
     """Apply action, step the world forward, and return observations."""
 
-    for agent, action in agents_actions.items(): # ADDED 
+    if self._action_size == 1:
+      # Handle a float or single-element arrays of any dimensionality. Strictly
+      # speaking, a single-element list will also work, but it's best not to
+      # confuse matters in the docstring with this option.
+      all_actions = [np.asarray(action).item()]
+    else:
+      all_actions = [np.asarray(a).item() for a in action]
 
-      if self._action_size == 1:
-        # Handle a float or single-element arrays of any dimensionality. Strictly
-        # speaking, a single-element list will also work, but it's best not to
-        # confuse matters in the docstring with this option.
-        all_actions = [np.asarray(action).item()]
-      else:
-        all_actions = [np.asarray(a).item() for a in action]
+    if len(all_actions) != self._action_size:
+      raise RuntimeError("A pycolab Environment adapter's step method "
+                         'was called with actions that were not compatible '
+                         'with what the pycolab game expects.')
 
-      if len(all_actions) != self._action_size:
-        raise RuntimeError("A pycolab EnvironmentMa adapter's step method "
-                           'was called with actions that were not compatible '
-                           'with what the pycolab game expects.')
+    # Clear episode internals and start a new episode, if episode ended or if
+    # the game was not already underway.
+    if self._state == environment.StepType.LAST:
+      self._drop_last_episode()
+    if self._current_game is None:
+      return self.reset(do_not_replace_reward=True) # NB! do_not_replace_reward=True since self._process_timestep(timestep) will be called after .step()
 
-      # Clear episode internals and start a new episode, if episode ended or if
-      # the game was not already underway.
-      if self._state == environment.StepType.LAST:
-        self._drop_last_episode()
-      if self._current_game is None:
-        return self.reset(do_not_replace_reward=True) # NB! do_not_replace_reward=True since self._process_timestep(timestep) will be called after .step()
-
-      # Execute the action in pycolab.
-      action = all_actions[0] if self._action_size == 1 else all_actions
-      observations, reward, discount = self._current_game.play({ agent: action })
-      self._update_for_game_step(observations, reward, discount)
-
-    #/ for agent, actions in agents_actions.items():
+    # Execute the action in pycolab.
+    action = all_actions[0] if self._action_size == 1 else all_actions
+    observations, reward, discount = self._current_game.play(action)
+    self._update_for_game_step(observations, reward, discount)
 
     # Check the current status of the game.
     if self._game_over:
@@ -188,7 +184,6 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
         reward=self._last_reward,
         discount=self._last_discount,
         observation=self.last_observations)
-
 
   def observation_spec(self):
     return self._observation_spec
@@ -264,7 +259,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     action_size = sum(value.shape[0] for value in valid_actions)
 
     if action_size <= 0:
-      raise ValueError('A pycolab EnvironmentMa adapter was initialised '
+      raise ValueError('A pycolab Environment adapter was initialised '
                        'without any discrete or continuous actions specified.')
 
     # Use arrays directly if we only have one.
@@ -288,7 +283,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
         _ = timestep.reward + self._default_reward
       except TypeError:
         raise TypeError(
-            'A pycolab game wrapped by an EnvironmentMa adapter returned '
+            'A pycolab game wrapped by an Environment adapter returned '
             'a first reward whose type is incompatible with the default reward '
             "given to the adapter's `__init__`.")
 
@@ -324,7 +319,7 @@ class Distiller(object):
   An "observation distiller" is any function from the `rendering.Observation`s
   generated by a pycolab game to a numpy array or a dict mapping string
   keys to numpy arrays.  While any callable performing this transformation is
-  usable as the `observation_distiller` parameter to the `EnvironmentMa`
+  usable as the `observation_distiller` parameter to the `Environment`
   constructor, happy users tend to have these callables be stateless.
 
   This class is sugar for a common pattern, which is to distill `Observation`s

@@ -125,7 +125,7 @@ class mo_reward(object):
       enabled_mo_rewards: a list of mo_reward objects.
     """
 
-    if enabled_mo_rewards is None:
+    if enabled_mo_rewards is None or len(enabled_mo_rewards) == 0:
 
       return [None]
 
@@ -154,7 +154,7 @@ class mo_reward(object):
       enabled_mo_rewards: a list of mo_reward objects.
     """
 
-    if enabled_mo_rewards is None:
+    if enabled_mo_rewards is None or len(enabled_mo_rewards) == 0:
 
       return None
 

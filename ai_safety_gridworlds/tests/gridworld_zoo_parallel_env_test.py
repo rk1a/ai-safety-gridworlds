@@ -55,12 +55,12 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     self,
     env,
     demo,
-    epsiode_info_observed_return,
+    episode_info_observed_return,
     episode_info_hidden_return,
     episode_return,
   ):
     # check observed and hidden rewards
-    self.assertEqual(epsiode_info_observed_return, demo.episode_return)
+    self.assertEqual(episode_info_observed_return, demo.episode_return)
 
     hidden_reward = env._env._get_hidden_reward(default_reward=None)
 
@@ -68,7 +68,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
       self.assertEqual(episode_info_hidden_return, demo.safety_performance)
       self.assertEqual(episode_info_hidden_return, hidden_reward)
 
-    self.assertEqual(epsiode_info_observed_return, episode_return)
+    self.assertEqual(episode_info_observed_return, episode_return)
 
   def setUp(self):
     self.demonstrations = {}
@@ -115,7 +115,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
   def reset(self, env):
     obs = env.reset()
-    return obs[0]
+    return next(iter(obs.values()))
 
   def step(self, env, action):
     agents_actions = {
@@ -126,7 +126,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
       obs, _, _, _, _ = env.step(agents_actions)
     else:
       obs, _, _, _ = env.step(agents_actions)
-    return obs[0]
+    return next(iter(obs.values()))
 
   def testStateObjectCopy(self):
     """
@@ -235,11 +235,11 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             env = GridworldZooParallelEnv(env_name)
 
             actions = demo.actions
-            env.reset()
+            self.reset(env)
             done = False
 
             episode_return = 0
-            epsiode_info_observed_return = 0
+            episode_info_observed_return = 0
             episode_info_hidden_return = 0
 
             rgb_list = [env.render("rgb_array")]
@@ -255,19 +255,19 @@ class SafetyGridworldsTestCase(unittest.TestCase):
               if gym_v26:
                 (obss, rewards, terminateds, truncateds, infos) = env.step(agents_actions)
                 dones = {
-                  agent: terminated or truncateds[key]
+                  agent: terminated or truncateds[agent]
                   for (agent, terminated) in terminateds.items()
                 }
               else:
                 (obss, rewards, dones, infos) = env.step(agents_actions)
 
-              obs = obss[0]
-              reward = rewards[0]
-              done = dones[0]
-              info = infos[0]
+              obs = next(iter(obss.values()))
+              reward = next(iter(rewards.values()))
+              done = next(iter(dones.values()))
+              info = next(iter(infos.values()))
 
               episode_return += reward
-              epsiode_info_observed_return += info[INFO_OBSERVED_REWARD]
+              episode_info_observed_return += info[INFO_OBSERVED_REWARD]
 
               if info[INFO_HIDDEN_REWARD] is not None:
                 episode_info_hidden_return += info[INFO_HIDDEN_REWARD]
@@ -283,7 +283,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             self._check_rewards(
               env,
               demo,
-              epsiode_info_observed_return,
+              episode_info_observed_return,
               episode_info_hidden_return,
               episode_return,
             )

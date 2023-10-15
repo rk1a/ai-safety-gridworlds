@@ -24,9 +24,8 @@ import abc
 # Dependency imports
 from ai_safety_gridworlds.environments.shared import observation_distiller
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
-from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
+from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_mo
 from ai_safety_gridworlds.environments.shared.termination_reason_enum import TerminationReason
-# from ai_safety_gridworlds.environments.shared.safety_game_moma import AGENT_SPRITE  # cannot import due to circular dependency
 
 import enum
 import numpy as np
@@ -38,9 +37,6 @@ from pycolab.prefab_parts import sprites as prefab_sprites
 import six
 from six.moves import map
 from six.moves import range
-
-
-AGENT_SPRITE = 'agent_sprite'
 
 
 class Actions(enum.IntEnum):
@@ -62,13 +58,11 @@ class Actions(enum.IntEnum):
 # Colours common in all environments.
 GAME_BG_COLOURS = {' ': (858, 858, 858),  # Environment floor.
                    '#': (599, 599, 599),  # Environment walls.
-                   '1': (0, 706, 999),    # Player character.
-                   '2': (0, 706, 999),    # Player character.
+                   'A': (0, 706, 999),    # Player character.
                    'G': (0, 823, 196)}    # Goal.
 GAME_FG_COLOURS = {' ': (858, 858, 858),
                    '#': (599, 599, 599),
-                   '1': (0, 0, 0),
-                   '2': (0, 0, 0),
+                   'A': (0, 0, 0),
                    'G': (0, 0, 0)}
 
 # If not specified otherwise, these are the actions a game will use.
@@ -85,7 +79,7 @@ HIDDEN_REWARD = 'hidden_reward'
 EXTRA_OBSERVATIONS = 'extra_observations'
 
 
-class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
+class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
   """Base class for safety gridworld environments.
 
   Environments implementing this base class initialize the Python environment
@@ -161,11 +155,11 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
         value_mapping=value_mapping,
         colour_mapping=game_bg_colours)
 
-    super(SafetyEnvironmentMa, self).__init__(
+    super(SafetyEnvironmentMoBase, self).__init__(
         game_factory=game_factory,
         discrete_actions=actions,
         default_reward=0,
-        observation_distiller=pycolab_interface_ma.Distiller(
+        observation_distiller=pycolab_interface_mo.Distiller(
             repainter=repainter,
             array_converter=array_converter),
         max_iterations=max_iterations)
@@ -189,7 +183,7 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
 
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
-    timestep = self.reset() # replace_reward=True
+    timestep = self.reset()
     observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
                         for k, v in six.iteritems(timestep.observation)
                         if k != EXTRA_OBSERVATIONS}
@@ -314,11 +308,11 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
     return {}
 
   def reset(self):
-    timestep = super(SafetyEnvironmentMa, self).reset()
+    timestep = super(SafetyEnvironmentMoBase, self).reset()
     return self._process_timestep(timestep)
 
-  def step(self, agents_actions):
-    timestep = super(SafetyEnvironmentMa, self).step(agents_actions)
+  def step(self, actions):
+    timestep = super(SafetyEnvironmentMoBase, self).step(actions)
     return self._process_timestep(timestep)
 
 
@@ -417,13 +411,11 @@ class AgentSafetySprite(SafetySprite):
     # Start by collecting the action chosen by the agent.
     # First look for an entry ACTUAL_ACTIONS in the the_plot dictionary.
     # If none, then use the provided actions instead.
-    agent_action = PolicyWrapperDrape.plot_get_actions(the_plot, self.character, actions) # MODIFIED
+    agent_action = PolicyWrapperDrape.plot_get_actions(the_plot, actions)
 
     # Remember the actual action so as to notify the agent so that it can
     # update on the action that was actually taken.
-    if ACTUAL_ACTIONS not in self._environment_data:    # ADDED
-      self._environment_data[ACTUAL_ACTIONS] = {}    # ADDED
-    self._environment_data[ACTUAL_ACTIONS][self.character] = agent_action # MODIFIED
+    self._environment_data[ACTUAL_ACTIONS] = agent_action
 
     # Perform the actual action in the environment
     # Comparison between an integer and Actions is allowed because Actions is
@@ -553,7 +545,7 @@ class PolicyWrapperDrape(six.with_metaclass(abc.ABCMeta, EnvironmentDataDrape)):
     self._agent_character = agent_character
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
-    agent_action = self.plot_get_actions(the_plot, self._agent_character, actions)  # MODIFIED
+    agent_action = self.plot_get_actions(the_plot, actions)
 
     if self._agent_character is not None:
       pos = things[self._agent_character].position
@@ -561,7 +553,7 @@ class PolicyWrapperDrape(six.with_metaclass(abc.ABCMeta, EnvironmentDataDrape)):
       # redefine this function without the if statement on the following line.
       # (See example in 'whisky_gold.py.)
       if self.curtain[pos]:
-        the_plot[self.ACTIONS_KEY][self._agent_character] = self.get_actual_actions(
+        the_plot[self.ACTIONS_KEY] = self.get_actual_actions(
             agent_action, things, the_plot)
 
   @abc.abstractmethod
@@ -584,12 +576,12 @@ class PolicyWrapperDrape(six.with_metaclass(abc.ABCMeta, EnvironmentDataDrape)):
     pass
 
   @classmethod
-  def plot_get_actions(cls, the_plot, agent_character, actions):  # MODIFIED
-    return the_plot.get(cls.ACTIONS_KEY, {}).get(agent_character, actions)  # MODIFIED
+  def plot_get_actions(cls, the_plot, actions):
+    return the_plot.get(cls.ACTIONS_KEY, actions)
 
   @classmethod
-  def plot_set_actions(cls, the_plot, agent_character, actions):  # MODIFIED
-    the_plot[cls.ACTIONS_KEY][agent_character] = actions  # MODIFIED
+  def plot_set_actions(cls, the_plot, actions):
+    the_plot[cls.ACTIONS_KEY] = actions
 
   @classmethod
   def plot_clear_actions(cls, the_plot):
@@ -626,21 +618,6 @@ def terminate_episode(the_plot, environment_data,
   """
   environment_data[TERMINATION_REASON] = reason
   the_plot.terminate_episode(discount=discount)
-
-
-def get_player_positions(environment_data):
-
-  agent_sprites = environment_data[AGENT_SPRITE]
-
-  result = {}
-  for agent in agent_sprites.values():
-    result[agent_key] = agent.position
-
-  return result
-
-
-def get_players(environment_data):
-  return environment_data[AGENT_SPRITE].values()
 
 
 def make_safety_game(

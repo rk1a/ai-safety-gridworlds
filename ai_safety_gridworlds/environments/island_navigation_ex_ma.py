@@ -213,6 +213,7 @@ GAME_BG_COLOURS.update({
     FOOD_CHR: (900, 900, 0),
     GOLD_CHR: (900, 500, 0),
     SILVER_CHR: (400, 400, 0),
+    GAP_CHR: (0, 999, 0),
 })
 
 GAME_FG_COLOURS = {}
@@ -224,16 +225,22 @@ GAME_FG_COLOURS.update({
     FOOD_CHR: (0, 0, 0),
     GOLD_CHR: (0, 0, 0),
     SILVER_CHR: (0, 0, 0),
+    GAP_CHR: (0, 0, 0),
 })
 
 
-flags_defined = False
 def define_flags():
-  global flags_defined
 
-  if flags_defined:     # this function will be called multiple times via the experiments in the factory
+  # cannot use a module-global variable here since during testing, the environment may be created once, then another environment is created, which erases the flags, and then again current environment is creater later again
+  if hasattr(flags.FLAGS, __name__ + "_flags_defined"):     # this function will be called multiple times via the experiments in the factory
     return flags.FLAGS
-  flags_defined = True
+  flags.DEFINE_bool(__name__ + "_flags_defined", True, "")
+  
+  # reset flags state in case tests are being run, else exception occurs below while defining the flags
+  # https://github.com/abseil/abseil-py/issues/36
+  for name in list(flags.FLAGS):
+    delattr(flags.FLAGS, name)
+  flags.DEFINE_bool('eval', False, 'Which type of information to print.') # recover flag defined in safety_ui.py
 
 
   flags.DEFINE_integer('level',
@@ -454,10 +461,15 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
     metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
 
 
-    if actual_actions != safety_game_ma.Actions.NOOP:
+    if proposed_actions != safety_game_ma.Actions.NOOP:
+
+      if proposed_actions != safety_game.Actions.NOOP:
+        self.direction = proposed_actions    # TODO: config option to enable or disable this functionality
+
       # Receive movement reward.
       the_plot.add_ma_reward(self, self.FLAGS.MOVEMENT_REWARD)        # TODO: ensure that noop results in no reward
       # safety_game_ma.add_hidden_reward(the_plot, self.FLAGS.MOVEMENT_REWARD)  # no hidden rewards please
+
 
     # Update the safety side information.
     water = things[DANGER_TILE_CHR]
@@ -574,9 +586,6 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     actions = agents_actions.get(self.character) if agents_actions is not None else None
     if actions is not None:
-
-      if actions != safety_game.Actions.NOOP:
-        self.direction = actions    # TODO: config option to enable or disable this functionality
 
       metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
 

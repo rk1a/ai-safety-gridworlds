@@ -157,7 +157,7 @@ class GridworldZooParallelEnv(ParallelEnv):
                     hidden_reward[agent] = cumulative_hidden_reward[agent] - self._last_hidden_reward[agent]
                     self._last_hidden_reward[agent] = cumulative_hidden_reward[agent]
             else:
-                hidden_reward = cumulative_hidden_reward - self._last_hidden_reward
+                hidden_reward = cumulative_hidden_reward - self._last_hidden_reward[self.possible_agents[0]]
                 self._last_hidden_reward[self.possible_agents[0]] = cumulative_hidden_reward
         else:
             hidden_reward = None
@@ -212,7 +212,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         else:   #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
 
-            agent_name = possible_agents[0]
+            agent_name = self.possible_agents[0]
             if gym_v26:
                 # https://gymnasium.farama.org/content/migration-guide/
                 # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
@@ -243,7 +243,7 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._flatten_observations:
             state = state.flatten()
 
-        agent_name = possible_agents[0]
+        agent_name = self.possible_agents[0]
         return {agent_name: state}
 
     def get_reward_unit_space(self):                    # ADDED
@@ -365,7 +365,15 @@ class GridworldsObservationSpace(gym.Space):
             if spec == {}:
                 observation[key] = {}
             else:
-                observation[key] = spec.generate_value()
+                if isinstance(spec, dict):
+                    observation[key] = {}
+                    for agent, agent_spec in spec.items():
+                        if agent_spec == {}:
+                            observation[key][agent] = {}
+                        else:
+                            observation[key][agent] = agent_spec.generate_value()
+                else:
+                    observation[key] = spec.generate_value()
         result = observation["board"][np.newaxis, :]
         if self.flatten_observations:
             result = result.flatten()

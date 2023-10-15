@@ -152,13 +152,13 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
                #game_fg_colours,
                #actions=None,
                #value_mapping=None,
-               environment_data={},
+               environment_data=None,
                #repainter=None,
                #max_iterations=100,
                FLAGS=None,
                scalarise=False,
                gzip_log=False,
-               log_columns=[],
+               log_columns=None,
                log_dir="logs",
                log_filename_comment="",
                log_arguments=None,
@@ -259,10 +259,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     self.scalarise = scalarise
 
 
-    if environment_data is None:
-      self._environment_data = {}
-    else:
-      self._environment_data = environment_data
+    if environment_data is None:  # https://stackoverflow.com/questions/1132941/least-astonishment-and-the-mutable-default-argument
+      environment_data = {}
+    self._environment_data = environment_data
 
     self._environment_data[METRICS_DICT] = dict()
     self._environment_data[METRICS_MATRIX] = np.empty([0, 2], object)
@@ -351,7 +350,11 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     self.gzip_log = gzip_log
     self.log_dir = log_dir
     self.log_filename_comment = log_filename_comment
+
+    if log_columns is None: # https://stackoverflow.com/questions/1132941/least-astonishment-and-the-mutable-default-argument
+      log_columns = []
     self.log_columns = log_columns
+
     self.log_arguments_to_separate_file = log_arguments_to_separate_file
 
     # prec = 12
@@ -364,7 +367,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
-  def reset(self, trial_no=None, start_new_experiment=False, seed=None, options=None):  # seed, options: for Gym 0.26+ compatibility
+  def reset(self, trial_no=None, start_new_experiment=False, seed=None, options=None, do_not_replace_reward=False):  # seed, options: for Gym 0.26+ compatibility
     """Start a new episode. 
     Increment the episode counter if the previous game was played.
     
@@ -528,7 +531,8 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         observation=self.last_observations)
     # end of code adapted from from Environment.reset()
 
-    return self._process_timestep(timestep)  # adapted from SafetyEnvironment.reset()
+    # do_not_replace_reward = not replace_reward     # NB! do_not_replace_reward=True since self._process_timestep(timestep) will be called after .step()
+    return self._process_timestep(timestep, do_not_replace_reward)  # adapted from SafetyEnvironment.reset()
 
 
   def _write_log_header(self, file):
@@ -704,7 +708,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
-    timestep = self.reset()
+    timestep = self.reset() # replace_reward=True)
     observation_spec = {k: self._ma_observation_spec_helper(k ,v)
                         for k, v in six.iteritems(timestep.observation)
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
@@ -783,7 +787,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
 
   # adapted from safety_game.py SafetyEnvironment._process_timestep(self, timestep)
-  def _process_timestep(self, timestep):
+  def _process_timestep(self, timestep, do_not_replace_reward=False):
     """Do timestep preprocessing before sending it to the agent.
 
     This method stores the cumulative return and makes sure that the
@@ -884,16 +888,19 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       agent_scalar_reward = sum(agent_reward_dims)
       scalar_reward[agent_key] = agent_scalar_reward
 
-      if self.scalarise:
-        agent_reward = float(agent_scalar_reward)
-      else:
-        agent_reward = np.array([float(x) for x in agent_reward_dims])
+      if not do_not_replace_reward:
+        if self.scalarise:
+          agent_reward = float(agent_scalar_reward)
+        else:
+          agent_reward = np.array([float(x) for x in agent_reward_dims])
 
-      reward[agent_key] = agent_reward
+        reward[agent_key] = agent_reward
+      #/ if not do_not_replace_reward:
 
     #/ for agent_key, agent_reward_dims in reward_dims.items():
 
-    timestep = timestep._replace(reward=reward)
+    if not do_not_replace_reward:
+      timestep = timestep._replace(reward=reward)
     
     
     gini_index = {}
@@ -1144,7 +1151,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     # Start by collecting the action chosen by the agent.
     # First look for an entry ACTUAL_ACTIONS in the the_plot dictionary.
     # If none, then use the provided actions instead.
-    agent_action = PolicyWrapperDrape.plot_get_actions(the_plot, actions)
+    agent_action = PolicyWrapperDrape.plot_get_actions(the_plot, self.character, actions) # MODIFIED
 
     # Perform the actual action in the environment
     # Comparison between an integer and Actions is allowed because Actions is

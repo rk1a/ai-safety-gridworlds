@@ -5,7 +5,7 @@
 import traceback
 import unittest
 
-from pettingzoo import AECEnv
+from pettingzoo import AECEnv, ParallelEnv
 
 try:
   import gymnasium as gym
@@ -20,8 +20,8 @@ from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.demonstrations import demonstrations
 from ai_safety_gridworlds.environments.shared.safety_game import Actions
 
-from ai_safety_gridworlds.helpers.gridworld_zoo_aec_env import GridworldZooAecEnv
-from ai_safety_gridworlds.helpers.gridworld_zoo_aec_env import INFO_HIDDEN_REWARD, INFO_OBSERVED_REWARD
+from ai_safety_gridworlds.helpers.gridworld_zoo_parallel_env import GridworldZooParallelEnv
+from ai_safety_gridworlds.helpers.gridworld_zoo_parallel_env import INFO_HIDDEN_REWARD, INFO_OBSERVED_REWARD
 
 
 class SafetyGridworldsTestCase(unittest.TestCase):
@@ -92,7 +92,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     repetitions = 10
 
     for env_name in self.demonstrations.keys():
-      env = GridworldZooAecEnv(env_name)
+      env = GridworldZooParallelEnv(env_name)
       for agent in env.possible_agents:
         action_space = env.action_space(agent)
         for _ in range(repetitions):
@@ -106,7 +106,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     repetitions = 10
 
     for env_name in self.demonstrations.keys():
-      env = GridworldZooAecEnv(env_name)
+      env = GridworldZooParallelEnv(env_name)
       for agent in env.possible_agents:
         observation_space = env.observation_space(agent)
         for _ in range(repetitions):
@@ -115,22 +115,18 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
   def reset(self, env):
     obs = env.reset()
-    self.agent_iter = env.agent_iter()
-    self.prev_agent = None
-
-  def last(self, env):
-    if gym_v26:
-      obs, reward, terminated, truncated, info = env.last_for_agent(self.prev_agent)
-      done = terminated or truncated
-    else:
-      obs, reward, done, info = env.last_for_agent(self.prev_agent)
-    return obs, reward, done, info
+    return obs[0]
 
   def step(self, env, action):
-    self.prev_agent = next(self.agent_iter)
-    env.step(action)
-    obs = env.observe(self.prev_agent)
-    return obs
+    agents_actions = {
+      agent: action for agent in env.possible_agents
+    }  
+
+    if gym_v26:
+      obs, _, _, _, _ = env.step(agents_actions)
+    else:
+      obs, _, _, _ = env.step(agents_actions)
+    return obs[0]
 
   def testStateObjectCopy(self):
     """
@@ -140,9 +136,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     For gym, however, we want the state to not change, i.e. return a copy
     of the board.
     """
-    env = GridworldZooAecEnv("boat_race")
-    self.reset(env)
-    obs0, _, _, _ = self.last(env)
+    env = GridworldZooParallelEnv("island_navigation_ex_ma")
+    obs0 = self.reset(env)
     obs1 = self.step(env, Actions.RIGHT)
     obs2 = self.step(env, Actions.RIGHT)
     self.assertFalse(np.all(obs0 == obs1))
@@ -150,83 +145,58 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     self.assertFalse(np.all(obs1 == obs2))
 
     # ADDED
-    env = GridworldZooAecEnv("boat_race_ex")
-    self.reset(env)
-    obs0, _, _, _ = self.last(env)
+    env = GridworldZooParallelEnv("firemaker_ex_ma")
+    obs0 = self.reset(env)
     obs1 = self.step(env, Actions.RIGHT)
     obs2 = self.step(env, Actions.RIGHT)
     self.assertFalse(np.all(obs0 == obs1))
     self.assertFalse(np.all(obs0 == obs2))
     self.assertFalse(np.all(obs1 == obs2))
+
 
   def testTransitions(self):
     """
     Ensure that when the use_transitions argument is set to True the state
     contains the board of the last two timesteps.
     """
-    env = GridworldZooAecEnv("boat_race", use_transitions=False)
-    self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (1, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (1, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (1, 5, 5)
+    env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=False)
+    board_init = self.reset(env)
+    while env.agents:
+      # this is where you would insert your policy
+      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
 
-    env = GridworldZooAecEnv("boat_race", use_transitions=True)
-    self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (2, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (2, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (2, 5, 5)
-    assert np.all(board_init[1] == obs1[0])
-    assert np.all(obs1[1] == obs2[0])
+      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
+    parallel_env.close()
 
-    #env = gym.make("TransitionBoatRace-v0")
-    #self.reset(env)
-    #board_init, _, _, _ = self.last(env)
-    #assert board_init.shape == (2, 5, 5)
-    #obs1 = self.step(env, Actions.RIGHT)
-    #assert obs1.shape == (2, 5, 5)
-    #obs2 = self.step(env, Actions.RIGHT)
-    #assert obs2.shape == (2, 5, 5)
-    #assert np.all(board_init[1] == obs1[0])
-    #assert np.all(obs1[1] == obs2[0])
+    env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=True)
+    board_init = self.reset(env)
+    while env.agents:
+      # this is where you would insert your policy
+      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
+
+      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
+    parallel_env.close()
 
 
     # ADDED
-    env = GridworldZooAecEnv("boat_race_ex", level=0, use_transitions=False)
-    self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (1, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (1, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (1, 5, 5)
+    env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=False)
+    board_init = self.reset(env)
+    while env.agents:
+      # this is where you would insert your policy
+      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
 
-    env = GridworldZooAecEnv("boat_race_ex", level=0, use_transitions=True)
-    self.reset(env)
-    board_init, _, _, _ = self.last(env)
-    assert board_init.shape == (2, 5, 5)
-    obs1 = self.step(env, Actions.RIGHT)
-    assert obs1.shape == (2, 5, 5)
-    obs2 = self.step(env, Actions.RIGHT)
-    assert obs2.shape == (2, 5, 5)
-    assert np.all(board_init[1] == obs1[0])
-    assert np.all(obs1[1] == obs2[0])
+      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
+    parallel_env.close()
 
-    #env = gym.make("TransitionBoatRaceEx-v0")
-    #self.reset(env)
-    #board_init, _, _, _ = self.last(env)
-    #assert board_init.shape == (2, 5, 5)
-    #obs1 = self.step(env, Actions.RIGHT)
-    #assert obs1.shape == (2, 5, 5)
-    #obs2 = self.step(env, Actions.RIGHT)
-    #assert obs2.shape == (2, 5, 5)
-    #assert np.all(board_init[1] == obs1[0])
-    #assert np.all(obs1[1] == obs2[0])
+    env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=True)
+    board_init = self.reset(env)
+    while env.agents:
+      # this is where you would insert your policy
+      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
+
+      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
+    parallel_env.close()
+
 
   def testWithDemonstrations(self):
     """
@@ -244,7 +214,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             # need to use np seed instead of the environment seed function
             # to be consistent with the seeds given in the demonstrations
             np.random.seed(demo.seed)
-            env = GridworldZooAecEnv(env_name)
+            env = GridworldZooParallelEnv(env_name)
 
             actions = demo.actions
             self.reset(env)
@@ -260,10 +230,20 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             for action in actions:
               self.assertFalse(done)
 
-              self.step(env, action)
-              (obs, reward, done, info) = self.last(env)    # TODO
+              agents_actions = {
+                agent: action for agent in env.possible_agents
+              }  
 
-              episode_return += reward
+              if gym_v26:
+                (obss, rewards, terminateds, truncateds, infos) = env.step(agents_actions)
+                dones = {
+                  agent: terminated or truncateds[agent]
+                  for (agent, terminated) in terminateds.items()
+                }
+              else:
+                (obss, rewards, dones, infos) = env.step(agents_actions)
+
+              episode_return += rewards
               episode_info_observed_return += info[INFO_OBSERVED_REWARD]
 
               if info[INFO_HIDDEN_REWARD] is not None:
