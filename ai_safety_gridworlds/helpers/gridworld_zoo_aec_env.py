@@ -35,6 +35,8 @@ from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
 
+from pycolab import rendering
+
 #from safe_grid_gym_orig.envs.common.interface import (
 #    INFO_HIDDEN_REWARD,
 #    INFO_OBSERVED_REWARD,
@@ -56,9 +58,11 @@ class GridworldZooAecEnv(AECEnv):
                         - 'conveyor_belt'
                         - 'conveyor_belt_ex'
                         - 'distributional_shift'
+                        - 'firemaker_ex_ma'
                         - 'friend_foe'
                         - 'island_navigation'
                         - 'island_navigation_ex'
+                        - 'island_navigation_ex_ma'
                         - 'rocks_diamonds'
                         - 'safe_interruptibility'
                         - 'safe_interruptibility_ex'
@@ -86,6 +90,8 @@ class GridworldZooAecEnv(AECEnv):
         self._use_transitions = use_transitions
         self._flatten_observations = flatten_observations
         self._last_board = None
+        self._last_observation = None
+        self._last_agent_observations = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             agents = safety_game_ma.get_players(self._env.environment_data)
@@ -198,17 +204,47 @@ class GridworldZooAecEnv(AECEnv):
 
 
     def observe(self, agent):
-        return self.last_step_result[agent][0]
+        # TODO: return current observation, not past observation
+        # TODO: return the perspective of current agent, not whole map
+        if self._last_agent_observations is not None:
+            board = self._last_agent_observations[agent].board
+        else:
+            board = copy.deepcopy(self._last_observation["board"])
+
+        if self._use_transitions:
+            if self._last_agent_observations is not None:
+                state = np.stack([self._last_agent_board[agent], board], axis=0) # TODO
+            else:
+                last_agent_board = self.last_step_result[agent][0][0]
+                state = np.stack([last_agent_board, board], axis=0)
+        else:
+            state = board[np.newaxis, :]
+
+        if self._flatten_observations:
+            state = state.flatten()
+
+        return state
 
     def last_for_agent(self, agent):    
         """Returns observation, cumulative reward, terminated, truncated, info for the specified agent."""
         if agent is None:
             agent = self._next_agent
-        return self.last_step_result[agent]
+
+        state = self.observe(agent)
+
+        if gym_v26:
+            (_, reward, terminated, truncated, info) = self.last_step_result[agent]
+            return (state, reward, terminated, truncated, info)
+        else:
+            (_, reward, done, info) = self.last_step_result[agent]
+            return (state, reward, done, info)
+
 
     def last(self, observe = True):    
         """Returns observation, cumulative reward, terminated, truncated, info for the current agent (specified by self.agent_selection)."""
-        return self.last_step_result[self._next_agent]
+        # TODO: return current observation, not past observation
+        # TODO: return the perspective of current agent, not whole map
+        return self.last_step_result[self._next_agent]    
 
     def step(self, action, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
         """ Perform an action in the gridworld environment.
@@ -231,7 +267,12 @@ class GridworldZooAecEnv(AECEnv):
             timestep = self._env.step(action, *args, **kwargs)
             
         obs = timestep.observation
+        self._last_observation = obs
         self._rgb = obs["RGB"]
+
+        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:  
+            self._last_agent_observations = self._env._agent_perspectives(rendering.Observation(board=obs["board"], layers={}))  
+            self._last_agent_observations = { agent_name: self._last_agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
 
         reward = 0.0 if timestep.reward is None else timestep.reward
         done = timestep.step_type.last()
@@ -261,12 +302,12 @@ class GridworldZooAecEnv(AECEnv):
 
         if self._use_transitions:
             state = np.stack([self._last_board, board], axis=0)
-            self._last_board = board
+            self._last_board = board    # TODO: save also pre-transition agent perspectives
         else:
             state = board[np.newaxis, :]
 
-        if self._flatten_observations:
-            state = state.flatten()
+        #if self._flatten_observations:   # flatten only when returning state, not yet here
+        #    state = state.flatten()
 
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -304,14 +345,21 @@ class GridworldZooAecEnv(AECEnv):
 
         board = copy.deepcopy(timestep.observation["board"])
 
+        self._last_observation = timestep.observation
+
+        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
+            self._last_agent_observations = self._env._agent_perspectives(rendering.Observation(board=board, layers={}))   
+            self._last_agent_observations = { agent_name: self._last_agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
+
+
         if self._use_transitions:
             state = np.stack([np.zeros_like(board), board], axis=0)
             self._last_board = board
         else:
             state = board[np.newaxis, :]
 
-        if self._flatten_observations:
-            state = state.flatten()
+        #if self._flatten_observations:   # flatten only when returning state, not yet here
+        #    state = state.flatten()
                     
         self._next_agent = self.possible_agents[0]
         self._next_agent_index = 0

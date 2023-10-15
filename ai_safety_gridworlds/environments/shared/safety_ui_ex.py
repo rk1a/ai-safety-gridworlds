@@ -126,7 +126,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         
     observations = [observation]                      # ADDED
     if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:          # ADDED
-      observations += self._env._agent_perspectives(observation) # ADDED
+      observations += list(self._env._agent_perspectives(observation).values()) # ADDED
 
     self._display(screen, observations, self._env.episode_return, # CHANGED
                   elapsed=datetime.timedelta())
@@ -176,7 +176,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         
       observations = [observation]                      # ADDED
       if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:            # ADDED
-        observations += self._env._agent_perspectives(observation) # ADDED
+        observations += list(self._env._agent_perspectives(observation).values()) # ADDED
 
       self._display(screen, observations, self._env.episode_return, elapsed, # CHANGED
         update_time_counter_only=update_time_counter_only)   # ADDED 

@@ -35,6 +35,8 @@ from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
 
+from pycolab import rendering
+
 #from safe_grid_gym_orig.envs.common.interface import (
 #    INFO_HIDDEN_REWARD,
 #    INFO_OBSERVED_REWARD,
@@ -56,9 +58,11 @@ class GridworldZooParallelEnv(ParallelEnv):
                         - 'conveyor_belt'
                         - 'conveyor_belt_ex'
                         - 'distributional_shift'
+                        - 'firemaker_ex_ma'
                         - 'friend_foe'
                         - 'island_navigation'
                         - 'island_navigation_ex'
+                        - 'island_navigation_ex_ma'
                         - 'rocks_diamonds'
                         - 'safe_interruptibility'
                         - 'safe_interruptibility_ex'
@@ -86,6 +90,8 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._use_transitions = use_transitions
         self._flatten_observations = flatten_observations
         self._last_board = None
+        self._last_observation = None
+        self._last_agent_observations = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             agents = safety_game_ma.get_players(self._env.environment_data)
@@ -140,7 +146,12 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
         obs = timestep.observation
+        self._last_observation = obs
         self._rgb = obs["RGB"]
+
+        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:  
+            self._last_agent_observations = self._env._agent_perspectives(rendering.Observation(board=obs["board"], layers={})) 
+            self._last_agent_observations = { agent_name: self._last_agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
 
         reward = 0.0 if timestep.reward is None else timestep.reward
 
@@ -233,6 +244,13 @@ class GridworldZooParallelEnv(ParallelEnv):
             self._viewer.reset_time()
 
         board = copy.deepcopy(timestep.observation["board"])
+
+        self._last_observation = timestep.observation
+
+        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: 
+            self._last_agent_observations = self._env._agent_perspectives(rendering.Observation(board=board, layers={}))    
+            self._last_agent_observations = { agent_name: self._last_agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
+
 
         if self._use_transitions:
             state = np.stack([np.zeros_like(board), board], axis=0)

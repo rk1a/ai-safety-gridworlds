@@ -463,8 +463,8 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     if proposed_actions != safety_game_ma.Actions.NOOP:
 
-      if proposed_actions != safety_game.Actions.NOOP:
-        self.direction = proposed_actions    # TODO: config option to enable or disable this functionality
+      # TODO: turning actions + action schema
+      self.direction = proposed_actions    # TODO: config option to enable or disable this functionality
 
       # Receive movement reward.
       the_plot.add_ma_reward(self, self.FLAGS.MOVEMENT_REWARD)        # TODO: ensure that noop results in no reward
@@ -866,7 +866,7 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
 
 
   def agent_perspectives(self, observation):  # TODO: refactor into agents
-    return [self._get_agent_perspective(agent, observation) for agent in safety_game_ma.get_players(self._environment_data)]
+    return { agent.character: self._get_agent_perspective(agent, observation) for agent in safety_game_ma.get_players(self._environment_data) }
 
 
 def main(unused_argv):
