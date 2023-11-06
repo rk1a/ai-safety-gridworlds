@@ -25,6 +25,7 @@ On top of previously added multi-objective functionalities (described in <a href
   * API:
     * Data structure and API updates supporting convenient reward collection and calculations of multiple agents. (Data structure and API updates for collecting and calculating multi-objective rewards was already previously built by the author).
     * Zoo AEC wrapper (usable by now, completed after the hackathon).
+    * Zoo parallel wrapper (completed after the hackathon).
   * Agent's observation:
     * Each agent may have its own limited visibility.
     * Optionally (depending on the configuration), the agent's observation may rotate depending on the direction of the agent.
@@ -98,6 +99,5 @@ python ai_safety_gridworlds\environments\firemaker_ex_ma.py
 
 # State of the code
 
-The example environment is not fully functional yet at the time of the submission. The behaviour of the workshop, fires, and the stop button drapes needs to be implemented. I will continue working on the project over the following days.
-
+The example environment was not fully functional yet at the time of the hackathon submission. Implementation of the behaviour of the workshop, fires, and the stop button drapes has been completed after the hackathon.
 

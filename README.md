@@ -21,7 +21,7 @@ The currently available experiment environments are described here https://docs.
 * Support for multi-agent environments. Each agent has its own reward and termination accounting.
 * Support for agent-specific observations. The agent-specific observations are returnd via Zoo API as well as shown in the human ui. The number of agents is controlled by the environment. It can be configured for example via environment flags.
 * Support for relative observation and action direction per agent. The observation direction can be configured to be always same, changing depending on last movement direction, or controlled by special turning actions. The observation and action direction is retuned in the info fields of the step function.
-* Implemented a strategy for automatically resolving collisions as well as any kinds of distributed resource conflicts in the Zoo parallel environments without extra code in the concrete environment's code.
+* Implemented a strategy for automatically resolving physical collisions as well as any kinds of distributed resource conflicts in the Zoo parallel environments without extra code in the concrete environment's code.
 * Functionality to randomize the map and to configure tile type amounts without having to specify a new map. Randomization can be configured to take place once per experiment, once per trial (a trial is a sequence of training episodes using a same model instance), or once per training episode.
 
 
