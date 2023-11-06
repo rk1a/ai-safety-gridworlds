@@ -18,6 +18,7 @@ import numpy as np
 
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.demonstrations import demonstrations
+from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.environments.shared.safety_game import Actions
 
 from ai_safety_gridworlds.helpers.gridworld_zoo_parallel_env import GridworldZooParallelEnv
@@ -60,11 +61,17 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     episode_return,
   ):
     # check observed and hidden rewards
+    if not isinstance(env, safety_game_moma.SafetyEnvironmentMoMa):
+      episode_info_observed_return = next(iter(episode_info_observed_return.values()))
+      episode_return = next(iter(episode_return.values()))
+
     self.assertEqual(episode_info_observed_return, demo.episode_return)
 
     hidden_reward = env._env._get_hidden_reward(default_reward=None)
 
     if hidden_reward is not None:
+      if not isinstance(env, safety_game_moma.SafetyEnvironmentMoMa):
+        episode_info_hidden_return = next(iter(episode_info_hidden_return.values()))
       self.assertEqual(episode_info_hidden_return, demo.safety_performance)
       self.assertEqual(episode_info_hidden_return, hidden_reward)
 
@@ -114,8 +121,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
           assert observation_space.contains(observation)
 
   def reset(self, env):
-    obs = env.reset()
-    return obs[0]
+    obs, infos = env.reset()
+    return obs
 
   def step(self, env, action):
     agents_actions = {
@@ -159,43 +166,51 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     Ensure that when the use_transitions argument is set to True the state
     contains the board of the last two timesteps.
     """
-    env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=False)
+    env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=False, max_iterations=100)
     board_init = self.reset(env)
-    while env.agents:
+    done = False
+    while not done:
       # this is where you would insert your policy
-      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
+      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      observations, rewards, terminations, truncations, infos = env.step(actions)
+      done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
-      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
-    parallel_env.close()
+    env.close()
 
-    env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=True)
+    env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=True, max_iterations=100)
     board_init = self.reset(env)
-    while env.agents:
+    done = False
+    while not done:
       # this is where you would insert your policy
-      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
+      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      observations, rewards, terminations, truncations, infos = env.step(actions)
+      done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
-      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
-    parallel_env.close()
+    env.close()
 
 
     # ADDED
-    env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=False)
+    env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=False, max_iterations=100)
     board_init = self.reset(env)
-    while env.agents:
+    done = False
+    while not done:
       # this is where you would insert your policy
-      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
+      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      observations, rewards, terminations, truncations, infos = env.step(actions)
+      done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
-      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
-    parallel_env.close()
+    env.close()
 
-    env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=True)
+    env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=True, max_iterations=100)
     board_init = self.reset(env)
-    while env.agents:
+    done = False
+    while not done:
       # this is where you would insert your policy
-      actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
+      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      observations, rewards, terminations, truncations, infos = env.step(actions)
+      done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
-      observations, rewards, terminations, truncations, infos = parallel_env.step(actions)
-    parallel_env.close()
+    env.close()
 
 
   def testWithDemonstrations(self):
@@ -220,9 +235,9 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             self.reset(env)
             done = False
 
-            episode_return = 0
-            episode_info_observed_return = 0
-            episode_info_hidden_return = 0
+            episode_return = {}
+            episode_info_observed_return = {}
+            episode_info_hidden_return = {}
 
             rgb_list = [env.render("rgb_array")]
             ansi_list = [env.render("ansi")]
@@ -242,19 +257,23 @@ class SafetyGridworldsTestCase(unittest.TestCase):
                 }
               else:
                 (obss, rewards, dones, infos) = env.step(agents_actions)
+                
+              done = all(dones.values())
 
-              episode_return += rewards
-              episode_info_observed_return += info[INFO_OBSERVED_REWARD]
+              episode_return = { agent: episode_return.get(agent, 0) + rewards[agent] for agent in rewards.keys() }
+              # episode_info_observed_return += infos[INFO_OBSERVED_REWARD]    # TODO
+              episode_info_observed_return = { agent: episode_info_observed_return.get(agent, 0) + rewards[agent] for agent in rewards.keys() }
 
-              if info[INFO_HIDDEN_REWARD] is not None:
-                episode_info_hidden_return += info[INFO_HIDDEN_REWARD]
+              for agent in env.possible_agents:
+                if infos[agent][INFO_HIDDEN_REWARD] is not None:
+                  episode_info_hidden_return[agent] = episode_info_hidden_return.get(agent, 0) + infos[agent][INFO_HIDDEN_REWARD]
 
               rgb_list.append(env.render("rgb_array"))
               ansi_list.append(env.render("ansi"))
 
               for agent in env.possible_agents:
-                self._check_action_observation_valid(env, agent, action, obs)
-              self._check_reward(env, reward)
+                self._check_action_observation_valid(env, agent, action, obss[agent])
+              self._check_reward(env, rewards)
 
             self.assertEqual(done, demo.terminates)
             self._check_rewards(

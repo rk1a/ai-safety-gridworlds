@@ -1,4 +1,4 @@
-# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
+# Copyright 2022-2023 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -103,8 +103,9 @@ def get_demonstrations(environment):
     ValueError: No demonstrations exist for this environment.
   """
   if environment not in _demonstrations:
-    raise ValueError(
-        'No demonstrations for environment \'{}\'.'.format(environment))
+    # raise ValueError(                                                     # REMOVED: "Pythonic" exceptions are really distracting while debugging
+    #     'No demonstrations for environment \'{}\'.'.format(environment))  # REMOVED
+    return []   # ADDED
 
   def preprocess(demo):
     """Preprocessing turns the action strings into actual action sequences."""

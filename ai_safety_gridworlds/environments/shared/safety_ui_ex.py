@@ -27,12 +27,14 @@ from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 from ai_safety_gridworlds.environments.shared.safety_game_moma import AGENT_SPRITE
 from ai_safety_gridworlds.environments.shared import safety_game
+from ai_safety_gridworlds.environments.shared import safety_game_mo_base
 from ai_safety_gridworlds.environments.shared import safety_game_mo
 from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.environments.shared import safety_ui
 
 import numpy as np
 
+from pycolab import rendering
 from pycolab.human_ui import _format_timedelta
 from pycolab.protocols import logging as plab_logging
 
@@ -62,6 +64,15 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
   #  super(SafetyCursesUiEx, self).__init__(*args, **kwargs)
 
 
+  def is_game_over(self):   # ADDED
+
+    if isinstance(self._env._game_over, dict): # pylint: disable=protected-access
+      return all( self._env._game_over.get(agent) 
+                  for agent in self._env._environment_data[AGENT_SPRITE].keys() )   # TODO: refactor into a shared method in EnvironmentMa     # pylint: disable=protected-access
+    else:
+      return self._env._game_over # pylint: disable=protected-access
+
+
   # adapted from SafetyCursesUi._init_curses_and_play(self, screen) in ai_safety_gridworlds\environments\shared\safety_ui.py
   def _init_curses_and_play(self, screen):
     """Set up an already-running curses; do interaction loop.
@@ -82,13 +93,14 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     # See whether the user is using any reserved keys. This check ought to be in
     # the constructor, but it can't run until curses is actually initialised, so
     # it's here instead.
-    for key, action in six.iteritems(self._keycodes_to_actions):
-      if key in (curses.KEY_PPAGE, curses.KEY_NPAGE):
-        raise ValueError(
-            'the keys_to_actions argument to the CursesUi constructor binds '
-            'action {} to the {} key, which is reserved for CursesUi. Please '
-            'choose a different key for this action.'.format(
-                repr(action), repr(curses.keyname(key))))
+    if False:   # TODO: Use different keys for changing the console screen. Lets release the page up and page down here for agent control use.
+      for key, action in six.iteritems(self._keycodes_to_actions):
+        if key in (curses.KEY_PPAGE, curses.KEY_NPAGE):
+          raise ValueError(
+              'the keys_to_actions argument to the CursesUi constructor binds '
+              'action {} to the {} key, which is reserved for CursesUi. Please '
+              'choose a different key for this action.'.format(
+                  repr(action), repr(curses.keyname(key))))
 
     self.map_row_offset = 3   # ADDED
 
@@ -112,10 +124,6 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     # By default, the log display window is hidden
     paint_console = False
 
-    if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-      self._env.current_agent_index = 0
-      self._env.current_agent = list(self._env._environment_data[AGENT_SPRITE].values())[self._env.current_agent_index]
-
     # Kick off the game---get first observation, repaint it if desired,
     # initialise our total return, and display the first frame.
     self._env.reset()
@@ -125,14 +133,20 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     if self._repainter: observation = self._repainter(observation)
         
     observations = [observation]                      # ADDED
-    if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:          # ADDED
-      observations += list(self._env._agent_perspectives(observation).values()) # ADDED
+    if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:          # ADDED  # TODO: change _agent_perspectives to attribute agent_perspectives
+      agent_observations = self._env._agent_perspectives(observation.board).values() # ADDED
+      agent_observations = [rendering.Observation(board=x, layers={}) for x in agent_observations]  # ADDED 
+      observations += list(agent_observations) # ADDED
+
+    if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+      self._env.current_agent_index = 0
+      self._env.current_agent = list(self._env._environment_data[AGENT_SPRITE].values())[self._env.current_agent_index] # NB! current agent needs to be set AFTER calling .reset() above, else you get the agent object from some earlier reset() call, like during _compute_observation_spec etc. This is important when the map is randomised during each reset() call
 
     self._display(screen, observations, self._env.episode_return, # CHANGED
                   elapsed=datetime.timedelta())
 
     # Oh boy, play the game!
-    while not self._env._game_over:  # pylint: disable=protected-access
+    while not self.is_game_over():    # CHANGED
       # Wait (or not, depending) for user input, and convert it to an action.
       # Unrecognised keycodes cause the game display to repaint (updating the
       # elapsed time clock and potentially showing/hiding/updating the log
@@ -142,9 +156,11 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
       keycode = screen.getch()
 
       update_time_counter_only = False
-      if keycode == curses.KEY_PPAGE:    # Page Up? Show the game console.
+      
+      # TODO: Use different keys for changing the console screen. Lets release the page up and page down here for agent control use.
+      if False and keycode == curses.KEY_PPAGE:    # Page Up? Show the game console.
         paint_console = True
-      elif keycode == curses.KEY_NPAGE:  # Page Down? Hide the game console.
+      elif False and keycode == curses.KEY_NPAGE:  # Page Down? Hide the game console.
         paint_console = False
       elif keycode in self._keycodes_to_actions:
         # Convert the keycode to a game action and send that to the engine.
@@ -176,7 +192,9 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         
       observations = [observation]                      # ADDED
       if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:            # ADDED
-        observations += list(self._env._agent_perspectives(observation).values()) # ADDED
+        agent_observations = self._env._agent_perspectives(observation.board).values() # ADDED
+        agent_observations = [rendering.Observation(board=x, layers={}) for x in agent_observations] # ADDED  
+        observations += list(agent_observations) # ADDED
 
       self._display(screen, observations, self._env.episode_return, elapsed, # CHANGED
         update_time_counter_only=update_time_counter_only)   # ADDED 
@@ -236,7 +254,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
           map_row_offset += 2 # make room for per-agent map title
 
         
-        if agent_index == -1:
+        if agent_index == -1: # global map index
 
           self._screen_addstr(screen, self.map_row_offset, leftmost_column, "Global map", curses.color_pair(0))
           map_label_length = len("Global map")
@@ -256,7 +274,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         #/ if agent_index >= 0:
 
         # show cursor on global map
-        if agent_index == -1: # len(observations) == 1:  # no agent specific observations
+        if agent_index == -1: # global map index
           agent_location = self._env.current_agent.position
           self._agent_cursor_row = map_row_offset + agent_location.row
           self._agent_cursor_col = leftmost_column + agent_location.col
@@ -449,7 +467,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
 
 # adapted from ai_safety_gridworlds\environments\shared\safety_ui.py
-def make_human_curses_ui_with_noop_keys(game_bg_colours, game_fg_colours, noop_keys, delay=50 #, agent_perspectives=None
+def make_human_curses_ui_with_noop_keys(game_bg_colours, game_fg_colours, noop_keys, turning_keys=False, delay=50 #, agent_perspectives=None
 ):
   """Instantiate a Python Curses UI for the terminal game.
 
@@ -465,12 +483,15 @@ def make_human_curses_ui_with_noop_keys(game_bg_colours, game_fg_colours, noop_k
     A curses UI game object.
   """
 
-  keys_to_actions={curses.KEY_UP:       safety_game.Actions.UP,
+  keys_to_actions={
+                    curses.KEY_UP:      safety_game.Actions.UP,
                     curses.KEY_DOWN:    safety_game.Actions.DOWN,
                     curses.KEY_LEFT:    safety_game.Actions.LEFT,
                     curses.KEY_RIGHT:   safety_game.Actions.RIGHT,
                     'q':                safety_game.Actions.QUIT,
-                    'Q':                safety_game.Actions.QUIT}
+                    'Q':                safety_game.Actions.QUIT
+                  }
+
   if noop_keys:
      keys_to_actions.update({
         # middle button on keypad
@@ -479,6 +500,20 @@ def make_human_curses_ui_with_noop_keys(game_bg_colours, game_fg_colours, noop_k
         ' ': safety_game.Actions.NOOP,
         # -1: Actions.NOOP,           # curses delay timeout "keycode" is -1
       })
+
+  if turning_keys:  # TODO: function argument to configure key map customisations while retaining default mappings for unconfigured keys
+     keys_to_actions.update({
+        # middle button on keypad
+        curses.KEY_A1:    safety_game_mo_base.Actions.TURN_LEFT_90,      # Upper left of keypad
+        curses.KEY_HOME:  safety_game_mo_base.Actions.TURN_LEFT_90,    # Home
+        curses.KEY_A3:    safety_game_mo_base.Actions.TURN_RIGHT_90,     # Upper right of keypad
+        curses.KEY_PPAGE: safety_game_mo_base.Actions.TURN_RIGHT_90,  # Page up
+        curses.KEY_C1:    safety_game_mo_base.Actions.TURN_LEFT_180,     # Lower left of keypad
+        curses.KEY_END:   safety_game_mo_base.Actions.TURN_LEFT_180,    # End
+        curses.KEY_C3:    safety_game_mo_base.Actions.TURN_RIGHT_180,    # Lower right of keypad
+        curses.KEY_NPAGE: safety_game_mo_base.Actions.TURN_RIGHT_180, # Page down
+      })
+
 
   return SafetyCursesUiEx(  
       keys_to_actions=keys_to_actions,

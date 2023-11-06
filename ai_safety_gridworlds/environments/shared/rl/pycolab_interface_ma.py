@@ -24,10 +24,18 @@ from __future__ import print_function
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
 from ai_safety_gridworlds.environments.shared.rl import environment
 from ai_safety_gridworlds.environments.shared import safety_game
+# from ai_safety_gridworlds.environments.shared import safety_game_ma  # cannot import due to circular dependency
 
 import numpy as np
 import six
 from six.moves import zip
+
+
+AGENT_SPRITE = 'agent_sprite'
+INFO_OBSERVATION_DIRECTION = "observation_direction"
+INFO_ACTION_DIRECTION = "action_direction"
+INFO_LAYERS = "layers"
+TERMINATION_REASON = 'termination_reason'
 
 
 class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.SafetyEnvironment as base class to avoid type check exceptions in safety_ui   # TODO: override only methods that need to be overridden
@@ -114,9 +122,9 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     self._max_iterations = max_iterations
 
     # These slots comprise an EnvironmentMa's internal state. They are:
-    self._state = None              # Current EnvironmentMa game step state.
+    self._state = {}                # Current EnvironmentMa game step state.
     self._current_game = None       # Current pycolab game instance.
-    self._game_over = None          # Whether the instance's game has ended.
+    self._game_over = {}            # Whether the instance's game has ended.
     self._last_observations = None  # Last observation received from the game.
     self._last_reward = None        # Last reward, if any, or default reward.
     self._last_discount = None      # Last discount factor from the game.
@@ -135,15 +143,16 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     """Start a new episode."""
     # Build a new game and retrieve its first set of state/reward/discount.
     self._current_game = self._game_factory()
-    self._state = environment.StepType.FIRST
+    self._state = { agent: environment.StepType.FIRST for agent in self.environment_data[AGENT_SPRITE].keys() }
     # Collect environment returns from starting the game and update state.
     observations, reward, discount = self._current_game.its_showtime()
     self._update_for_game_step(observations, reward, discount)
     return environment.TimeStep(
-        step_type=self._state,
-        reward=None,
-        discount=None,
-        observation=self.last_observations)
+      step_type=self._state,
+      reward=None,
+      discount=None,
+      observation=self.last_observations
+    )
 
   def step(self, agents_actions):
     """Apply action, step the world forward, and return observations."""
@@ -165,8 +174,13 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
 
       # Clear episode internals and start a new episode, if episode ended or if
       # the game was not already underway.
-      if self._state == environment.StepType.LAST:
-        self._drop_last_episode()
+      if self._state[agent].last():   # CHANGED
+        if all( self._state[agent2].last()    # ADDED
+                for agent2 in self.environment_data[AGENT_SPRITE].keys() ):   # drop episode only when all agents are terminated    # ADDED
+          self._drop_last_episode()
+        else:     # ignore any commands on the agent that is terminated    # ADDED
+          continue    # TODO: raise any warnings about commands sent to terminated agents?    # ADDED
+
       if self._current_game is None:
         return self.reset(do_not_replace_reward=True) # NB! do_not_replace_reward=True since self._process_timestep(timestep) will be called after .step()
 
@@ -178,17 +192,18 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     #/ for agent, actions in agents_actions.items():
 
     # Check the current status of the game.
-    if self._game_over:
-      self._state = environment.StepType.LAST
-    else:
-      self._state = environment.StepType.MID
+    for agent in agents_actions.keys():
+      if self._game_over.get(agent):
+        self._state[agent] = environment.StepType.LAST
+      else:
+        self._state[agent] = environment.StepType.MID
 
     return environment.TimeStep(
-        step_type=self._state,
-        reward=self._last_reward,
-        discount=self._last_discount,
-        observation=self.last_observations)
-
+      step_type=self._state,
+      reward=self._last_reward,
+      discount=self._last_discount,
+      observation=self.last_observations_for_agents(agents_actions.keys())
+    )
 
   def observation_spec(self):
     return self._observation_spec
@@ -201,9 +216,37 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     """Distill and return the last observation."""
     # A "bare" numpy array will be placed in a dict under the key "board".
     if isinstance(self._last_observations, dict):
-      observation = self._last_observations
+      observation = dict(self._last_observations) # NB! clone before modifying
     else:
       observation = {'board': self._last_observations}
+
+    agent_objects = self.environment_data[AGENT_SPRITE]
+    observation_directions = { agent_name: getattr(agent_object, "observation_direction", None) for agent_name, agent_object in agent_objects.items() }
+    action_directions = { agent_name: agent_object.action_direction for agent_name, agent_object in agent_objects.items() }
+
+    observation.update({
+      INFO_OBSERVATION_DIRECTION: observation_directions,
+      INFO_ACTION_DIRECTION: action_directions,
+    })
+
+    return observation
+
+  def last_observations_for_agents(self, agent_names):
+    """Distill and return the last observation."""
+    # A "bare" numpy array will be placed in a dict under the key "board".
+    if isinstance(self._last_observations, dict):
+      observation = dict(self._last_observations) # NB! clone before modifying
+    else:
+      observation = {'board': self._last_observations}
+
+    agent_objects = self.environment_data[AGENT_SPRITE]
+    observation_directions = { agent_name: getattr(agent_objects[agent_name], "observation_direction", None) for agent_name in agent_names }
+    action_directions = { agent_name: agent_objects[agent_name].action_direction for agent_name in agent_names }
+
+    observation.update({
+      INFO_OBSERVATION_DIRECTION: observation_directions,
+      INFO_ACTION_DIRECTION: action_directions,
+    })
 
     return observation
 
@@ -301,18 +344,21 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     self._last_observations = self._observation_distiller(observations)
     self._last_reward = reward if reward is not None else self._default_reward
     self._last_discount = discount
-    self._game_over = self._current_game.game_over
+
+    # self._game_over = self._current_game.game_over    # let us have our own multi-agent game over accounting    # REMOVED
+    termination_reasons = self.environment_data.get(TERMINATION_REASON, {})   # ADDED
+    self._game_over = { agent: termination_reasons.get(agent) is not None for agent in self.environment_data[AGENT_SPRITE].keys() }   # ADDED
 
     # If we've reached the maximum number of game iterations, terminate the
     # current game.
     if self._current_game.the_plot.frame >= self._max_iterations:
-      self._game_over = True
+      self._game_over = { agent: True for agent in self.environment_data[AGENT_SPRITE].keys() }
 
   def _drop_last_episode(self):
     """Clear all the internal information about the game."""
-    self._state = None
+    self._state = {}
     self._current_game = None
-    self._game_over = None
+    self._game_over = {}
     self._last_observations = None
     self._last_reward = None
     self._last_discount = None

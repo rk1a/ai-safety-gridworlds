@@ -44,6 +44,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\environments\shared\mo_reward.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ai_safety_gridworlds\environments\shared\observation_distiller_ex.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\plot_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\plot_mo.py">
       <SubType>Code</SubType>

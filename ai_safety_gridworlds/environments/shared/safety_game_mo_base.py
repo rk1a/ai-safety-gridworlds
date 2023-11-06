@@ -22,10 +22,12 @@ from __future__ import print_function
 import abc
 
 # Dependency imports
-from ai_safety_gridworlds.environments.shared import observation_distiller
+from ai_safety_gridworlds.environments.shared import observation_distiller_ex   # CHANGED
+from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward        # ADDED
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
 from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_mo
 from ai_safety_gridworlds.environments.shared.termination_reason_enum import TerminationReason
+from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 
 import enum
 import numpy as np
@@ -53,6 +55,10 @@ class Actions(enum.IntEnum):
   NOOP = 4
   # Human only.
   QUIT = 5
+  TURN_LEFT_90 = 6    # ADDED
+  TURN_RIGHT_90 = 7    # ADDED
+  TURN_LEFT_180 = 8    # ADDED
+  TURN_RIGHT_180 = 9    # ADDED
 
 
 # Colours common in all environments.
@@ -140,7 +146,7 @@ class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
     # metric might not be equal to the reward obtained.
     self._episodic_performances = []
     # Total environment reward for the current episode.
-    self._episode_return = 0
+    self._episode_return = mo_reward({})    # CHANGED
     # Keys to clear from environment_data at start of each episode.
     self._keys_to_clear = [TERMINATION_REASON, ACTUAL_ACTIONS]
 
@@ -151,7 +157,7 @@ class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
       value_mapping = {chr(i): i for i in range(256)}
     self._value_mapping = value_mapping
 
-    array_converter = observation_distiller.ObservationToArrayWithRGB(
+    array_converter = observation_distiller_ex.ObservationToArrayWithRGBEx(   # CHANGED
         value_mapping=value_mapping,
         colour_mapping=game_bg_colours)
 
@@ -358,7 +364,9 @@ class SafetySprite(prefab_sprites.MazeWalker):
       impassable: the character that the agent can't traverse.
     """
     super(SafetySprite, self).__init__(
-        corner, position, character, impassable=impassable)
+        corner, position, character, impassable=impassable,
+        confined_to_board=True,   # multi-objective sprites are always confined to the board in order to avoid problems in computing observed object coordinates  # TODO: fix that limitation    # ADDED
+    )
     self._environment_data = environment_data
     self._original_board = original_board
 
@@ -377,7 +385,9 @@ class AgentSafetySprite(SafetySprite):
 
   def __init__(self, corner, position, character,
                environment_data, original_board,
-               impassable='#'):
+               impassable='#', 
+               action_direction_mode=0    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions    # ADDED
+              ):
     """Initialize AgentSafetySprite.
 
     Args:
@@ -396,6 +406,162 @@ class AgentSafetySprite(SafetySprite):
         impassable=impassable)
     self._environment_data = environment_data
     self._original_board = original_board
+    self.action_direction_mode = action_direction_mode      # ADDED
+    self.action_direction = Actions.UP  
+
+
+  def translate_relative_direction_to_absolute(self, agent_action):  # ADDED
+
+    if self.action_direction_mode == 0:      # 0 - fixed
+      agent_absolute_action = agent_action
+
+    elif self.action_direction_mode == 1 or self.action_direction_mode == 2:    # 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
+
+      if agent_action == Actions.UP:  # go forwards
+        agent_absolute_action = {
+                              Actions.UP: Actions.UP,
+                              Actions.DOWN: Actions.DOWN,
+                              Actions.LEFT: Actions.LEFT,
+                              Actions.RIGHT: Actions.RIGHT,
+                            }[self.action_direction]
+
+      elif agent_action == Actions.DOWN:  # go backwards
+        agent_absolute_action = {
+                              Actions.UP: Actions.DOWN,
+                              Actions.DOWN: Actions.UP,
+                              Actions.LEFT: Actions.RIGHT,
+                              Actions.RIGHT: Actions.LEFT,
+                            }[self.action_direction]
+
+      elif agent_action == Actions.LEFT:  # go left
+        agent_absolute_action = {
+                              Actions.UP: Actions.LEFT,
+                              Actions.DOWN: Actions.RIGHT,
+                              Actions.LEFT: Actions.DOWN,
+                              Actions.RIGHT: Actions.UP,
+                            }[self.action_direction]
+
+      elif agent_action == Actions.RIGHT: # go right
+        agent_absolute_action = {
+                              Actions.UP: Actions.RIGHT,
+                              Actions.DOWN: Actions.LEFT,
+                              Actions.LEFT: Actions.UP,
+                              Actions.RIGHT: Actions.DOWN,
+                            }[self.action_direction]
+
+      else:
+        agent_absolute_action = agent_action
+
+    else:
+      raise ValueError
+
+    return agent_absolute_action
+
+
+  # TODO: change to a static method?
+  def map_action_to_observation_direction(self, proposed_actions, current_direction, action_direction_mode = 2, observation_direction_mode = 2):
+
+    if proposed_actions == Actions.NOOP:
+      direction = current_direction
+
+    elif observation_direction_mode == 0:   # fixed
+      direction = current_direction
+
+    elif observation_direction_mode == 1:   # relative, depending on last move
+      assert(proposed_actions in [Actions.UP, Actions.DOWN, Actions.LEFT, Actions.RIGHT])
+      direction = self.translate_relative_direction_to_absolute(proposed_actions)
+
+    elif observation_direction_mode == 2:   # relative, controlled by separate turning actions
+
+      if action_direction_mode == 0:        # fixed (fixed mapping between keys/actions and relative direction)
+        raise NotImplmentedError()  # TODO
+
+      elif (action_direction_mode == 1      # relative, depending on last move
+          or action_direction_mode == 2):   # relative, controlled by separate turning actions
+        
+        if proposed_actions == Actions.TURN_LEFT_90:
+          direction = {
+                                Actions.UP: Actions.LEFT,
+                                Actions.DOWN: Actions.RIGHT,
+                                Actions.LEFT: Actions.DOWN,
+                                Actions.RIGHT: Actions.UP,
+                              }[current_direction]
+
+        elif proposed_actions == Actions.TURN_RIGHT_90:
+          direction = {
+                                Actions.UP: Actions.RIGHT,
+                                Actions.DOWN: Actions.LEFT,
+                                Actions.LEFT: Actions.UP,
+                                Actions.RIGHT: Actions.DOWN,
+                              }[current_direction]
+
+        elif proposed_actions == Actions.TURN_LEFT_180 or proposed_actions == Actions.TURN_RIGHT_180:
+          direction = {
+                                Actions.UP: Actions.DOWN,
+                                Actions.DOWN: Actions.UP,
+                                Actions.LEFT: Actions.RIGHT,
+                                Actions.RIGHT: Actions.LEFT,
+                              }[current_direction]
+
+        else:
+          direction = current_direction
+
+      else:
+        raise ValueError("action_direction_mode")
+
+    else: #/ elif observation_direction_mode == 2:
+      raise ValueError("observation_direction_mode")
+
+    return direction
+
+
+  # TODO: change to a static method?
+  def map_action_to_action_direction(self, proposed_actions, current_direction, action_direction_mode = 2):
+
+    if proposed_actions == Actions.NOOP:
+      direction = current_direction
+
+    elif action_direction_mode == 0:   # fixed
+      direction = current_direction
+
+    elif action_direction_mode == 1:   # relative, depending on last move
+      assert(proposed_actions in [Actions.UP, Actions.DOWN, Actions.LEFT, Actions.RIGHT])
+      direction = self.translate_relative_direction_to_absolute(proposed_actions)
+
+    elif action_direction_mode == 2:   # relative, controlled by separate turning actions
+        
+      if proposed_actions == Actions.TURN_LEFT_90:
+        direction = {
+                              Actions.UP: Actions.LEFT,
+                              Actions.DOWN: Actions.RIGHT,
+                              Actions.LEFT: Actions.DOWN,
+                              Actions.RIGHT: Actions.UP,
+                            }[current_direction]
+
+      elif proposed_actions == Actions.TURN_RIGHT_90:
+        direction = {
+                              Actions.UP: Actions.RIGHT,
+                              Actions.DOWN: Actions.LEFT,
+                              Actions.LEFT: Actions.UP,
+                              Actions.RIGHT: Actions.DOWN,
+                            }[current_direction]
+
+      elif proposed_actions == Actions.TURN_LEFT_180 or proposed_actions == Actions.TURN_RIGHT_180:
+        direction = {
+                              Actions.UP: Actions.DOWN,
+                              Actions.DOWN: Actions.UP,
+                              Actions.LEFT: Actions.RIGHT,
+                              Actions.RIGHT: Actions.LEFT,
+                            }[current_direction]
+
+      else:
+        direction = current_direction
+
+    else: #/ elif action_direction_mode == 2:
+      raise ValueError("action_direction_mode")
+
+    return direction
+
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
     del backdrop  # Unused.
@@ -417,17 +583,21 @@ class AgentSafetySprite(SafetySprite):
     # update on the action that was actually taken.
     self._environment_data[ACTUAL_ACTIONS] = agent_action
 
+    agent_action_absolute = self.translate_relative_direction_to_absolute(agent_action)   # ADDED
+
     # Perform the actual action in the environment
     # Comparison between an integer and Actions is allowed because Actions is
     # an IntEnum
-    if agent_action == Actions.UP:       # go upward?
+    if agent_action_absolute == Actions.UP:       # go upward?
       self._north(board, the_plot)
-    elif agent_action == Actions.DOWN:   # go downward?
+    elif agent_action_absolute == Actions.DOWN:   # go downward?
       self._south(board, the_plot)
-    elif agent_action == Actions.LEFT:   # go leftward?
+    elif agent_action_absolute == Actions.LEFT:   # go leftward?
       self._west(board, the_plot)
-    elif agent_action == Actions.RIGHT:  # go rightward?
+    elif agent_action_absolute == Actions.RIGHT:  # go rightward?
       self._east(board, the_plot)
+
+    self.action_direction = self.map_action_to_action_direction(agent_action, self.action_direction, self.action_direction_mode) 
 
     self.update_reward(actions, agent_action, layers, things, the_plot)
 
@@ -628,10 +798,103 @@ def make_safety_game(
     sprites=None,
     drapes=None,
     update_schedule=None,
-    z_order=None):
+    z_order=None,
+    map_randomization_frequency=False,                        # ADDED   # TODO: configuration to specify whether to randomize the map once per experiment, once per trial, or once per episode
+    preserve_map_edges_when_randomizing=True,   # ADDED
+    environment=None,                           # ADDED
+    tile_type_counts=None,                      # ADDED
+  ):
   """Create a pycolab game instance."""
+
   # Keep a still copy of the initial board as a numpy array
   original_board = np.array(list(map(list, the_ascii_art[:])))
+
+
+  # START OF ADDED
+
+  if not tile_type_counts or not (map_randomization_frequency >= 1):
+    enable_randomize = False
+
+  if environment is None:
+    enable_randomize = True
+
+  else:
+    environment_class = environment.__class__.__module__ + "." + environment.__class__.__qualname__
+    last_randomization_done_for_environment = map_randomizations_per_environment.get(environment_class)
+    trial_no = environment.get_trial_no()
+    episode_no = environment.get_episode_no()
+
+    if map_randomization_frequency == 1:    # 1 - once per experiment run
+      randomization_key = ""
+    elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes using a same model instance)
+      randomization_key = str(trial_no)
+    elif map_randomization_frequency == 3:  # 3 - once per training episode
+      randomization_key = str(trial_no) + "|" + str(episode_no)
+    else:
+      raise ValueError("map_randomization_frequency")
+
+    enable_randomize = (last_randomization_done_for_environment != randomization_key)
+
+    if not enable_randomize:  # obtain earlier randomized map
+      (the_ascii_art, original_board) = randomized_maps_per_environment[randomization_key]
+
+
+  if tile_type_counts and enable_randomize:
+
+    for tile_type, tile_max_count in tile_type_counts.items():
+
+      tile_type_locations = (original_board == tile_type).nonzero()
+      num_locations = len(tile_type_locations[0])
+      num_items_to_remove = max(0, num_locations - tile_max_count)
+      # replace - Whether the sample is with or without replacement. Default is True, meaning that a value of a can be selected multiple times.
+      indexes_to_remove = np.random.choice(num_locations, size=num_items_to_remove, replace=False)
+      locations_to_remove = (tile_type_locations[0][indexes_to_remove], tile_type_locations[1][indexes_to_remove])
+      original_board[locations_to_remove] = what_lies_beneath
+
+      if tile_max_count == 0:
+        sprites.pop(tile_type, None)
+        drapes.pop(tile_type, None)
+        if tile_type in update_schedule:
+          del update_schedule[update_schedule.index(tile_type)]          
+        if tile_type in z_order:
+          del z_order[z_order.index(tile_type)]
+
+    #/ for tile_type, tile_max_count in tile_type_counts.items():
+
+    the_ascii_art = list(map(''.join, original_board.tolist()))
+
+  #/ if tile_type_counts:
+
+
+  if map_randomization_frequency >= 1 and enable_randomize:
+
+    if preserve_map_edges_when_randomizing:
+      submap = original_board[1:-1, 1:-1]
+    else:
+      submap = original_board
+
+    shape = submap.shape
+    submap = submap.reshape(shape[0] * shape[1])  # need to convert to vector form since np.random.shuffle shuffles only one dimension at a time
+    np.random.shuffle(submap)
+    submap = submap.reshape(shape)
+
+    if preserve_map_edges_when_randomizing:
+      original_board[1:-1, 1:-1] = submap
+    else:
+      original_board = submap
+
+    the_ascii_art = list(map(''.join, original_board.tolist()))
+
+  #/ if map_randomization_frequency >= 1 and enable_randomize:
+  
+  
+  if enable_randomize and environment is not None:  # obtain earlier randomized map
+    map_randomizations_per_environment[environment_class] = randomization_key
+    randomized_maps_per_environment[randomization_key] = (the_ascii_art, original_board)
+    
+  # END OF ADDED
+
+
   return ascii_art.ascii_art_to_game(
       the_ascii_art,
       what_lies_beneath,
@@ -649,4 +912,5 @@ def make_safety_game(
             for k, args in drapes.items()},
       backdrop=backdrop,
       update_schedule=update_schedule,
-      z_order=z_order)
+      z_order=z_order,
+      occlusion_in_layers=False)    # similar behaviour can be controlled by all_layers_in_observation in Zoo wrapper    # ADDED 

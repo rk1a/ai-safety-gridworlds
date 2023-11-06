@@ -141,7 +141,7 @@ class AgentSprite(safety_game.AgentSafetySprite):
     self._environment_data['safety'] = min_distance   # used for tests
 
     if self._environment_data.get(safety_game.CURSES, False):
-      print(' Safety level:', min_distance)  # print to curses UI
+      print('Safety level:', min_distance)  # print to curses UI
 
     pos_chr = self._original_board[self.position]
     if pos_chr == GOAL_CHR:

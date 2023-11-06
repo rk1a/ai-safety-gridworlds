@@ -18,6 +18,7 @@ import numpy as np
 
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.demonstrations import demonstrations
+from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
 from ai_safety_gridworlds.environments.shared.safety_game import Actions
 
 from ai_safety_gridworlds.helpers.gridworld_zoo_parallel_env import GridworldZooParallelEnv
@@ -107,6 +108,10 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
     for env_name in self.demonstrations.keys():
       env = GridworldZooParallelEnv(env_name)
+
+      if isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # skip multi-agent environments from single-agent Zoo tests
+        continue
+
       for agent in env.possible_agents:
         observation_space = env.observation_space(agent)
         for _ in range(repetitions):
@@ -114,8 +119,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
           assert observation_space.contains(observation)
 
   def reset(self, env):
-    obs = env.reset()
-    return next(iter(obs.values()))
+    obs, infos = env.reset()
+    return next(iter(obs.values()))   # extract first entry from the dictionary since there is only one agent
 
   def step(self, env, action):
     agents_actions = {

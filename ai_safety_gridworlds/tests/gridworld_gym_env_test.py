@@ -16,6 +16,7 @@ import numpy as np
 
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.demonstrations import demonstrations
+from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
 from ai_safety_gridworlds.environments.shared.safety_game import Actions
 
 from ai_safety_gridworlds.helpers.gridworld_gym_env import GridworldGymEnv
@@ -103,6 +104,10 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
     for env_name in self.demonstrations.keys():
       env = GridworldGymEnv(env_name)
+
+      if isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # skip multi-agent environments from Gym tests
+        continue
+
       observation_space = env.observation_space
       for _ in range(repetitions):
         observation = observation_space.sample()

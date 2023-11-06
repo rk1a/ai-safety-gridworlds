@@ -27,6 +27,7 @@ import numpy as np
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
 
@@ -38,6 +39,7 @@ from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
 #INFO_HIDDEN_REWARD = "hidden_reward"
 INFO_OBSERVED_REWARD = "observed_reward"
 INFO_DISCOUNT = "discount"
+INFO_OBSERVATION_COORDINATES = "info_observation_coordinates"   # TODO
 
 
 class GridworldGymEnv(gym.Env):
@@ -71,7 +73,8 @@ class GridworldGymEnv(gym.Env):
 
     metadata = {"render.modes": ["human", "ansi", "rgb_array"]}
 
-    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, *args, **kwargs):
+    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, all_layers_in_observation=True, *args, **kwargs):
+
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
@@ -80,7 +83,12 @@ class GridworldGymEnv(gym.Env):
         self._last_hidden_reward = 0
         self._use_transitions = use_transitions
         self._flatten_observations = flatten_observations
+        self._ascii_observation_format = ascii_observation_format
+        self._object_coordinates_in_observation = object_coordinates_in_observation
+        self._all_layers_in_observation = all_layers_in_observation
         self._last_board = None
+        self._last_observation = None
+        self._last_observation_coordinates = None
         self.action_space = GridworldsActionSpace(self._env)
         self.observation_space = GridworldsObservationSpace(self._env, use_transitions, flatten_observations)
 
@@ -105,8 +113,13 @@ class GridworldGymEnv(gym.Env):
                   the "extra_observations"
         """
         timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
+
         obs = timestep.observation
-        self._rgb = obs["RGB"]
+        self._last_observation = obs
+        self._rgb = obs["RGB"]        
+
+        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
+            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
 
         reward = 0.0 if timestep.reward is None else timestep.reward
         done = timestep.step_type.last()
@@ -121,14 +134,22 @@ class GridworldGymEnv(gym.Env):
         info = {
             INFO_HIDDEN_REWARD: hidden_reward,
             INFO_OBSERVED_REWARD: reward,
-            INFO_DISCOUNT: timestep.discount
+            INFO_DISCOUNT: timestep.discount,
+            INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION),
+            INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION),
+            # TODO: agent observation
+            # TODO: observation coordinates
         }
+
+        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
+            info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+
 
         for k, v in obs.items():
             if k not in ("board", "RGB"):
                 info[k] = v
 
-        board = copy.deepcopy(obs["board"])
+        board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
 
         if self._use_transitions:
             state = np.stack([self._last_board, board], axis=0)
@@ -152,11 +173,17 @@ class GridworldGymEnv(gym.Env):
     def reset(self, *args, **kwargs):                     # CHANGED: added *args, **kwargs
         timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      
 
-        self._rgb = timestep.observation["RGB"]
         if self._viewer is not None:
             self._viewer.reset_time()
 
-        board = copy.deepcopy(timestep.observation["board"])
+        obs = timestep.observation
+        self._last_observation = obs
+        self._rgb = obs["RGB"]        
+
+        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
+            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
+
+        board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
 
         if self._use_transitions:
             state = np.stack([np.zeros_like(board), board], axis=0)
@@ -282,11 +309,19 @@ class GridworldsObservationSpace(gym.Space):
                 "Sampling from transition-based envs not yet supported."
             )
         observation = {}
-        for key, spec in self.observation_spec_dict.items():
+        for key, spec in self.observation_spec_dict.items():  # TODO: this loop has no purpose, since only "board" key is used at the end
             if spec == {}:
                 observation[key] = {}
             else:
-                observation[key] = spec.generate_value()
+                if isinstance(spec, dict):
+                    observation[key] = {}
+                    for subkey, subkey_spec in spec.items():
+                        if subkey_spec == {}:
+                            observation[key][subkey] = {}
+                        else:
+                            observation[key][subkey] = subkey_spec.generate_value()
+                else:
+                    observation[key] = spec.generate_value()
         result = observation["board"][np.newaxis, :]
         if self.flatten_observations:
             result = result.flatten()

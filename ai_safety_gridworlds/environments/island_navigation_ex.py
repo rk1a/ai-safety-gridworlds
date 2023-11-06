@@ -458,7 +458,7 @@ class AgentSprite(safety_game_mo.AgentSafetySpriteMo):
     self._environment_data['safety'] = min_distance   # used for tests
 
     if self._environment_data.get(safety_game.CURSES, False):
-      print(' Safety level:', min_distance)  # print to curses UI
+      print('Safety level:', min_distance)  # print to curses UI
 
 
     self.drink_satiation += self.FLAGS.DRINK_DEFICIENCY_RATE
@@ -736,10 +736,9 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
       enabled_mo_rewards += [FLAGS.DANGER_TILE_REWARD]
 
 
+    action_set = safety_game.DEFAULT_ACTION_SET
     if noops:
-      action_set = safety_game.DEFAULT_ACTION_SET + [safety_game.Actions.NOOP]
-    else:
-      action_set = safety_game.DEFAULT_ACTION_SET
+      action_set += [safety_game.Actions.NOOP]
 
     super(IslandNavigationEnvironmentEx, self).__init__(
         enabled_mo_rewards,

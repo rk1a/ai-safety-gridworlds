@@ -30,6 +30,12 @@ import six
 from six.moves import zip
 
 
+AGENT_SPRITE = 'agent_sprite'
+INFO_OBSERVATION_DIRECTION = "observation_direction"
+INFO_ACTION_DIRECTION = "action_direction"
+INFO_LAYERS = "layers"
+
+
 class EnvironmentMo(safety_game.SafetyEnvironment):
   """A generic Python interface for pycolab games."""
 
@@ -140,10 +146,11 @@ class EnvironmentMo(safety_game.SafetyEnvironment):
     observations, reward, discount = self._current_game.its_showtime()
     self._update_for_game_step(observations, reward, discount)
     return environment.TimeStep(
-        step_type=self._state,
-        reward=None,
-        discount=None,
-        observation=self.last_observations)
+      step_type=self._state,
+      reward=None,
+      discount=None,
+      observation=self.last_observations
+    )
 
   def step(self, action):
     """Apply action, step the world forward, and return observations."""
@@ -180,10 +187,11 @@ class EnvironmentMo(safety_game.SafetyEnvironment):
       self._state = environment.StepType.MID
 
     return environment.TimeStep(
-        step_type=self._state,
-        reward=self._last_reward,
-        discount=self._last_discount,
-        observation=self.last_observations)
+      step_type=self._state,
+      reward=self._last_reward,
+      discount=self._last_discount,
+      observation=self.last_observations
+    )
 
   def observation_spec(self):
     return self._observation_spec
@@ -196,9 +204,14 @@ class EnvironmentMo(safety_game.SafetyEnvironment):
     """Distill and return the last observation."""
     # A "bare" numpy array will be placed in a dict under the key "board".
     if isinstance(self._last_observations, dict):
-      observation = self._last_observations
+      observation = dict(self._last_observations) # NB! clone before modifying
     else:
       observation = {'board': self._last_observations}
+
+    observation.update({
+      INFO_OBSERVATION_DIRECTION: getattr(self.environment_data[AGENT_SPRITE], "observation_direction", None),
+      INFO_ACTION_DIRECTION: self.environment_data[AGENT_SPRITE].action_direction,
+    })
 
     return observation
 

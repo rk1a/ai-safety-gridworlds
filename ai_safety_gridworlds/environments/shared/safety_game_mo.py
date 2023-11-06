@@ -34,6 +34,7 @@ from absl import flags
 # Dependency imports
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
 from ai_safety_gridworlds.environments.shared.rl import environment
+from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_LAYERS
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared.plot_mo import PlotMo
 from ai_safety_gridworlds.environments.shared.safety_game_mo_base import make_safety_game, SafetyEnvironmentMoBase, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
@@ -355,6 +356,35 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # log file header creation moved to reset() method
 
 
+  def calculate_observation_coordinates(self, observation, use_layers=True, ascii=True):
+
+    if use_layers:  # return coordinates of all objects, including the overlapped ones
+
+      layers_coordinates = {}
+      layers = observation["layers"] if isinstance(observation, dict) else observation.layers
+
+      for layer_key, layer in layers.items():
+        # if not ascii then translate key to corresponding observation value
+        layer_key = layer_key if ascii else self._value_mapping[layer_key]
+        # coordinates = layer.nonzero()
+        # layers_coordinates[layer_key] = list(zip(coordinates[0], coordinates[1])) # this returns list of tuples
+        layers_coordinates[layer_key] = [tuple(coord) for coord in np.argwhere(layer).tolist()] # argwhere returns list of lists, but list of tuples would be more efficient
+
+      return layers_coordinates
+
+    else:  # return coordinates of only the topmost objects visible on the board
+
+      board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board
+      chars = np.unique(board)
+            
+      chars_coordinates = {}
+      for char in chars:
+        # coordinates = (board == char).nonzero()
+        # chars_coordinates[key] = list(zip(coordinates[0], coordinates[1]))
+        chars_coordinates[key] = np.argwhere(board == char).tolist()[0]
+
+      return chars_coordinates
+
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
   def reset(self, trial_no=None, start_new_experiment=False, seed=None, options=None, do_not_replace_reward=False):  # seed, options: for Gym 0.26+ compatibility
@@ -405,7 +435,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
 
           # TODO: option to include log_arguments in filename
 
-          classname = self.__class__.__name__
+          classname = self.__class__.__module__ + "." + self.__class__.__qualname__
           timestamp = datetime.datetime.now()
           timestamp_str = datetime.datetime.strftime(timestamp, '%Y.%m.%d-%H.%M.%S')
 
@@ -481,7 +511,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
         or (      # If reset is called at the start of first trial then force random number generator re-seeding since setting up the experiment before the .reset() call might have consumed random numbers from the random number generator and we want the agent to be deterministic after the reset call
           trial_no == 1 
           and episode_no == 1
-          and (self._state is None or self._state == environment.StepType.FIRST)
+          and (self._state is None or self._state.first())
         )
       ):
         setattr(self.__class__, "trial_no", trial_no)
@@ -515,7 +545,8 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
         step_type=self._state,
         reward=None,
         discount=None,
-        observation=self.last_observations)
+        observation=self.last_observations
+    )
     # end of code adapted from from Environment.reset()
 
     # do_not_replace_reward = not replace_reward     # NB! do_not_replace_reward=True since self._process_timestep(timestep) will be called after .step()
@@ -672,10 +703,19 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     timestep = self.reset() # replace_reward=True)
     observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
                         for k, v in six.iteritems(timestep.observation)
-                        if k not in [EXTRA_OBSERVATIONS, METRICS_DICT]}                 # CHANGE
+                        if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
+                                     INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED
+                                     INFO_LAYERS,                                       # ADDED
+                                    ]}
     observation_spec[EXTRA_OBSERVATIONS] = dict()
-       
-    observation_spec[METRICS_DICT] = dict()                                             # ADDED
+
+    # START OF ADDED
+    observation_spec[INFO_OBSERVATION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_OBSERVATION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
+    observation_spec[INFO_ACTION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_ACTION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
+    observation_spec[INFO_LAYERS] = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
+                                     for k, v in six.iteritems(timestep.observation[INFO_LAYERS])}      
+    observation_spec[METRICS_DICT] = dict()                                             
+    # END OF ADDED
 
     self._drop_last_episode()
     return observation_spec
@@ -883,7 +923,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
         data.append(timestamp_str)
 
       elif col == LOG_ENVIRONMENT:
-        data.append(self.__class__.__name__)
+        data.append(self.__class__.__module__ + "." + self.__class__.__qualname__)
 
       elif col == LOG_TRIAL:
         data.append(self.get_trial_no())
@@ -989,10 +1029,10 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
 
 
   def get_trial_no(self):
-    return getattr(self.__class__, "trial_no")
+    return getattr(self.__class__, "trial_no", -1)
 
   def get_episode_no(self):
-    return getattr(self.__class__, "episode_no")
+    return getattr(self.__class__, "episode_no", -1)
 
 
   # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
@@ -1010,7 +1050,9 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
 
   def __init__(self, corner, position, character,
                environment_data, original_board,
-               impassable='#'):
+               impassable='#', 
+               action_direction_mode=0    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions    # ADDED
+              ):
     """Initialize AgentSafetySprite.
 
     Args:
@@ -1026,7 +1068,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     """
     super(AgentSafetySpriteMo, self).__init__(
         corner, position, character, environment_data, original_board,
-        impassable=impassable)
+        impassable=impassable, action_direction_mode=action_direction_mode)
 
     environment_data[AGENT_SPRITE] = self
 
@@ -1059,18 +1101,26 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     # If none, then use the provided actions instead.
     agent_action = PolicyWrapperDrape.plot_get_actions(the_plot, actions)
 
-    # Perform the actual action in the environment
+    agent_action_absolute = self.translate_relative_direction_to_absolute(agent_action)
+
+    # Perform the simulated action in the environment
     # Comparison between an integer and Actions is allowed because Actions is
     # an IntEnum
-    if agent_action == Actions.UP:       # go upward?
+    if agent_action_absolute == Actions.UP:       # go upward?
       self._simulate_north(board, the_plot)
-    elif agent_action == Actions.DOWN:   # go downward?
+    elif agent_action_absolute == Actions.DOWN:   # go downward?
       self._simulate_south(board, the_plot)
-    elif agent_action == Actions.LEFT:   # go leftward?
+    elif agent_action_absolute == Actions.LEFT:   # go leftward?
       self._simulate_west(board, the_plot)
-    elif agent_action == Actions.RIGHT:  # go rightward?
+    elif agent_action_absolute == Actions.RIGHT:  # go rightward?
       self._simulate_east(board, the_plot)
-    elif agent_action == Actions.NOOP:
+    elif agent_action_absolute == Actions.NOOP:
+      # pass
+      self._simulate_stay(board, the_plot)
+    elif (agent_action_absolute == TURN_LEFT_90
+        or agent_action_absolute == TURN_RIGHT_90
+        or agent_action_absolute == TURN_LEFT_180
+        or agent_action_absolute == TURN_RIGHT_180):
       # pass
       self._simulate_stay(board, the_plot)
     else:
@@ -1401,7 +1451,12 @@ def make_safety_game_mo(
     sprites=None,
     drapes=None,
     update_schedule=None,
-    z_order=None):
+    z_order=None,
+    map_randomization_frequency=False,                        # ADDED
+    preserve_map_edges_when_randomizing=True,   # ADDED
+    environment=None,                           # ADDED
+    tile_type_counts=None,                      # ADDED
+  ):
   """Create a pycolab game instance."""
 
   environment_data["what_lies_beneath"] = what_lies_beneath
@@ -1414,4 +1469,9 @@ def make_safety_game_mo(
     sprites,
     drapes,
     update_schedule,
-    z_order)
+    z_order,
+    map_randomization_frequency,                          # ADDED
+    preserve_map_edges_when_randomizing,    # ADDED   # TODO: this now here only for backwards compatibility with old maps
+    environment,                            # ADDED
+    tile_type_counts,                       # ADDED
+  )
