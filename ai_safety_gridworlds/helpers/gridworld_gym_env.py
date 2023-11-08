@@ -96,6 +96,7 @@ class GridworldGymEnv(gym.Env):
         self._last_observation_coordinates = None
         self._last_observation_layers_cube = None
 
+        # TODO: make these fields readonly
         self.action_space = GridworldsActionSpace(self._env)
         self.observation_space = GridworldsObservationSpace(self._env, use_transitions, flatten_observations)
 
@@ -167,7 +168,7 @@ class GridworldGymEnv(gym.Env):
 
 
         for k, v in obs.items():
-            if k not in ("board", "RGB"):
+            if k not in ("board", "RGB", "layers"):
                 info[k] = v
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array

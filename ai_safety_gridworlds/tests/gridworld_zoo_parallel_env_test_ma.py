@@ -169,7 +169,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=False, max_iterations=100)
     board_init = self.reset(env)
     done = False
-    while not done:
+    # while not done:
+    while env.agents:
       # this is where you would insert your policy
       actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
       observations, rewards, terminations, truncations, infos = env.step(actions)
@@ -180,7 +181,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     env = GridworldZooParallelEnv("island_navigation_ex_ma", use_transitions=True, max_iterations=100)
     board_init = self.reset(env)
     done = False
-    while not done:
+    # while not done:
+    while env.agents:
       # this is where you would insert your policy
       actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
       observations, rewards, terminations, truncations, infos = env.step(actions)
@@ -193,7 +195,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=False, max_iterations=100)
     board_init = self.reset(env)
     done = False
-    while not done:
+    # while not done:
+    while env.agents:
       # this is where you would insert your policy
       actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
       observations, rewards, terminations, truncations, infos = env.step(actions)
@@ -204,7 +207,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     env = GridworldZooParallelEnv("firemaker_ex_ma", level=0, use_transitions=True, max_iterations=100)
     board_init = self.reset(env)
     done = False
-    while not done:
+    # while not done:
+    while env.agents:
       # this is where you would insert your policy
       actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
       observations, rewards, terminations, truncations, infos = env.step(actions)
