@@ -980,4 +980,4 @@ def make_safety_game(
       backdrop=backdrop,
       update_schedule=update_schedule,
       z_order=z_order,
-      occlusion_in_layers=False)    # similar behaviour can be controlled by all_layers_in_observation in Zoo wrapper    # ADDED
+      occlusion_in_layers=False)    # similar behaviour can be controlled by occlusion_in_layers in Zoo wrapper    # ADDED
