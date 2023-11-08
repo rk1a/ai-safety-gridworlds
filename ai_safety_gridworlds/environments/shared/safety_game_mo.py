@@ -386,6 +386,40 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
       return chars_coordinates
 
 
+  def calculate_observation_layers_cube(self, observation, use_layers=True, layers_order=[]):
+
+    if use_layers:  # return coordinates of all objects, including the overlapped ones
+
+      layers_list = []
+      layers = observation["layers"] if isinstance(observation, dict) else observation.layers
+
+      if layers_order == []:  # take all layers
+        layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
+        layers_order.sort()
+
+      for layer_key in layers_order:
+        layer = layers[layer_key]
+        layers_list.append(layer)
+
+      return np.array(layers_list)
+
+    else:  # return coordinates of only the topmost objects visible on the board
+
+      board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board
+      chars = np.unique(board)
+
+      if layers_order == []:  # take all layers
+        layers_order = chars.tolist()  # assignment to default argument does not cause the "mutable default argument" problem
+        layers_order.sort()
+
+      layers_list = []
+      for layer_key in layers_order:
+        layer = (board == layer_key)
+        layers_list.append(layer)
+
+      return np.array(layers_list)
+
+
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
   def reset(self, trial_no=None, start_new_experiment=False, seed=None, options=None, do_not_replace_reward=False):  # seed, options: for Gym 0.26+ compatibility
     """Start a new episode. 

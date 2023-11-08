@@ -47,8 +47,12 @@ from pycolab import rendering
 INFO_OBSERVED_REWARD = "observed_reward"
 INFO_DISCOUNT = "discount"
 INFO_OBSERVATION_COORDINATES = "info_observation_coordinates"
+INFO_OBSERVATION_LAYERS_DICT = "info_observation_layers_dict"
+INFO_OBSERVATION_LAYERS_CUBE = "info_observation_layers_cube"
 INFO_AGENT_OBSERVATIONS = "info_agent_observations"
 INFO_AGENT_OBSERVATION_COORDINATES = "info_agent_observation_coordinates"
+INFO_AGENT_OBSERVATION_LAYERS_DICT = "info_agent_observation_layers_dict"
+INFO_AGENT_OBSERVATION_LAYERS_CUBE = "info_agent_observation_layers_cube"
 
 
 class GridworldZooAecEnv(AECEnv):
@@ -84,7 +88,7 @@ class GridworldZooAecEnv(AECEnv):
 
     metadata = {"render.modes": ["human", "ansi", "rgb_array"]}
 
-    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, all_layers_in_observation=True, *args, **kwargs):
+    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, layers_in_observation=True, occlusion_in_layers=False, layers_order_in_cube=[], layers_order_in_cube_per_agent={}, *args, **kwargs):
 
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
@@ -95,13 +99,19 @@ class GridworldZooAecEnv(AECEnv):
         self._flatten_observations = flatten_observations
         self._ascii_observation_format = ascii_observation_format
         self._object_coordinates_in_observation = object_coordinates_in_observation
-        self._all_layers_in_observation = all_layers_in_observation
+        self._layers_in_observation = layers_in_observation
+        self._occlusion_in_layers = occlusion_in_layers
+        self._layers_order_in_cube = layers_order_in_cube
+        self._layers_order_in_cube_per_agent = layers_order_in_cube_per_agent
+
         self._last_board = None
         self._last_observed_agent_board = {}
         self._last_observation = None
         self._last_observation_coordinates = None
+        self._last_observation_layers_cube = None
         self._last_agent_observations_after_some_agents_step = None
         self._last_agent_observation_coordinates = None
+        self._last_agent_observations_layers_cubes = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             agents = safety_game_ma.get_players(self._env.environment_data)
@@ -272,6 +282,32 @@ class GridworldZooAecEnv(AECEnv):
         If observe flag is True then current board state is observed. If observe flag is False then the observation that was made after current agent's latest move is returned."""
         return self.last_for_agent(self._next_agent, observe)
 
+
+    def _process_observation(self, obs):
+
+        self._last_observation = obs
+        self._rgb = obs["RGB"]
+
+        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
+            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+
+        if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+            self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+
+        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: 
+            # TODO: for step() method, calculate observations and coordinates only for current agent 
+
+            agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+            self._last_agent_observations_after_some_agents_step = { agent_name: agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
+
+            if self._object_coordinates_in_observation:
+                agent_observations_coordinates = self._env.calculate_agents_observation_coordinates(obs, agent_observations, use_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+                self._last_agent_observations_coordinates = { agent_name: agent_observations_coordinates[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
+
+            if self._layers_order_in_cube_per_agent is not None:
+                self._last_agent_observations_layers_cubes = { agent_name: self._env.calculate_observation_layers_cube(agent_observations[agent_chr], use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube_per_agent.get(agent_name, [])) for agent_name, agent_chr in self.agent_name_mapping.items() }
+
+
     def step(self, action, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
         """ Perform an action in the gridworld environment.
 
@@ -293,21 +329,7 @@ class GridworldZooAecEnv(AECEnv):
             timestep = self._env.step(action, *args, **kwargs)
             
         obs = timestep.observation
-        self._last_observation = obs
-        self._rgb = obs["RGB"]
-
-        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
-            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
-
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: 
-            # TODO: calculate observations and coordinates only for current agent 
-            agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
-            if self._object_coordinates_in_observation:
-                agent_observations_coordinates = self._env.calculate_agents_observation_coordinates(obs, agent_observations, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
-
-            self._last_agent_observations_after_some_agents_step = { agent_name: agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
-            if self._object_coordinates_in_observation:
-                self._last_agent_observations_coordinates = { agent_name: agent_observations_coordinates[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
+        self._process_observation(obs)
 
 
         reward = { agent: 0.0 for agent in self.agent_name_mapping.values() } if timestep.reward is None else timestep.reward
@@ -349,10 +371,23 @@ class GridworldZooAecEnv(AECEnv):
         if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
             info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
 
+        if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
+            info[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
+
+        if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+            info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
+
         if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
-            info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observations_after_some_agents_step[self._next_agent]
+            info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observations_after_some_agents_step[self._next_agent].board
+
+            if self._layers_in_observation:
+                info[INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observations_after_some_agents_step[self._next_agent].layers
+
             if self._object_coordinates_in_observation:
                 info[INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[self._next_agent]
+
+            if self._layers_order_in_cube_per_agent is not None:
+                info[INFO_AGENT_OBSERVATION_LAYERS_CUBE] = self._last_agent_observations_layers_cubes[self._next_agent]
 
 
         for k, v in obs.items():
@@ -371,13 +406,8 @@ class GridworldZooAecEnv(AECEnv):
         #    state = state.flatten()
 
 
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            agent_name = self._next_agent
-        else:
-            agent_name = self.possible_agents[0]
-
-        self.rewards[agent_name] = reward
-        self.infos[agent_name] = info
+        self.rewards[self._next_agent] = reward
+        self.infos[self._next_agent] = info
 
 
         if gym_v26:
@@ -386,12 +416,12 @@ class GridworldZooAecEnv(AECEnv):
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminated = done
             truncated = False    # TODO      
-            self._given_agents_last_step_result[agent_name] = (state, reward, terminated, truncated, info)            
-            self.terminations[agent_name] = terminated
-            self.truncations[agent_name] = truncated
+            self._given_agents_last_step_result[self._next_agent] = (state, reward, terminated, truncated, info)            
+            self.terminations[self._next_agent] = terminated
+            self.truncations[self._next_agent] = truncated
         else:
-            self._given_agents_last_step_result[agent_name] = (state, reward, done, info)
-            self.dones[agent_name] = done
+            self._given_agents_last_step_result[self._next_agent] = (state, reward, done, info)
+            self.dones[self._next_agent] = done
 
         self._move_to_next_agent()    # https://pettingzoo.farama.org/content/basic_usage/#interacting-with-environments  
 
@@ -408,20 +438,7 @@ class GridworldZooAecEnv(AECEnv):
         board = copy.deepcopy(timestep.observation["board"])   # TODO: option to return observation as character array
 
         obs = timestep.observation
-        self._last_observation = obs
-        self._rgb = obs["RGB"]
-
-        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
-            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
-
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
-            agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
-            if self._object_coordinates_in_observation:
-                agent_observations_coordinates = self._env.calculate_agents_observation_coordinates(obs, agent_observations, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
-
-            self._last_agent_observations_after_some_agents_step = { agent_name: agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
-            if self._object_coordinates_in_observation:
-                self._last_agent_observations_coordinates = { agent_name: agent_observations_coordinates[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
+        self._process_observation(obs)
 
 
         if self._use_transitions:

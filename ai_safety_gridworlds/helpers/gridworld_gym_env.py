@@ -39,7 +39,9 @@ from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
 #INFO_HIDDEN_REWARD = "hidden_reward"
 INFO_OBSERVED_REWARD = "observed_reward"
 INFO_DISCOUNT = "discount"
-INFO_OBSERVATION_COORDINATES = "info_observation_coordinates"   # TODO
+INFO_OBSERVATION_COORDINATES = "info_observation_coordinates"
+INFO_OBSERVATION_LAYERS_DICT = "info_observation_layers_dict"
+INFO_OBSERVATION_LAYERS_CUBE = "info_observation_layers_cube"
 
 
 class GridworldGymEnv(gym.Env):
@@ -73,7 +75,7 @@ class GridworldGymEnv(gym.Env):
 
     metadata = {"render.modes": ["human", "ansi", "rgb_array"]}
 
-    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, all_layers_in_observation=True, *args, **kwargs):
+    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, layers_in_observation=True, occlusion_in_layers=False, layers_order_in_cube=[], *args, **kwargs):
 
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
@@ -85,10 +87,15 @@ class GridworldGymEnv(gym.Env):
         self._flatten_observations = flatten_observations
         self._ascii_observation_format = ascii_observation_format
         self._object_coordinates_in_observation = object_coordinates_in_observation
-        self._all_layers_in_observation = all_layers_in_observation
+        self._layers_in_observation = layers_in_observation
+        self._occlusion_in_layers = occlusion_in_layers
+        self._layers_order_in_cube = layers_order_in_cube
+
         self._last_board = None
         self._last_observation = None
         self._last_observation_coordinates = None
+        self._last_observation_layers_cube = None
+
         self.action_space = GridworldsActionSpace(self._env)
         self.observation_space = GridworldsObservationSpace(self._env, use_transitions, flatten_observations)
 
@@ -96,6 +103,18 @@ class GridworldGymEnv(gym.Env):
         if self._viewer is not None:
             self._viewer.close()
             self._viewer = None
+
+    def _process_observation(self, obs):
+
+        self._last_observation = obs
+        self._rgb = obs["RGB"]        
+
+        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
+            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+
+        if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+            self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+
 
     def step(self, action, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
         """ Perform an action in the gridworld environment.
@@ -115,11 +134,7 @@ class GridworldGymEnv(gym.Env):
         timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
 
         obs = timestep.observation
-        self._last_observation = obs
-        self._rgb = obs["RGB"]        
-
-        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
-            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
+        self._process_observation(obs)
 
         reward = 0.0 if timestep.reward is None else timestep.reward
         done = timestep.step_type.last()
@@ -143,6 +158,12 @@ class GridworldGymEnv(gym.Env):
 
         if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
             info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+
+        if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
+            info[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
+
+        if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+            info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
 
 
         for k, v in obs.items():
@@ -171,17 +192,14 @@ class GridworldGymEnv(gym.Env):
             return (state, reward, done, info)
 
     def reset(self, *args, **kwargs):                     # CHANGED: added *args, **kwargs
+
         timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      
 
         if self._viewer is not None:
             self._viewer.reset_time()
 
         obs = timestep.observation
-        self._last_observation = obs
-        self._rgb = obs["RGB"]        
-
-        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
-            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=self._all_layers_in_observation, ascii=self._ascii_observation_format)
+        self._process_observation(obs)
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
 
