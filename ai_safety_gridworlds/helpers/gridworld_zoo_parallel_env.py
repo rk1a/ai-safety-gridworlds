@@ -115,23 +115,26 @@ class GridworldZooParallelEnv(ParallelEnv):
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             agents = safety_game_ma.get_players(self._env.environment_data)
             # num_agents = len(agents)
-            self.possible_agents = [f"agent_{agent.character}" for agent in agents]
+            self.possible_agents = [f"agent_{agent.character}" for agent in agents]  # TODO: make it readonly
             self.agent_name_mapping = dict(
                 zip(self.possible_agents, [agent.character for agent in agents])
             )
         else:
             num_agents = 1
-            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]
+            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]  # TODO: make it readonly
             self.agent_name_mapping = dict(
                 zip(self.possible_agents, [str(r) for r in range(1, num_agents + 1)])
             )
+            
+        self._state = None
+        self._dones = {agent_name: False for agent_name in self.possible_agents} 
 
         self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
 
-        self.action_spaces = {
+        self.action_spaces = {  # TODO: make it readonly
             agent: GridworldsActionSpace(self._env) for agent in self.possible_agents
         }  
-        self.observation_spaces = {
+        self.observation_spaces = {  # TODO: make it readonly
             agent: GridworldsObservationSpace(self._env, use_transitions, flatten_observations) for agent in self.possible_agents
         }
 
@@ -139,6 +142,26 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._viewer is not None:
             self._viewer.close()
             self._viewer = None
+
+
+    @property
+    def agents(self):
+        return [agent for agent in self.possible_agents if not self._dones[agent]]
+
+    @property
+    def num_agents(self):
+        return sum(1 for agent in self.possible_agents if not self._dones[agent])
+
+    @property
+    def max_num_agents(self):
+        return len(self.possible_agents)
+
+    @property
+    def state(self):
+        return self._state
+
+    def observation_space(self, agent):
+        return self.observation_spaces[agent]
 
     def action_space(self, agent):
         return self.action_spaces[agent]
@@ -168,6 +191,72 @@ class GridworldZooParallelEnv(ParallelEnv):
             if self._layers_order_in_cube_per_agent is not None:
                 self._last_agent_observations_layers_cubes = { agent_name: self._env.calculate_observation_layers_cube(agent_observations[agent_chr], use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube_per_agent.get(agent_name, [])) for agent_name, agent_chr in self.agent_name_mapping.items() }
 
+    #/ def _process_observation(self, obs):
+
+
+    def _compute_infos(self, obs):
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+            infos = { 
+                      agent: 
+                      {
+                          INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION, {}).get(agent),
+                          INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION, {}).get(agent),
+                      }
+                      for agent in self.possible_agents
+                   }
+
+            if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
+                infos[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+
+            if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
+                infos[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
+
+            if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+                infos[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
+
+            if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
+                for agent in self.possible_agents:
+                    infos[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent].board
+
+                    if self._layers_in_observation:
+                        infos[agent][INFO_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent].layers
+
+                    if self._object_coordinates_in_observation:
+                        infos[agent][INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[agent]
+
+                    if self._layers_order_in_cube_per_agent is not None:
+                        infos[agent][INFO_AGENT_OBSERVATION_LAYERS_CUBE] = self._last_agent_observations_layers_cubes[agent]
+
+        else:   # if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+            infos = {
+                agent: {
+                    INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION),
+                    INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION),
+                }
+                for agent in self.possible_agents
+            }
+
+            if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
+                infos[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+
+            if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+                infos[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
+
+        #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+
+        for k, v in obs.items():
+            if k not in ("board", "RGB", "layers"):
+                infos[k] = v
+
+
+        return infos
+
+    #/ def _compute_infos(self, obs):
+
 
     def step(self, actions, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
         """ Perform an action in the gridworld environment.
@@ -193,14 +282,10 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         obs = timestep.observation
         self._process_observation(obs)
+        infos = self._compute_infos(obs)
 
 
         reward = { agent: 0.0 for agent in self.agent_name_mapping.values() } if timestep.reward is None else timestep.reward
-
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            dones = { agent_name: timestep.step_type[agent_char].last() for agent_name, agent_char in self.agent_name_mapping.items() }
-        else:
-            dones = { agent_name: timestep.step_type.last() for agent_name in self.agent_name_mapping.keys() }
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
@@ -215,63 +300,24 @@ class GridworldZooParallelEnv(ParallelEnv):
         else:
             hidden_reward = None
 
+
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             # TODO
-            info = { 
-                      agent: 
-                      {
+            for agent in self.possible_agents:
+                infos[agent] = {
                           INFO_HIDDEN_REWARD: hidden_reward[agent] if hidden_reward is not None else None,
                           INFO_OBSERVED_REWARD: reward[self.agent_name_mapping[agent]],
                           INFO_DISCOUNT: timestep.discount, # [agent],    # TODO: agent-based discount
-                          INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION, {}).get(agent),
-                          INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION, {}).get(agent),
                       }
-                      for agent in self.possible_agents
-                   }
-
-            if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
-                info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
-
-            if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
-                info[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
-
-            if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
-
-            if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
-                for agent in self.possible_agents:
-                    info[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent].board
-
-                    if self._layers_in_observation:
-                        info[agent][INFO_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent].layers
-
-                    if self._object_coordinates_in_observation:
-                        info[agent][INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[agent]
-
-                    if self._layers_order_in_cube_per_agent is not None:
-                        info[agent][INFO_AGENT_OBSERVATION_LAYERS_CUBE] = self._last_agent_observations_layers_cubes[agent]
 
         else:   # if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            info = {
-                INFO_HIDDEN_REWARD: hidden_reward,
-                INFO_OBSERVED_REWARD: reward,
-                INFO_DISCOUNT: timestep.discount,                
-                INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION),
-                INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION),
-            }
+            for agent in self.possible_agents:
+                infos[agent] = {
+                    INFO_HIDDEN_REWARD: hidden_reward,
+                    INFO_OBSERVED_REWARD: reward,
+                    INFO_DISCOUNT: timestep.discount,                
+                }
 
-            if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
-                info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
-
-            if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
-
-        #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-
-
-        for k, v in obs.items():
-            if k not in ("board", "RGB"):
-                info[k] = v
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
 
@@ -286,6 +332,16 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._flatten_observations:
             state = state.flatten()
 
+        self._state = state
+            
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            dones = { agent_name: timestep.step_type[agent_char].last() for agent_name, agent_char in self.agent_name_mapping.items() }
+        else:
+            dones = { agent_name: timestep.step_type.last() for agent_name in self.agent_name_mapping.keys() }
+
+        self._dones = dones
+
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
 
@@ -297,9 +353,9 @@ class GridworldZooParallelEnv(ParallelEnv):
                 # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
                 terminateds = dones
                 truncateds = {agent: False for agent in self.possible_agents}    # TODO        
-                return (state, reward, terminateds, truncateds, info)
+                return (state, reward, terminateds, truncateds, infos)
             else:
-                return ({agent_name: state}, {agent_name: reward}, dones, {agent_name: info})
+                return (state, reward, dones, infos)
 
         else:   #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
 
@@ -310,9 +366,9 @@ class GridworldZooParallelEnv(ParallelEnv):
                 # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
                 terminateds = dones
                 truncateds = {agent: False for agent in self.possible_agents}    # TODO                
-                return ({agent_name: state}, {agent_name: reward}, terminateds, truncateds, {agent_name: info})
+                return ({agent_name: state}, {agent_name: reward}, terminateds, truncateds, infos)
             else:
-                return ({agent_name: state}, {agent_name: reward}, dones, {agent_name: info})
+                return ({agent_name: state}, {agent_name: reward}, dones, infos)
 
         #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
 
@@ -326,6 +382,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         obs = timestep.observation
         self._process_observation(obs)
+        infos = self._compute_infos(obs)
 
 
         # TODO: apply transitions to agent observations as well
@@ -339,8 +396,11 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._flatten_observations:
             state = state.flatten()
 
+        self._state = state
+
+        self._dones = {agent_name: False for agent_name in self.possible_agents} 
+
         obs = {agent_name: state for agent_name in self.possible_agents}    
-        infos = {agent_name: {} for agent_name in self.possible_agents}    # TODO
         return obs, infos
 
     def get_reward_unit_space(self):                    # ADDED

@@ -116,13 +116,13 @@ class GridworldZooAecEnv(AECEnv):
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             agents = safety_game_ma.get_players(self._env.environment_data)
             # num_agents = len(agents)
-            self.possible_agents = [f"agent_{agent.character}" for agent in agents]
+            self.possible_agents = [f"agent_{agent.character}" for agent in agents]  # TODO: make it readonly
             self.agent_name_mapping = dict(
                 zip(self.possible_agents, [agent.character for agent in agents])
             )
         else:
             num_agents = 1
-            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]
+            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]  # TODO: make it readonly
             self.agent_name_mapping = dict(
                 zip(self.possible_agents, [str(r) for r in range(1, num_agents + 1)])
             )
@@ -142,16 +142,16 @@ class GridworldZooAecEnv(AECEnv):
 
         if gym_v26:
             self._given_agents_last_step_result = { agent: (state, reward, False, False, info) for agent in self.possible_agents }
-            self.terminations = { agent: False for agent in self.possible_agents }
-            self.truncations = { agent: False for agent in self.possible_agents }
+            self.terminations = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
+            self.truncations = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
         else:
             self._given_agents_last_step_result = { agent: (state, reward, False, info) for agent in self.possible_agents }
-            self.dones = { agent: False for agent in self.possible_agents }
+            self.dones = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
 
-        self.action_spaces = {
+        self.action_spaces = {  # TODO: make it readonly
             agent: GridworldsActionSpace(self._env) for agent in self.possible_agents
         }  
-        self.observation_spaces = {
+        self.observation_spaces = {  # TODO: make it readonly
             agent: GridworldsObservationSpace(self._env, use_transitions, flatten_observations) for agent in self.possible_agents
         }
 
@@ -159,6 +159,36 @@ class GridworldZooAecEnv(AECEnv):
         if self._viewer is not None:
             self._viewer.close()
             self._viewer = None
+
+
+    @property
+    def agents(self):
+        if gym_v26:
+            return [agent for agent in self.possible_agents if not self.terminations[agent] and not self.truncations[agent]]
+        else:
+            return [agent for agent in self.possible_agents if not self._dones[agent]]
+
+    @property
+    def num_agents(self):
+        if gym_v26:
+            return sum(1 for agent in self.possible_agents if not self.terminations[agent] and not self.truncations[agent])
+        else:
+            return sum(1 for agent in self.possible_agents if not self._dones[agent])
+
+    @property
+    def max_num_agents(self):
+        return len(self.possible_agents)
+
+    @property
+    def agent_selecton(self):
+        return self._next_agent
+
+    @property
+    def state(self):
+        return self._state
+
+    def observation_space(self, agent):
+        return self.observation_spaces[agent]
 
     def action_space(self, agent):
         return self.action_spaces[agent]
@@ -252,7 +282,17 @@ class GridworldZooAecEnv(AECEnv):
 
         return state
 
-    def last_for_agent(self, agent, observe = True):    
+    def observe_info(self, agent):
+
+        # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, we get current agent's perspective computed after that latest step made by any agent.
+        if gym_v26:
+            (_, _, _, _, info) = self._given_agents_last_step_result[agent]
+        else:
+            (_, _, _, info) = self._given_agents_last_step_result[agent]
+
+        return info
+
+    def last_for_agent(self, agent = None, observe = True):    
         """Returns observation, cumulative reward, terminated, truncated, info for the specified agent.
         
         If observe flag is True then CURRENT board state is observed. If observe flag is False then the observation that was made after given agent's latest move is returned.
@@ -307,6 +347,54 @@ class GridworldZooAecEnv(AECEnv):
             if self._layers_order_in_cube_per_agent is not None:
                 self._last_agent_observations_layers_cubes = { agent_name: self._env.calculate_observation_layers_cube(agent_observations[agent_chr], use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube_per_agent.get(agent_name, [])) for agent_name, agent_chr in self.agent_name_mapping.items() }
 
+    #/ def _process_observation(self, obs):
+
+
+    def _compute_info(self, obs, agent_name):
+            
+        observation_direction = obs.get(INFO_OBSERVATION_DIRECTION)
+        action_direction = obs.get(INFO_ACTION_DIRECTION)
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            observation_direction = observation_direction[self.agent_name_mapping[agent_name]]
+            action_direction = action_direction[self.agent_name_mapping[agent_name]]
+
+        info = {
+            INFO_OBSERVATION_DIRECTION: observation_direction,
+            INFO_ACTION_DIRECTION: action_direction,
+        }
+
+        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
+            info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+
+        if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
+            info[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
+
+        if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+            info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
+
+        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
+            info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observations_after_some_agents_step[agent_name].board
+
+            if self._layers_in_observation:
+                info[INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observations_after_some_agents_step[agent_name].layers
+
+            if self._object_coordinates_in_observation:
+                info[INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[agent_name]
+
+            if self._layers_order_in_cube_per_agent is not None:
+                info[INFO_AGENT_OBSERVATION_LAYERS_CUBE] = self._last_agent_observations_layers_cubes[agent_name]
+
+
+        for k, v in obs.items():
+            if k not in ("board", "RGB", "layers"):
+                info[k] = v
+
+
+        return info
+
+    #/ def _compute_info(self, obs, agent_name):
+
 
     def step(self, action, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
         """ Perform an action in the gridworld environment.
@@ -330,16 +418,11 @@ class GridworldZooAecEnv(AECEnv):
             
         obs = timestep.observation
         self._process_observation(obs)
+        info = self._compute_info(obs, self._next_agent)
+        self.infos[self._next_agent] = info
 
 
         reward = { agent: 0.0 for agent in self.agent_name_mapping.values() } if timestep.reward is None else timestep.reward
-
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            # done = { self._next_agent: timestep.step_type[self.agent_name_mapping[self._next_agent]].last() }
-            done = timestep.step_type[self.agent_name_mapping[self._next_agent]].last()
-        else:
-            # done = { agent: timestep.step_type.last() for agent in self.agent_name_mapping.values() }
-            done = timestep.step_type.last()
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
@@ -352,47 +435,14 @@ class GridworldZooAecEnv(AECEnv):
         else:
             hidden_reward = None
 
-      
-        observation_direction = obs.get(INFO_OBSERVATION_DIRECTION)
-        action_direction = obs.get(INFO_ACTION_DIRECTION)
-
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            observation_direction = observation_direction[self.agent_name_mapping[self._next_agent]]
-            action_direction = action_direction[self.agent_name_mapping[self._next_agent]]
-
-        info = {
+        info.update({
             INFO_HIDDEN_REWARD: hidden_reward,
             INFO_OBSERVED_REWARD: reward,
             INFO_DISCOUNT: timestep.discount,            
-            INFO_OBSERVATION_DIRECTION: observation_direction,
-            INFO_ACTION_DIRECTION: action_direction,
-        }
+        })
 
-        if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
-            info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+        self.rewards[self._next_agent] = reward
 
-        if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
-            info[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
-
-        if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-            info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
-
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
-            info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observations_after_some_agents_step[self._next_agent].board
-
-            if self._layers_in_observation:
-                info[INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observations_after_some_agents_step[self._next_agent].layers
-
-            if self._object_coordinates_in_observation:
-                info[INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[self._next_agent]
-
-            if self._layers_order_in_cube_per_agent is not None:
-                info[INFO_AGENT_OBSERVATION_LAYERS_CUBE] = self._last_agent_observations_layers_cubes[self._next_agent]
-
-
-        for k, v in obs.items():
-            if k not in ("board", "RGB"):
-                info[k] = v
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
 
@@ -406,8 +456,12 @@ class GridworldZooAecEnv(AECEnv):
         #    state = state.flatten()
 
 
-        self.rewards[self._next_agent] = reward
-        self.infos[self._next_agent] = info
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            # done = { self._next_agent: timestep.step_type[self.agent_name_mapping[self._next_agent]].last() }
+            done = timestep.step_type[self.agent_name_mapping[self._next_agent]].last()
+        else:
+            # done = { agent: timestep.step_type.last() for agent in self.agent_name_mapping.values() }
+            done = timestep.step_type.last()
 
 
         if gym_v26:
@@ -439,6 +493,7 @@ class GridworldZooAecEnv(AECEnv):
 
         obs = timestep.observation
         self._process_observation(obs)
+        self.infos = { agent: self._compute_info(obs, agent) for agent in self.possible_agents }
 
 
         if self._use_transitions:
@@ -455,17 +510,15 @@ class GridworldZooAecEnv(AECEnv):
         self._all_agents_done = False
 
         reward = None
-        info = None
-
         self.rewards = { agent: reward for agent in self.possible_agents }
-        self.infos = { agent: info for agent in self.possible_agents }
+
 
         if gym_v26:
-            self._given_agents_last_step_result = { agent: (state, reward, False, False, info) for agent in self.possible_agents }
+            self._given_agents_last_step_result = { agent: (state, reward, False, False, self.infos[agent]) for agent in self.possible_agents }
             self.terminations = { agent: False for agent in self.possible_agents }
             self.truncations = { agent: False for agent in self.possible_agents }  
         else:
-            self._given_agents_last_step_result = { agent: (state, reward, False, info) for agent in self.possible_agents }
+            self._given_agents_last_step_result = { agent: (state, reward, False, self.infos[agent]) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }
 
         # return state
