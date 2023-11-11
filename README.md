@@ -39,6 +39,29 @@ The currently available experiment environments are described here https://docs.
 * Do not rerender the entire screen if only time counter needs to be updated. This reduces screen flicker.
 
 
+# Roadmap
+
+* Functionality for multi-modal actions. Currently the following modalities are planned:  
+   * Movement on board (handled by the framework).
+   * Additional actions (handled by the agent implementation). Multiple concurrent additional actions can be provided for each step. Examples of additional actions: "Eat", "Take", "Put", etc.
+   * Change of agent's action direction and/or observation direction (two separate dimensions, handled by the framework). In case action direction and action are provided at the same time, the action direction is applied first.
+   * Agent's expressions. Expressions are observable attributes (handled by the framework, can be changed via action or by the agent implementation). Multiple concurrent expressions can be provided for each step. Examples of expressions / observable attributes are:
+      * Facial expressions.
+      * Signs.
+      * Numeric message bubbles.
+      * Textual message bubbles.
+* Functionality for observable agent attributes. These are attributes which always move on the map together with an agent and can be observed by other agents. The actions described above can change some of these attributes. Other attributes are controlled by environment's code.
+   * Agent's action direction.
+   * Agent's observation direction.
+   * Expressions and numeric attributes:
+      * Facial expressions.
+      * Signs.
+      * Numeric message bubbles.
+      * Textual message bubbles.
+   * Public metrics. Some of the agent's metrics can be made observable by other agents. Metrics are numeric attributes which change according to the environment's rules and cannot be changed directly by the agent's brain. Metrics are not rewards, but rewards may be dependent on metrics. Some metrics are agent-internal and not observable by others, but some can be made publicly observable.
+
+
+
 # Other related resources
 
 * For other interesting Gridworlds environments contributions, take a look at https://github.com/side-grids/ai-safety-gridworlds/tree/master/ai_safety_gridworlds/environments
