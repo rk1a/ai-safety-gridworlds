@@ -2,6 +2,8 @@
 
 The currently available experiment environments are described here https://docs.google.com/document/d/1AV566H0c-k7krBietrGdn-kYefSSH99oIH74DMWHYj0/edit# The descriptions are also available in this repo as a markdown file: https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/ai_safety_gridworlds/experiments/experiment_descriptions.md
 
+One more elaborate environment is described separately here: https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/blob/master/MultiAgentSafetyHackathon.md
+
 
 # Major updates in this fork
 
