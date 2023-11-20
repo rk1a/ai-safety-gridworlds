@@ -18,7 +18,7 @@ elif sys.version_info[0] == 3:
     enum = []
 
 setuptools.setup(
-    name="multiobjective-ai-safety-gridworlds",
+    name="ai-safety-gridworlds",
     version="2.0",
     description="Extended and multi-objective environments based on DeepMind's "
         "AI Safety Gridworlds. This is a suite of reinforcement learning "
@@ -31,7 +31,7 @@ setuptools.setup(
         "are implemented in pycolab, a highly-customisable gridworld game "
         "engine with some batteries included."
     ),
-    url="https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds/",
+    url="https://github.com/levitation-opensource/ai-safety-gridworlds/",
     author="Roland Pihlakas, forked from David Lindner, n0p2, and from DeepMind Technologies",
     author_email="roland@simplify.ee",
     license="Apache 2.0",
