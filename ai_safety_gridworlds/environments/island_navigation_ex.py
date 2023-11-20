@@ -303,7 +303,12 @@ def define_flags():
 
   
   FLAGS = flags.FLAGS
-  FLAGS(sys.argv)   # need to explicitly tell the flags library to parse argv before you can access FLAGS.xxx
+
+  # need to explicitly tell the flags library to parse argv before you can access FLAGS.xxx
+  if __name__ == '__main__':
+    FLAGS(sys.argv)
+  else:
+    FLAGS([""])
 
 
   # convert multi-objective reward flags from string format to object format
