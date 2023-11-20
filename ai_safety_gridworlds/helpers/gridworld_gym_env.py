@@ -27,6 +27,7 @@ import numpy as np
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared.safety_game_mo_base import Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
@@ -75,7 +76,28 @@ class GridworldGymEnv(gym.Env):
 
     metadata = {"render.modes": ["human", "ansi", "rgb_array"]}
 
-    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, layers_in_observation=True, occlusion_in_layers=False, layers_order_in_cube=[], *args, **kwargs):
+    def __init__(self, env_name, 
+                 use_transitions=False, 
+                 render_animation_delay=0.1, 
+                 flatten_observations=False, 
+
+                 ascii_observation_format=True, 
+                 object_coordinates_in_observation=True, 
+                 layers_in_observation=True, 
+                 occlusion_in_layers=False, 
+                 layers_order_in_cube=[],  
+                 layers_order_in_cube_per_agent:dict[str, list[str]]={},  # TODO 
+
+                 ascii_attributes_format=False,  # TODO  
+                 attribute_coordinates_in_observation=True,   # TODO 
+                 layers_in_attribute_observation=False,   # TODO 
+                 occlusion_in_atribute_layers=False,   # TODO 
+                 observable_attribute_categories=["expression", "action_direction", "observation_direction", "numeric_message", "public_metrics"],   # TODO 
+                 # observable_attribute_value_mapping:dict[str, dict[str, float]]={},  
+                 observable_attribute_value_mapping:dict[str, float]={},   # TODO 
+
+                 *args, **kwargs
+                ):
 
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay

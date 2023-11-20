@@ -67,6 +67,7 @@ CUMULATIVE_MO_VARIANCE = 'cumulative_mo_variance'
 AVERAGE_MO_VARIANCE = 'average_mo_variance'
 TILE_TYPES = 'tile_types'
 AGENT_SPRITE = 'agent_sprite'
+Z_ORDER = 'z_order'
 
 
 # timestamp, environment_name, episode_no, iteration_no, environment_flags, reward_unit_sizes, rewards, cumulative_rewards, metrics
@@ -1300,6 +1301,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
 
     self.action_direction_mode = action_direction_mode      # ADDED
 
+    # AGENT_SPRITE in environment_data is similar to self._sprites_and_drapes, but contains only agents and is accessible via environment_data
     if AGENT_SPRITE not in environment_data:      # ADDED
       environment_data[AGENT_SPRITE] = OrderedDict()         # ADDED
     environment_data[AGENT_SPRITE][character] = self   # CHANGED
@@ -1315,7 +1317,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
                       ) | set(gap_chr)     # replace the agent tile character with a gap tile character
                     )
     tile_types.sort()
-    environment_data[TILE_TYPES][character] = tile_types
+    environment_data[TILE_TYPES][character] = tile_types  # tile types where current agent can step on. Needed for Q-value logging,
 
 
   def terminate_episode(self, the_plot, environment_data):  # ADDED  # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
@@ -1696,6 +1698,7 @@ def make_safety_game_mo(
   """Create a pycolab game instance."""
 
   environment_data["what_lies_beneath"] = what_lies_beneath
+  environment_data[Z_ORDER] = z_order   # ADDED
 
   return make_safety_game(
     environment_data,

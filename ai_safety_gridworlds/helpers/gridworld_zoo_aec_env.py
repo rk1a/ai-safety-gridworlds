@@ -30,6 +30,7 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared.safety_game_ma import Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
@@ -88,7 +89,28 @@ class GridworldZooAecEnv(AECEnv):
 
     metadata = {"render.modes": ["human", "ansi", "rgb_array"]}
 
-    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, layers_in_observation=True, occlusion_in_layers=False, layers_order_in_cube=[], layers_order_in_cube_per_agent={}, *args, **kwargs):
+    def __init__(self, env_name, 
+                 use_transitions=False, 
+                 render_animation_delay=0.1, 
+                 flatten_observations=False, 
+
+                 ascii_observation_format=True, 
+                 object_coordinates_in_observation=True, 
+                 layers_in_observation=True, 
+                 occlusion_in_layers=False, 
+                 layers_order_in_cube=[], 
+                 layers_order_in_cube_per_agent:dict[str, list[str]]={}, 
+
+                 ascii_attributes_format=False, 
+                 attribute_coordinates_in_observation=True, 
+                 layers_in_attribute_observation=False, 
+                 occlusion_in_atribute_layers=False, 
+                 observable_attribute_categories=["expression", "action_direction", "observation_direction", "numeric_message", "public_metrics"], 
+                 # observable_attribute_value_mapping:dict[str, dict[str, float]]={},  
+                 observable_attribute_value_mapping:dict[str, float]={},  
+
+                 *args, **kwargs
+                ):
 
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
@@ -103,6 +125,8 @@ class GridworldZooAecEnv(AECEnv):
         self._occlusion_in_layers = occlusion_in_layers
         self._layers_order_in_cube = layers_order_in_cube
         self._layers_order_in_cube_per_agent = layers_order_in_cube_per_agent
+        self._observable_attribute_categories = observable_attribute_categories
+        self._observable_attribute_value_mapping = observable_attribute_value_mapping
 
         self._last_board = None
         self._last_observed_agent_board = {}
@@ -114,6 +138,9 @@ class GridworldZooAecEnv(AECEnv):
         self._last_agent_observations_layers_cubes = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            self._env.set_observable_attribute_categories(observable_attribute_categories, observable_attribute_value_mapping)
+            self._env.reset() # apply _observable_attribute_categories
+
             agents = safety_game_ma.get_players(self._env.environment_data)
             # num_agents = len(agents)
             self.possible_agents = [f"agent_{agent.character}" for agent in agents]  # TODO: make it readonly
@@ -121,10 +148,12 @@ class GridworldZooAecEnv(AECEnv):
                 zip(self.possible_agents, [agent.character for agent in agents])
             )
         else:
+            #if len(observable_attribute_categories) > 0:
+            #    raise ValueError("observable_attribute_categories")
             num_agents = 1
-            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]  # TODO: make it readonly
-            self.agent_name_mapping = dict(
-                zip(self.possible_agents, [str(r) for r in range(1, num_agents + 1)])
+            self.possible_agents = [f"agent_{r}" for r in range(0, num_agents)]  # TODO: make it readonly
+            self.agent_name_mapping = dict(   # TODO: read agent char from environment
+                zip(self.possible_agents, [str(r) for r in range(0, num_agents)])
             )
 
         self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
@@ -137,8 +166,8 @@ class GridworldZooAecEnv(AECEnv):
         reward = None
         info = None
 
-        self.rewards = { agent: reward for agent in self.possible_agents }
-        self.infos = { agent: info for agent in self.possible_agents }
+        self.rewards = { agent: reward for agent in self.possible_agents }  # TODO: make it readonly for callers
+        self.infos = { agent: info for agent in self.possible_agents }  # TODO: make it readonly for callers
 
         if gym_v26:
             self._given_agents_last_step_result = { agent: (state, reward, False, False, info) for agent in self.possible_agents }
@@ -180,7 +209,7 @@ class GridworldZooAecEnv(AECEnv):
         return len(self.possible_agents)
 
     @property
-    def agent_selecton(self):
+    def agent_selection(self):
         return self._next_agent
 
     @property
@@ -285,10 +314,12 @@ class GridworldZooAecEnv(AECEnv):
     def observe_info(self, agent):
 
         # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, we get current agent's perspective computed after that latest step made by any agent.
-        if gym_v26:
-            (_, _, _, _, info) = self._given_agents_last_step_result[agent]
+        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: # are agent perspectives enabled and available?
+            obs = self._last_agent_observations_after_some_agents_step[agent]
         else:
-            (_, _, _, info) = self._given_agents_last_step_result[agent]
+            obs = self._last_observation
+
+        info = self._compute_info(self, obs, agent)
 
         return info
 
@@ -316,7 +347,7 @@ class GridworldZooAecEnv(AECEnv):
             (_, reward, done, info) = self._given_agents_last_step_result[agent]
             return (state, reward, done, info)
 
-    def last(self, observe = True):   # TODO: observe argument handling - does it match Zoo documentation?
+    def last(self, observe = True):
         """Returns observation, cumulative reward, terminated, truncated, info for the current agent (specified by self.agent_selection).
         
         If observe flag is True then current board state is observed. If observe flag is False then the observation that was made after current agent's latest move is returned."""

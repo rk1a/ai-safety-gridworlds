@@ -63,7 +63,7 @@ DEFAULT_SUSTAINABILITY_CHALLENGE = False  # Whether to deplete the drink and foo
 DEFAULT_THIRST_HUNGER_DEATH = False       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
 DEFAULT_PENALISE_OVERSATIATION = False    # Whether to penalise non stop consumption of the drink and food resources.
 DEFAULT_USE_SATIATION_PROPORTIONAL_REWARD = False   # TODO: description
-DEFAULT_MAP_RANDOMIZATION_FREQUENCY = 0                 # Whether to randomize the map.   # 0 - no, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes using a same model instance), 3 - once per training episode
+DEFAULT_MAP_RANDOMIZATION_FREQUENCY = 0                 # Whether to randomize the map.   # 0 - no, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance), 3 - once per training episode
 DEFAULT_OBSERVATION_RADIUS = 2            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself.
 DEFAULT_OBSERVATION_DIRECTION_MODE = 0    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_ACTION_DIRECTION_MODE = 0         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
@@ -278,7 +278,7 @@ def define_flags():
                         '')
 
   flags.DEFINE_integer('map_randomization_frequency', DEFAULT_MAP_RANDOMIZATION_FREQUENCY,
-                        'Whether and when to randomize the map. 0 - off, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes using a same model instance), 3 - once per training episode.')
+                        'Whether and when to randomize the map. 0 - off, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance), 3 - once per training episode.')
   
   flags.DEFINE_integer('observation_radius', DEFAULT_OBSERVATION_RADIUS, 
                        'How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself.')
@@ -775,9 +775,17 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
     if FLAGS is None:
       FLAGS = define_flags()
 
+    arguments = dict(locals())   # defined keyword arguments    # NB! copy the locals dict since it will change when new variables are introduced around here
+    arguments.update(kwargs)     # undefined keyword arguments
+    for key, value in arguments.items():
+      if key in ["FLAGS", "__class__", "kwargs", "self"]:
+        continue
+      if key in FLAGS:
+        FLAGS[key].value = value
+      elif key.upper() in FLAGS:    # detect cases when flag has uppercase name
+        FLAGS[key.upper()].value = value
 
-    log_arguments = dict(locals())
-    log_arguments.update(kwargs)
+    log_arguments = arguments
 
 
     value_mapping = { # TODO: create shared helper method for automatically building this value mapping from a list of characters

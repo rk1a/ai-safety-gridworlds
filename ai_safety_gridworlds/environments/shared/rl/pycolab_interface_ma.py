@@ -210,7 +210,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
       step_type=self._state,
       reward=self._last_reward,
       discount=self._last_discount,
-      observation=self.last_observations_for_agents(agents_actions.keys())
+      observation=self.last_observations_for_agents(agents_actions.keys())  # TODO: compute observation for all agents, not only for those who performed an action?
     )
 
   def observation_spec(self):
@@ -359,7 +359,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
 
     # If we've reached the maximum number of game iterations, terminate the
     # current game.
-    if self._current_game.the_plot.frame >= self._max_iterations:
+    if self._current_game.the_plot.frame >= self._max_iterations: # TODO: allow None as _max_iterations
       self._game_over = { agent: True for agent in self.environment_data[AGENT_SPRITE].keys() }
 
   def _drop_last_episode(self):

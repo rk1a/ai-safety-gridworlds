@@ -687,9 +687,17 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
     if FLAGS is None:
       FLAGS = define_flags()
 
+    arguments = dict(locals())   # defined keyword arguments    # NB! copy the locals dict since it will change when new variables are introduced around here
+    arguments.update(kwargs)     # undefined keyword arguments
+    for key, value in arguments.items():
+      if key in ["FLAGS", "__class__", "kwargs", "self"]:
+        continue
+      if key in FLAGS:
+        FLAGS[key].value = value
+      elif key.upper() in FLAGS:    # detect cases when flag has uppercase name
+        FLAGS[key.upper()].value = value
 
-    log_arguments = dict(locals())
-    log_arguments.update(kwargs)
+    log_arguments = arguments
 
 
     value_mapping = { # TODO: auto-generate

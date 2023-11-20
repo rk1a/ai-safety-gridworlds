@@ -30,6 +30,7 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared.safety_game_ma import Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
@@ -88,7 +89,28 @@ class GridworldZooParallelEnv(ParallelEnv):
 
     metadata = {"render.modes": ["human", "ansi", "rgb_array"]}
 
-    def __init__(self, env_name, use_transitions=False, render_animation_delay=0.1, flatten_observations=False, ascii_observation_format=True, object_coordinates_in_observation=True, layers_in_observation=True, occlusion_in_layers=False, layers_order_in_cube=[], layers_order_in_cube_per_agent={}, *args, **kwargs):
+    def __init__(self, env_name, 
+                 use_transitions=False, 
+                 render_animation_delay=0.1, 
+                 flatten_observations=False, 
+
+                 ascii_observation_format=True, 
+                 object_coordinates_in_observation=True, 
+                 layers_in_observation=True, 
+                 occlusion_in_layers=False, 
+                 layers_order_in_cube=[], 
+                 layers_order_in_cube_per_agent:dict[str, list[str]]={}, 
+
+                 ascii_attributes_format=False, 
+                 attribute_coordinates_in_observation=True, 
+                 layers_in_attribute_observation=False, 
+                 occlusion_in_atribute_layers=False, 
+                 observable_attribute_categories=["expression", "action_direction", "observation_direction", "numeric_message", "public_metrics"], 
+                 # observable_attribute_value_mapping:dict[str, dict[str, float]]={}, 
+                 observable_attribute_value_mapping:dict[str, float]={},  
+
+                 *args, **kwargs
+                ):
 
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
@@ -103,6 +125,8 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._occlusion_in_layers = occlusion_in_layers
         self._layers_order_in_cube = layers_order_in_cube
         self._layers_order_in_cube_per_agent = layers_order_in_cube_per_agent
+        self._observable_attribute_categories = observable_attribute_categories
+        self._observable_attribute_value_mapping = observable_attribute_value_mapping
 
         self._last_board = None
         self._last_observation = None
@@ -113,6 +137,9 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._last_agent_observations_layers_cubes = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            self._env.set_observable_attribute_categories(observable_attribute_categories, observable_attribute_value_mapping)  # TODO
+            self._env.reset() # apply _observable_attribute_categories
+
             agents = safety_game_ma.get_players(self._env.environment_data)
             # num_agents = len(agents)
             self.possible_agents = [f"agent_{agent.character}" for agent in agents]  # TODO: make it readonly
@@ -120,10 +147,12 @@ class GridworldZooParallelEnv(ParallelEnv):
                 zip(self.possible_agents, [agent.character for agent in agents])
             )
         else:
+            #if len(observable_attribute_categories) > 0:
+            #    raise ValueError("observable_attribute_categories")
             num_agents = 1
-            self.possible_agents = [f"agent_{r}" for r in range(1, num_agents + 1)]  # TODO: make it readonly
-            self.agent_name_mapping = dict(
-                zip(self.possible_agents, [str(r) for r in range(1, num_agents + 1)])
+            self.possible_agents = [f"agent_{r}" for r in range(0, num_agents)]  # TODO: make it readonly
+            self.agent_name_mapping = dict(   # TODO: read agent char from environment
+                zip(self.possible_agents, [str(r) for r in range(0, num_agents)])
             )
             
         self._state = None
@@ -208,13 +237,16 @@ class GridworldZooParallelEnv(ParallelEnv):
                    }
 
             if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
-                infos[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+                for agent in self.possible_agents:
+                    infos[agent][INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates   # shared global observation must be returned via agent keys
 
             if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
-                infos[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
+                for agent in self.possible_agents:
+                    infos[agent][INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]   # shared global observation must be returned via agent keys
 
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                infos[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
+                for agent in self.possible_agents:
+                    infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube   # shared global observation must be returned via agent keys
 
             if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
                 for agent in self.possible_agents:
@@ -240,17 +272,20 @@ class GridworldZooParallelEnv(ParallelEnv):
             }
 
             if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
-                infos[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
+                for agent in self.possible_agents:
+                    infos[agent][INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates   # shared global observation must be returned via agent keys
 
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                infos[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
+                for agent in self.possible_agents:
+                    infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube   # shared global observation must be returned via agent keys
 
         #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
 
 
         for k, v in obs.items():
             if k not in ("board", "RGB", "layers"):
-                infos[k] = v
+                for agent in self.possible_agents:
+                    infos[agent][k] = v   # shared global observation must be returned via agent keys
 
 
         return infos
@@ -304,19 +339,19 @@ class GridworldZooParallelEnv(ParallelEnv):
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             # TODO
             for agent in self.possible_agents:
-                infos[agent] = {
+                infos[agent].update({
                           INFO_HIDDEN_REWARD: hidden_reward[agent] if hidden_reward is not None else None,
                           INFO_OBSERVED_REWARD: reward[self.agent_name_mapping[agent]],
                           INFO_DISCOUNT: timestep.discount, # [agent],    # TODO: agent-based discount
-                      }
+                      })
 
         else:   # if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             for agent in self.possible_agents:
-                infos[agent] = {
+                infos[agent].update({
                     INFO_HIDDEN_REWARD: hidden_reward,
                     INFO_OBSERVED_REWARD: reward,
                     INFO_DISCOUNT: timestep.discount,                
-                }
+                })
 
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array

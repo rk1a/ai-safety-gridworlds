@@ -26,10 +26,17 @@ from __future__ import print_function
 
 # Dependency imports
 from ai_safety_gridworlds.environments.shared import observation_distiller
+from ai_safety_gridworlds.environments.shared import safety_game_ma
 
 import numpy as np
 
+import six
+
 from pycolab import rendering
+
+
+AGENT_SPRITE = 'agent_sprite'   # TODO: use safety_game_moma.AGENT_SPRITE instead
+Z_ORDER = 'z_order'   # TODO: use safety_game_moma.Z_ORDER instead
 
 
 class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRGB):
@@ -45,7 +52,11 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
   `Observation.board` value.
   """
 
-  def __init__(self, value_mapping, colour_mapping):
+  def __init__(self, value_mapping, colour_mapping, 
+               env=None,      # ADDED  
+               observable_attribute_categories=[],      # ADDED   
+               observable_attribute_value_mapping:dict[str, dict[str, float]]={},      # ADDED   
+              ):
     """Construct an `ObservationToArrayWithRGBEx`.
 
     Builds a callable that will take `Observation`s and emit a dictionary
@@ -66,6 +77,10 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
     """
     super(ObservationToArrayWithRGBEx, self).__init__(value_mapping, colour_mapping)
 
+    self._env = env    # ADDED
+    self._observable_attribute_categories = observable_attribute_categories    # ADDED
+    self._observable_attribute_value_mapping = observable_attribute_value_mapping    # ADDED
+
     self._board_to_ascii_vectorize = np.vectorize(chr)
     
     self._renderers.update({
@@ -73,3 +88,82 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
         'ascii_codes': lambda observation: observation.board,   # "Rendering" function for the `ascii_ord` value.
         'ascii': lambda observation: self._board_to_ascii_vectorize(observation.board),   # Rendering function for the `ascii` value. converting ordinals to chars.
     })
+
+    if self._env is not None:
+      self._renderers['agent_attribute_board_ascii_codes'] = self.compute_agent_attribute_board
+      self._renderers['agent_attribute_layers'] = self.compute_agent_attribute_layers
+
+
+  def set_observable_attribute_categories(self, observable_attribute_categories=[], observable_attribute_value_mapping:dict[str, dict[str, float]]={}):   # ADDED   
+    self._observable_attribute_categories = observable_attribute_categories
+    self._observable_attribute_value_mapping = observable_attribute_value_mapping
+
+
+  def compute_agent_attribute_board(self, observation):
+
+    layers = {}
+    for attribute in self._observable_attribute_categories:
+      layer = np.zeros_like(observation.board)
+      layers[attribute] = layer
+
+      # for character, entity in six.iteritems(self._env._sprites_and_drapes):  # process agents in the reverse z-order just as in _render() method in engine.py
+      for character in self._env.environment_data[Z_ORDER]:
+        entity = self._env.environment_data[AGENT_SPRITE].get(character)
+        if entity is not None:  # does that character represent an agent?
+          if entity.visible:    # TODO: does this check need to be applied elsewhere too?
+            
+            value = entity.observable_attributes.get(attribute)
+            if value is not None:
+              layer[entity.position] = value
+
+    return layers
+
+
+  def compute_agent_attribute_layers(self, observation):
+
+    layers = {}
+    for attribute in self._observable_attribute_categories:
+      layers[attribute] = {}
+
+      for character, entity in self._env.environment_data[AGENT_SPRITE].items():
+      # for character, entity in six.iteritems(self._env._sprites_and_drapes):  # process agents in the reverse z-order just as in _render() method in engine.py
+        # if isinstance(entity, safety_game_ma.SafetySprite) and entity.visible:
+        if entity.visible:  
+
+          value = entity.observable_attributes.get(attribute)
+          if value is not None:
+
+            # need separate layer for each agent and attribute since we need to run them through agent perspectives transformation and then later extract the perspective-filtered attribute values and coordinates per attribute and owner agent combination again
+            layer = np.zeros_like(next(iter(observation.layers)))    # TODO: create a special sparse class for processing these layers in agent perspective transformation
+            layers[attribute][entity.character] = layer
+
+            layer[entity.position] = value
+
+    return layers
+        
+
+  def __call__(self, observation):
+    """Derives `board` and `RGB` arrays from an `Observation`.
+
+    Returns a dict with 2-D `board` and 3-D `RGB` numpy arrays as described in
+    the constructor.
+
+    Args:
+      observation: an `Observation` from which this method derives numpy arrays.
+
+    Returns:
+      a dict containing 'board' and 'RGB' keys as described.
+
+    """
+    # Perform observation rendering for agent and for video recording.
+    result = {}
+    for key, renderer in self._renderers.items():
+      result[key] = renderer(observation)
+
+    if self._env is not None:
+      result['agent_attribute_board_ascii'] = { key: self._board_to_ascii_vectorize(value) for key, value in result['agent_attribute_board_ascii_codes'].items() }   # ADDED 
+
+    # Convert to [0, 255] RGB values.
+    result['RGB'] = (result['RGB'] / 999.0 * 255.0).astype(np.uint8)
+    return result
+

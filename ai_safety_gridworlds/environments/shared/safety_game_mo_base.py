@@ -108,7 +108,9 @@ class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
                value_mapping=None,
                environment_data=None,
                repainter=None,
-               max_iterations=100):
+               max_iterations=100, 
+               **kwargs     # just to avoid runtime errors when environments are passed flags via kwargs
+              ):
     """Initialize a Python v2 environment for a pycolab game factory.
 
     Args:
@@ -159,7 +161,11 @@ class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
 
     array_converter = observation_distiller_ex.ObservationToArrayWithRGBEx(   # CHANGED
         value_mapping=value_mapping,
-        colour_mapping=game_bg_colours)
+        colour_mapping=game_bg_colours,
+        env=None,    # ADDED
+        observable_attribute_categories=None,    # ADDED
+        observable_attribute_value_mapping=None,    # ADDED
+      )
 
     super(SafetyEnvironmentMoBase, self).__init__(
         game_factory=game_factory,
@@ -826,7 +832,7 @@ def make_safety_game(
 
     if map_randomization_frequency == 1:    # 1 - once per experiment run
       randomization_key = ""
-    elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes using a same model instance)
+    elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance)
       randomization_key = str(trial_no)
     elif map_randomization_frequency == 3:  # 3 - once per training episode
       randomization_key = str(trial_no) + "|" + str(episode_no)
@@ -849,7 +855,9 @@ def make_safety_game(
       # replace - Whether the sample is with or without replacement. Default is True, meaning that a value of a can be selected multiple times.
       indexes_to_remove = np.random.choice(num_locations, size=num_items_to_remove, replace=False)
       locations_to_remove = (tile_type_locations[0][indexes_to_remove], tile_type_locations[1][indexes_to_remove])
-      original_board[locations_to_remove] = what_lies_beneath
+      row_coordinates = locations_to_remove[:, 0]
+      col_coordinates = locations_to_remove[:, 1]
+      original_board[row_coordinates, col_coordinates] = what_lies_beneath  # numpy requires unzipped coordinates for accessing multiple cells by individual coordinates
 
       if tile_max_count == 0:
         sprites.pop(tile_type, None)
@@ -891,7 +899,7 @@ def make_safety_game(
   if enable_randomize and environment is not None:  # obtain earlier randomized map
     map_randomizations_per_environment[environment_class] = randomization_key
     randomized_maps_per_environment[randomization_key] = (the_ascii_art, original_board)
-    
+
   # END OF ADDED
 
 

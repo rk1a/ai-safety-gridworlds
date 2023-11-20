@@ -132,7 +132,11 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
                value_mapping=None,
                environment_data=None,
                repainter=None,
-               max_iterations=100):
+               max_iterations=100,
+               observable_attribute_categories=[],      # ADDED   
+               observable_attribute_value_mapping:dict[str, dict[str, float]]={},      # ADDED 
+               **kwargs     # just to avoid runtime errors when environments are passed flags via kwargs
+              ):
     """Initialize a Python v2 environment for a pycolab game factory.
 
     Args:
@@ -173,6 +177,8 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
     self._episode_return = ma_reward({})      # CHANGED
     # Keys to clear from environment_data at start of each episode.
     self._keys_to_clear = [TERMINATION_REASON, ACTUAL_ACTIONS]
+    #self._observable_attribute_categories = observable_attribute_categories    # ADDED
+    #self._observable_attribute_value_mapping = observable_attribute_value_mapping    # ADDED
 
     if actions is None:
       actions = (min(DEFAULT_ACTION_SET).value, max(DEFAULT_ACTION_SET).value)
@@ -183,7 +189,11 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
 
     array_converter = observation_distiller_ex.ObservationToArrayWithRGBEx(   # CHANGED
         value_mapping=value_mapping,
-        colour_mapping=game_bg_colours)
+        colour_mapping=game_bg_colours,
+        env=self,    # ADDED
+        observable_attribute_categories=observable_attribute_categories,    # ADDED
+        observable_attribute_value_mapping=observable_attribute_value_mapping,    # ADDED
+      )
 
     super(SafetyEnvironmentMa, self).__init__(
         game_factory=game_factory,
@@ -193,6 +203,11 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
             repainter=repainter,
             array_converter=array_converter),
         max_iterations=max_iterations)
+
+  def set_observable_attribute_categories(self, observable_attribute_categories=[], observable_attribute_value_mapping:dict[str, dict[str, float]]={}):   # ADDED   
+    #self.observable_attribute_categories = observable_attribute_categories
+    #self.observable_attribute_value_mapping = observable_attribute_value_mapping
+    self._observation_distiller._array_converter.set_observable_attribute_categories(observable_attribute_categories, observable_attribute_value_mapping)
 
   @property
   def environment_data(self):
@@ -442,7 +457,8 @@ class AgentSafetySprite(SafetySprite):
     self._environment_data = environment_data
     self._original_board = original_board
     self.action_direction_mode = action_direction_mode      # ADDED
-    self.action_direction = Actions.UP 
+    self.action_direction = Actions.UP       # ADDED
+    self.observable_attributes = {}       # ADDED
 
 
   def translate_relative_direction_to_absolute(self, agent_action):  # ADDED
@@ -890,7 +906,7 @@ def make_safety_game(
 
     if map_randomization_frequency == 1:    # 1 - once per experiment run
       randomization_key = ""
-    elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes using a same model instance)
+    elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance)
       randomization_key = str(trial_no)
     elif map_randomization_frequency == 3:  # 3 - once per training episode
       randomization_key = str(trial_no) + "|" + str(episode_no)
@@ -916,7 +932,9 @@ def make_safety_game(
       indexes_to_remove = np.random.choice(num_locations, size=num_items_to_remove, replace=False)
       # locations_to_remove = (tile_type_locations[0][indexes_to_remove], tile_type_locations[1][indexes_to_remove])
       locations_to_remove = tile_type_locations[indexes_to_remove]
-      original_board[locations_to_remove] = what_lies_beneath
+      row_coordinates = locations_to_remove[:, 0]
+      col_coordinates = locations_to_remove[:, 1]
+      original_board[row_coordinates, col_coordinates] = what_lies_beneath  # numpy requires unzipped coordinates for accessing multiple cells by individual coordinates
 
       if tile_max_count == 0:
         sprites.pop(tile_type, None)

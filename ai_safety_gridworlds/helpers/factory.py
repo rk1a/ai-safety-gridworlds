@@ -25,6 +25,7 @@ import inspect
 import os
 from types import ModuleType
 
+from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
 from ai_safety_gridworlds.environments.shared.safety_game import SafetyEnvironment
 
 # comment-out: the environments are now automatically detected
@@ -102,11 +103,13 @@ def auto_add_environments_to_factory():
   # reflect classes in these files
   # if class derives from SafetyEnvironment then add it
 
+  import ai_safety_gridworlds.environments.aintelope
   import ai_safety_gridworlds.environments
   import ai_safety_gridworlds.experiments
 
-  auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments)
-  auto_add_environments_to_factory_from_module(ai_safety_gridworlds.experiments)
+  auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments.aintelope)
+  # auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments)
+  # auto_add_environments_to_factory_from_module(ai_safety_gridworlds.experiments)
 
 
 # code adapted from https://stackoverflow.com/questions/3507125/how-can-i-discover-classes-in-a-specific-package-in-python
@@ -117,28 +120,42 @@ def auto_add_environments_to_factory_from_module(parent_module):
   # them using __import__. If you need to recursively descend a directory 
   # tree, you can adapt this to use os.walk instead of os.listdir
 
-  # TODO: use os.walk instead of os.listdir
+  submodule_names = []
+  # os.walk lists subfolders as well
+  basefolder = list(parent_module.__path__)[0]
+  for root, dirs, files in os.walk(basefolder):   # parent_module.__file__ would be undefined if the folder does not have __init__.py
+    relative_root = root[len(basefolder):]
+    for file in files:
+      if (file.endswith('.py') 
+          and not file.startswith('__init__.py')
+          and os.path.sep + "." not in root[len(basefolder):]   # ignore subfolders starting with .
+          and relative_root != os.path.sep + "shared"            # ignore shared subfolder
+          and not relative_root.startswith(os.path.sep + "shared" + os.path.sep)   # ignore subfolders under shared subfolder
+        ):
+        if relative_root != "":
+          submodule = (relative_root[1:] + os.path.sep).replace(os.path.sep, ".")
+        else:
+          submodule = ""
+        submodule_names.append(submodule + os.path.splitext(file)[0])
 
-  submodule_names = [
-                      os.path.splitext(file)[0]
-                      for file in os.listdir(list(parent_module.__path__)[0])   # parent_module.__file__ would be undefined if the folder does not have __init__.py
-                        if file.endswith(('.py', '.pyc', '.pyo'))
-                        and not file.startswith('__init__.py')
-                    ]
   pkg = __import__(parent_module.__name__, fromlist=submodule_names)
 
+  # TODO: make adding modules from subfolders working here
   for parent_module_item_name in dir(parent_module):
     module_candidate = getattr(parent_module, parent_module_item_name)
     # Get all (and only) modules in Plugins
     if type(module_candidate) == ModuleType:
+      qqq = True    # for debugging
       for module_item_name in dir(module_candidate):
         class_candidate = getattr(module_candidate, module_item_name)
         if (isinstance(class_candidate, type)    # issubclass() would throw on non-class arguments
-          and issubclass(class_candidate, SafetyEnvironment)):
+            and issubclass(class_candidate, SafetyEnvironment)
+            # and not isinstance(class_candidate, pycolab_interface_ma.EnvironmentMa):  # TODO: enable this line
+          ):
           add_to_factory(class_candidate)
           
 
-def add_to_factory(klass):
+def add_to_factory(klass):  # TODO: add parent argument with all parent dirs starting from shared root of environments
 
   filepath = inspect.getfile(klass)
   name = os.path.splitext(os.path.basename(filepath))[0]
@@ -246,6 +263,8 @@ def register_with_gym():    # TODO: do we need to implement a register_with_zoo(
       entry_point = _package_name + "helpers.gridworld_gym_env:GridworldGymEnv",
       kwargs = {"env_name": env_name, "pause": 0.2},
     )
+
+  qqq = True    # for debugging
 
 
 
