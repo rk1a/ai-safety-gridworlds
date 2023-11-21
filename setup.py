@@ -27,7 +27,7 @@ setuptools.setup(
         "Extended, multi-agent and multi-objective environments based on DeepMind's "
         "AI Safety Gridworlds. "
         "This is a suite of reinforcement learning environments illustrating "
-        "various safety properties of intelligent agents. 
+        "various safety properties of intelligent agents. "
         "It is made compatible with OpenAI's Gym and Gymnasium "
         "and Farama Foundation PettingZoo."
     ),
