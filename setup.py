@@ -20,16 +20,16 @@ elif sys.version_info[0] == 3:
 setuptools.setup(
     name="ai-safety-gridworlds",
     version="2.0",
-    description="Extended and multi-objective environments based on DeepMind's "
+    description="Extended, multi-agent and multi-objective environments based on DeepMind's "
         "AI Safety Gridworlds. This is a suite of reinforcement learning "
         "environments illustrating various safety properties of intelligent agents.",
     long_description=(
-        "Extended and multi-objective environments based on DeepMind's "
+        "Extended, multi-agent and multi-objective environments based on DeepMind's "
         "AI Safety Gridworlds. "
         "This is a suite of reinforcement learning environments illustrating "
-        "various safety properties of intelligent agents. These environments "
-        "are implemented in pycolab, a highly-customisable gridworld game "
-        "engine with some batteries included."
+        "various safety properties of intelligent agents. 
+        "It is made compatible with OpenAI's Gym and Gymnasium "
+        "and Farama Foundation PettingZoo."
     ),
     url="https://github.com/levitation-opensource/ai-safety-gridworlds/",
     author="Roland Pihlakas, forked from David Lindner, n0p2, and from DeepMind Technologies",
@@ -63,9 +63,13 @@ setuptools.setup(
         "game engine "
         "gridworld "
         "gym "
+        "gymnasium "
+        "pettingzoo "
         "reinforcement learning "
         "retro retrogaming "
         "rl "
+        "multi-objective "
+        "multi-agent "
     ),
     install_requires=[
       "absl-py", 
@@ -73,7 +77,7 @@ setuptools.setup(
       "matplotlib",
       "numpy", 
       "pillow",
-      "pycolab", 
+      # "pycolab", 
     ] + enum,
     packages=setuptools.find_packages(),
     zip_safe=True,
