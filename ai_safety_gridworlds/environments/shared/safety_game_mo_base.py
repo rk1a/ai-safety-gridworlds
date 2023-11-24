@@ -52,13 +52,13 @@ class Actions(enum.IntEnum):
   DOWN = 1
   LEFT = 2
   RIGHT = 3
-  NOOP = 4
-  # Human only.
-  QUIT = 5
-  TURN_LEFT_90 = 6    # ADDED
-  TURN_RIGHT_90 = 7    # ADDED
-  TURN_LEFT_180 = 8    # ADDED
-  TURN_RIGHT_180 = 9    # ADDED
+  TURN_LEFT_90 = 4    # ADDED
+  TURN_RIGHT_90 = 5    # ADDED
+  TURN_LEFT_180 = 6    # ADDED
+  TURN_RIGHT_180 = 7    # ADDED
+  NOOP = 8    # CHANGED
+  # Human only. Needs to be the last action in order for the action space sampling to work properly.
+  QUIT = 9    # CHANGED
 
 
 # Colours common in all environments.

@@ -147,6 +147,7 @@ class GridworldZooAecEnv(AECEnv):
             self.agent_name_mapping = dict(
                 zip(self.possible_agents, [agent.character for agent in agents])
             )
+            # TODO: agent step sequence configuration
         else:
             #if len(observable_attribute_categories) > 0:
             #    raise ValueError("observable_attribute_categories")
@@ -313,14 +314,9 @@ class GridworldZooAecEnv(AECEnv):
 
     def observe_info(self, agent):
 
-        # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, we get current agent's perspective computed after that latest step made by any agent.
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: # are agent perspectives enabled and available?
-            obs = self._last_agent_observations_after_some_agents_step[agent]
-        else:
-            obs = self._last_observation
-
-        info = self._compute_info(self, obs, agent)
-
+        # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, _compute_info will use current agent's perspective computed after that latest step made by any agent.
+        obs = self._last_observation
+        info = self._compute_info(obs, agent)
         return info
 
     def last_for_agent(self, agent = None, observe = True):    
@@ -382,13 +378,13 @@ class GridworldZooAecEnv(AECEnv):
 
 
     def _compute_info(self, obs, agent_name):
-            
-        observation_direction = obs.get(INFO_OBSERVATION_DIRECTION)
-        action_direction = obs.get(INFO_ACTION_DIRECTION)
-
+      
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            observation_direction = observation_direction[self.agent_name_mapping[agent_name]]
-            action_direction = action_direction[self.agent_name_mapping[agent_name]]
+            observation_direction = obs.get(INFO_OBSERVATION_DIRECTION, {}).get(self.agent_name_mapping[agent_name])
+            action_direction = obs.get(INFO_ACTION_DIRECTION, {}).get(self.agent_name_mapping[agent_name])
+        else:
+            observation_direction = obs.get(INFO_OBSERVATION_DIRECTION)
+            action_direction = obs.get(INFO_ACTION_DIRECTION)
 
         info = {
             INFO_OBSERVATION_DIRECTION: observation_direction,
@@ -619,8 +615,8 @@ class GridworldsActionSpace(gym.Space):
         assert action_spec.name == "discrete"
         assert action_spec.dtype == "int32"
         assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
-        self.min_action = action_spec.minimum
-        self.max_action = action_spec.maximum
+        self.min_action = int(action_spec.minimum)
+        self.max_action = int(action_spec.maximum)
         self.n = (self.max_action - self.min_action) + 1
         super(GridworldsActionSpace, self).__init__(
             shape=action_spec.shape, dtype=action_spec.dtype

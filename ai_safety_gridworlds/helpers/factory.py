@@ -108,8 +108,8 @@ def auto_add_environments_to_factory():
   import ai_safety_gridworlds.experiments
 
   auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments.aintelope)
-  # auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments)
-  # auto_add_environments_to_factory_from_module(ai_safety_gridworlds.experiments)
+  auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments)
+  auto_add_environments_to_factory_from_module(ai_safety_gridworlds.experiments)
 
 
 # code adapted from https://stackoverflow.com/questions/3507125/how-can-i-discover-classes-in-a-specific-package-in-python

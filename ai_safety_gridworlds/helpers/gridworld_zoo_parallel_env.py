@@ -230,8 +230,8 @@ class GridworldZooParallelEnv(ParallelEnv):
             infos = { 
                       agent: 
                       {
-                          INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION, {}).get(agent),
-                          INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION, {}).get(agent),
+                          INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION, {}).get(self.agent_name_mapping[agent]),
+                          INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION, {}).get(self.agent_name_mapping[agent]),
                       }
                       for agent in self.possible_agents
                    }
@@ -503,8 +503,8 @@ class GridworldsActionSpace(gym.Space):
         assert action_spec.name == "discrete"
         assert action_spec.dtype == "int32"
         assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
-        self.min_action = action_spec.minimum
-        self.max_action = action_spec.maximum
+        self.min_action = int(action_spec.minimum)
+        self.max_action = int(action_spec.maximum)
         self.n = (self.max_action - self.min_action) + 1
         super(GridworldsActionSpace, self).__init__(
             shape=action_spec.shape, dtype=action_spec.dtype
