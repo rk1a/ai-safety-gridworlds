@@ -13,6 +13,8 @@ import random
 import pettingzoo
 from pettingzoo import AECEnv
 
+from typing import Dict, List, Optional, NamedTuple, Tuple
+
 import copy
 import numpy as np
 
@@ -312,12 +314,51 @@ class GridworldZooAecEnv(AECEnv):
 
         return state
 
+
     def observe_info(self, agent):
 
         # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, _compute_info will use current agent's perspective computed after that latest step made by any agent.
         obs = self._last_observation
         info = self._compute_info(obs, agent)
         return info
+
+
+    # def observe_from_location(self, agent_name, agent_coordinates):
+    def observe_infos_from_location(self, agents_coordinates: Dict):
+        """This method is read-only (does not change the actual state of the environment nor the actual state of agents).
+        Each given agent observes the environment as well as itself as if it was in the given location."""
+        
+        #timestep = self._env.observe_from_location(agents_coordinates)       # CHANGED: added *args, **kwargs      
+
+        #board = copy.deepcopy(timestep.observation["board"])   # TODO: option to return observation as character array
+
+        #obs = timestep.observation
+        obs = self._last_observation
+        # board = obs["board"]
+        agents_coordinates2 = { self.agent_name_mapping[agent_name]: coordinate for agent_name, coordinate in agents_coordinates.items() }
+        self._process_observation(obs, agents_coordinates2)
+
+        infos = {}
+        for agent in agents_coordinates.keys():
+            info = self._compute_info(obs, agent)
+            infos[agent] = info
+
+        ## TODO: apply transitions to agent observations as well
+        #if self._use_transitions:
+        #    state = np.stack([np.zeros_like(board), board], axis=0)
+        #    self._last_board = board
+        #else:
+        #    state = board[np.newaxis, :]
+
+        ## TODO: apply flatten to agent observations as well
+        #if self._flatten_observations:
+        #    state = state.flatten()
+
+        # self._state = state
+
+        #return (state, info)
+        return infos
+
 
     def last_for_agent(self, agent = None, observe = True):    
         """Returns observation, cumulative reward, terminated, truncated, info for the specified agent.
@@ -350,34 +391,37 @@ class GridworldZooAecEnv(AECEnv):
         return self.last_for_agent(self._next_agent, observe)
 
 
-    def _process_observation(self, obs):
+    def _process_observation(self, obs, observe_from_agent_coordinates = None):
+        """Computes observation perspectives."""
 
         self._last_observation = obs
         self._rgb = obs["RGB"]
 
         if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
-            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, occlusion_in_layers=self._occlusion_in_layers, ascii=self._ascii_observation_format, agent_coordinates_override=observe_from_agent_coordinates)
 
-        if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-            self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+        if observe_from_agent_coordinates is None:
+            if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+                self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
 
         if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: 
             # TODO: for step() method, calculate observations and coordinates only for current agent 
 
-            agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+            agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates)
             self._last_agent_observations_after_some_agents_step = { agent_name: agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
 
             if self._object_coordinates_in_observation:
-                agent_observations_coordinates = self._env.calculate_agents_observation_coordinates(obs, agent_observations, use_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+                agent_observations_coordinates = self._env.calculate_agents_observation_coordinates(obs, agent_observations, occlusion_in_layers=self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates)
                 self._last_agent_observations_coordinates = { agent_name: agent_observations_coordinates[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
 
             if self._layers_order_in_cube_per_agent is not None:
-                self._last_agent_observations_layers_cubes = { agent_name: self._env.calculate_observation_layers_cube(agent_observations[agent_chr], use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube_per_agent.get(agent_name, [])) for agent_name, agent_chr in self.agent_name_mapping.items() }
+                self._last_agent_observations_layers_cubes = { agent_name: self._env.calculate_observation_layers_cube(agent_observations[agent_chr], occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube_per_agent.get(agent_name, [])) for agent_name, agent_chr in self.agent_name_mapping.items() }
 
     #/ def _process_observation(self, obs):
 
 
     def _compute_info(self, obs, agent_name):
+        """Stores the observation into info fields."""
       
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             observation_direction = obs.get(INFO_OBSERVATION_DIRECTION, {}).get(self.agent_name_mapping[agent_name])

@@ -54,6 +54,7 @@ import numpy as np
 import math
 
 from pycolab import rendering
+from pycolab.things import Sprite
 
 
 DEFAULT_LEVEL = 9   # 0-9
@@ -887,9 +888,14 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
     return observation  # TODO
 
 
-  def _get_agent_perspective(self, agent, board, outside_game_chr, for_layer=None):
+  def _get_agent_perspective(self, agent, board, outside_game_chr, for_layer=None, observe_from_coordinates=None):
+    # observe_from_coordinates can be tuple, list, or np.array of 2 items
+
 
     # board = observation.board
+
+
+    position = agent.position if observe_from_coordinates is None else Sprite.Position(observe_from_coordinates[0], observe_from_coordinates[1])
 
 
     left_visibility = agent.observation_radius
@@ -900,8 +906,8 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
     # TODO: refactor into a shared helper method
     if agent.observation_radius != -1:
       board_out = board[
-                    max(0, agent.position.row - top_visibility) : agent.position.row + bottom_visibility + 1, 
-                    max(0, agent.position.col - left_visibility) : agent.position.col + right_visibility + 1
+                    max(0, position.row - top_visibility) : position.row + bottom_visibility + 1, 
+                    max(0, position.col - left_visibility) : position.col + right_visibility + 1
                   ]
 
     outside_game_chr = ord(outside_game_chr)
@@ -909,15 +915,15 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
       outside_game_chr = (for_layer == outside_game_chr)
 
     # TODO: is there any numpy function for slicing and filling the missing parts automatically?
-    if agent.position.row - top_visibility < 0: # add empty tiles to top
-      board_out = np.vstack([np.ones([top_visibility - agent.position.row, board_out.shape[1]], board.dtype) * outside_game_chr, board_out])
-    elif agent.position.row + bottom_visibility + 1 > board.shape[0]: # add empty tiles to bottom
-      board_out = np.vstack([board_out, np.ones([agent.position.row + bottom_visibility + 1 - board.shape[0], board_out.shape[1]], board.dtype) * outside_game_chr])
+    if position.row - top_visibility < 0: # add empty tiles to top
+      board_out = np.vstack([np.ones([top_visibility - position.row, board_out.shape[1]], board.dtype) * outside_game_chr, board_out])
+    elif position.row + bottom_visibility + 1 > board.shape[0]: # add empty tiles to bottom
+      board_out = np.vstack([board_out, np.ones([position.row + bottom_visibility + 1 - board.shape[0], board_out.shape[1]], board.dtype) * outside_game_chr])
 
-    if agent.position.col - left_visibility < 0: # add empty tiles to left
-      board_out = np.hstack([np.ones([board_out.shape[0], left_visibility - agent.position.col], board.dtype) * outside_game_chr, board_out])
-    elif agent.position.col + right_visibility + 1 > board.shape[1]: # add empty tiles to right
-      board_out = np.hstack([board_out, np.ones([board_out.shape[0], agent.position.col + right_visibility + 1 - board.shape[1]], board.dtype) * outside_game_chr])
+    if position.col - left_visibility < 0: # add empty tiles to left
+      board_out = np.hstack([np.ones([board_out.shape[0], left_visibility - position.col], board.dtype) * outside_game_chr, board_out])
+    elif position.col + right_visibility + 1 > board.shape[1]: # add empty tiles to right
+      board_out = np.hstack([board_out, np.ones([board_out.shape[0], position.col + right_visibility + 1 - board.shape[1]], board.dtype) * outside_game_chr])
 
 
     if agent.observation_direction_mode != 0:
@@ -939,9 +945,13 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
   #/ def _get_agent_perspective(self, agent, observation):
 
 
-  def agent_perspectives(self, observation, for_agents=None, for_layer=None):  # TODO: refactor into agents
+  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None):  # TODO: refactor into agents
     outside_game_chr = DANGER_TILE_CHR  # TODO: config flag
-    return { agent.character: self._get_agent_perspective(agent, observation, outside_game_chr, for_layer=for_layer) for agent in (for_agents if for_agents else safety_game_ma.get_players(self._environment_data)) }
+
+    if observe_from_agent_coordinates is None:
+      observe_from_agent_coordinates = {}
+
+    return { agent.character: self._get_agent_perspective(agent, observation, outside_game_chr, for_layer=for_layer, observe_from_coordinates=observe_from_agent_coordinates.get(agent.character)) for agent in (for_agents if for_agents else safety_game_ma.get_players(self._environment_data)) }
 
 
 def main(unused_argv):

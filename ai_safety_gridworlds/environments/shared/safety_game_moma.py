@@ -369,42 +369,71 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     # log file header creation moved to reset() method
 
 
-  def agent_perspectives_with_layers(self, observation, include_layers=True, ascii=True): # TODO: configuration option to disable layers if not needed
+  def agent_perspectives_with_layers(self, observation, include_layers=True, ascii=True, observe_from_agent_coordinates=None): # TODO: configuration option to disable layers if not needed
+
+    for_agents = [self.environment_data[AGENT_SPRITE][key] for key in observe_from_agent_coordinates.keys()] if observe_from_agent_coordinates is not None else None
 
     # get layers observation perspectives for all agents
     all_agents_layers_observations = {}
     if include_layers:
       layers = observation["layers"]
       for layer_key, layer in layers.items():
+
+        # if called from observe_infos_from_location then replace agent cordinates with provided coordinates so that the agent is observing itself and the environment as if that agent were in that alternate location
+        if observe_from_agent_coordinates is not None and layer_key in observe_from_agent_coordinates:
+          layer = np.zeros_like(layer)
+          coordinate = observe_from_agent_coordinates[layer_key]
+          layer[coordinate[0], coordinate[1]] = True
+
         # if not ascii then translate key to corresponding observation value
         layer_key = layer_key if ascii else self._value_mapping[layer_key]
-        all_agents_layers_observations[layer_key] = self._agent_perspectives(layer, for_layer=ord(layer_key))
+        all_agents_layers_observations[layer_key] = self._agent_perspectives(layer, for_agents=for_agents, for_layer=ord(layer_key), observe_from_agent_coordinates=observe_from_agent_coordinates)
 
     if ascii:
       board_to_ascii_vectorize = np.vectorize(chr)
 
     # get board observation perspectives for all agents
     result = {}
-    agent_perspectives = self._agent_perspectives(observation["ascii_codes" if ascii else "board"]) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on
-    for agent_chr, agent_board_observation in agent_perspectives.items():
+    if observe_from_agent_coordinates is not None:
+      # TODO: replace agent locations in the board according to observe_from_agent_coordinates
 
-      agent_layers_observation = {}
-      if include_layers:
-        for layer_key in all_agents_layers_observations.keys():
-          agent_layers_observation[layer_key] = all_agents_layers_observations[layer_key][agent_chr]
+      for agent_chr in observe_from_agent_coordinates.keys():
 
-      if ascii:
-        agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
+        agent_layers_observation = {}
+        if include_layers:
+          for layer_key in all_agents_layers_observations.keys():
+            agent_layers_observation[layer_key] = all_agents_layers_observations[layer_key][agent_chr]
 
-      agent_observation = rendering.Observation(board=agent_board_observation, layers=agent_layers_observation)
-      result[agent_chr] = agent_observation
+        #if ascii:
+        #  agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
 
-    #/ for agent_chr, agent_observation in observation.items():
+        agent_observation = rendering.Observation(board=None, layers=agent_layers_observation)
+        result[agent_chr] = agent_observation
+
+      #/ for agent_chr, agent_observation in observation.items():
+    else:   #/ if observe_from_agent_coordinates is not None:
+      agent_perspectives = self._agent_perspectives(observation["ascii_codes" if ascii else "board"], for_agents=for_agents, observe_from_agent_coordinates=observe_from_agent_coordinates) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on
+
+      for agent_chr, agent_board_observation in agent_perspectives.items():
+
+        agent_layers_observation = {}
+        if include_layers:
+          for layer_key in all_agents_layers_observations.keys():
+            agent_layers_observation[layer_key] = all_agents_layers_observations[layer_key][agent_chr]
+
+        if ascii:
+          agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
+
+        agent_observation = rendering.Observation(board=agent_board_observation, layers=agent_layers_observation)
+        result[agent_chr] = agent_observation
+
+      #/ for agent_chr, agent_observation in observation.items():
+    #/ if observe_from_agent_coordinates is not None:
 
     return result
 
 
-  def calculate_agents_observation_coordinates(self, observation, agent_observations, use_layers=True, ascii=True):
+  def calculate_agents_observation_coordinates(self, observation, agent_observations, occlusion_in_layers=False, ascii=True, observe_from_agent_coordinates=None):
 
     agents = self.environment_data[AGENT_SPRITE]
 
@@ -413,19 +442,19 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       agent = agents[agent_chr]
 
       # NB! here we always use layers, in order to obtain current agent's coordinates. We need layers since the agent may be overlapped in the board view. 
-      if use_layers:
+      if not occlusion_in_layers:
         layers = agent_observation.layers
         agent_coordinates = np.argwhere(layers[agent_chr]) if agent_chr in layers else None
       else:
         layers = observation.layers
         if agent_chr in layers:
           agent_layer = layers[agent_chr]
-          agent_self_observation = self._agent_perspectives(agent_layer, for_agents=agent_chr)[agent_chr]    # NB! compute only the perspective for current agent since the other agents' perspective of current agent's location is not used
+          agent_self_observation = self._agent_perspectives(agent_layer, for_agents=[agent_chr], observe_from_agent_coordinates=observe_from_agent_coordinates)[agent_chr]    # NB! compute only the perspective for current agent since the other agents' perspective of current agent's location is not used
           agent_coordinates = np.argwhere(agent_self_observation)
         else:
           agent_coordinates = None
 
-      agent_layers_coordinates = self.calculate_observation_coordinates(agent_observation, use_layers=use_layers, ascii=ascii)
+      agent_layers_coordinates = self.calculate_observation_coordinates(agent_observation, occlusion_in_layers=occlusion_in_layers, ascii=ascii, agent_coordinates_override=None)
       relative_agent_layers_coordinates = {}
 
       if agent_coordinates is not None and len(agent_coordinates) > 0:   # agent found in the layers?   # TODO: handle cases where the agent is overlapped by another agent
@@ -457,9 +486,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     return result
 
 
-  def calculate_observation_coordinates(self, observation, use_layers=True, ascii=True):
+  def calculate_observation_coordinates(self, observation, occlusion_in_layers=False, ascii=True, agent_coordinates_override=None):
 
-    if use_layers:  # return coordinates of all objects, including the overlapped ones
+    if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_coordinates = {}
       layers = observation["layers"] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
@@ -469,7 +498,11 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         layer_key = layer_key if ascii else self._value_mapping[layer_key]
         # coordinates = layer.nonzero()
         # layers_coordinates[layer_key] = list(zip(coordinates[0], coordinates[1])) # this returns list of tuples
-        layers_coordinates[layer_key] = [tuple(coord) for coord in np.argwhere(layer).tolist()] # argwhere returns list of lists, but list of tuples would be more efficient
+        if agent_coordinates_override is not None and layer_key in agent_coordinates_override:
+          coord = agent_coordinates_override[layer_key]
+          layers_coordinates[layer_key] = [tuple(coord)]
+        else:
+          layers_coordinates[layer_key] = [tuple(coord) for coord in np.argwhere(layer).tolist()] # argwhere returns list of lists, but list of tuples would be more efficient
 
       return layers_coordinates
 
@@ -480,16 +513,20 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
             
       chars_coordinates = {}
       for char in chars:
-        # coordinates = (board == char).nonzero()
-        # chars_coordinates[key] = list(zip(coordinates[0], coordinates[1]))
-        chars_coordinates[key] = np.argwhere(board == char).tolist()[0]
+        if agent_coordinates_override is not None and char in agent_coordinates_override:
+          # TODO: replace agent locations in the board according to observe_from_agent_coordinates
+          raise NotImplementedError()
+        else:
+          # coordinates = (board == char).nonzero()
+          # chars_coordinates[key] = list(zip(coordinates[0], coordinates[1]))
+          chars_coordinates[key] = np.argwhere(board == char).tolist()[0]
 
       return chars_coordinates
 
 
-  def calculate_observation_layers_cube(self, observation, use_layers=True, layers_order=[]):
+  def calculate_observation_layers_cube(self, observation, occlusion_in_layers=False, layers_order=[]):
 
-    if use_layers:  # return coordinates of all objects, including the overlapped ones
+    if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
       layers = observation["layers"] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
