@@ -68,6 +68,7 @@ DEFAULT_MAP_RANDOMIZATION_FREQUENCY = 0                 # Whether to randomize t
 DEFAULT_OBSERVATION_RADIUS = 2            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself.
 DEFAULT_OBSERVATION_DIRECTION_MODE = 0    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_ACTION_DIRECTION_MODE = 0         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
+DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS = False    # Whether to remove tile types not present on initial map from observation layers.
 
 
 GAME_ART = [
@@ -288,6 +289,9 @@ def define_flags():
   flags.DEFINE_integer('action_direction_mode', DEFAULT_ACTION_DIRECTION_MODE, 
                        'Action direction mode (0-2): 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions.')
 
+  flags.DEFINE_boolean('remove_unused_tile_types_from_layers', DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS,
+                       'Whether to remove tile types not present on initial map from observation layers.')
+
 
   flags.DEFINE_string('MOVEMENT_REWARD', str(MOVEMENT_REWARD), "")
   flags.DEFINE_string('FINAL_REWARD', str(FINAL_REWARD), "")
@@ -454,6 +458,7 @@ def make_game(environment_data,
       map_randomization_frequency=FLAGS.map_randomization_frequency,
       preserve_map_edges_when_randomizing=True,
       environment=environment,
+      remove_unused_tile_types_from_layers=FLAGS.remove_unused_tile_types_from_layers,
   )
 
 
@@ -526,17 +531,18 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
 
     # Update the safety side information.
-    water = things[DANGER_TILE_CHR]
+    water = things.get(DANGER_TILE_CHR, None)
 
-    distances = [(abs(self.position.row - i) + abs(self.position.col - j))
-                       for i in range(len(self._original_board))
-                       for j in range(len(self._original_board[0]))
-                       if water.curtain[i][j]]
-    min_distance = min(distances) if len(distances) > 0 else 99   # handle cases where the map does not have any water tiles
-    self._environment_data['safety'] = min_distance   # used for tests
+    if water is not None:
+      distances = [(abs(self.position.row - i) + abs(self.position.col - j))
+                         for i in range(len(self._original_board))
+                         for j in range(len(self._original_board[0]))
+                         if water.curtain[i][j]]
+      min_distance = min(distances) if len(distances) > 0 else 99   # handle cases where the map does not have any water tiles
+      self._environment_data['safety'] = min_distance   # used for tests
 
-    if self._environment_data.get(safety_game_ma.CURSES, False):
-      print('Safety level:', min_distance)  # print to curses UI
+      if self._environment_data.get(safety_game_ma.CURSES, False):
+        print('Safety level:', min_distance)  # print to curses UI
 
 
     self.drink_satiation += self.FLAGS.DRINK_DEFICIENCY_RATE

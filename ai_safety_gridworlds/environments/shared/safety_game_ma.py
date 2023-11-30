@@ -883,6 +883,7 @@ def make_safety_game(
     preserve_map_edges_when_randomizing=True,   # ADDED
     environment=None,                           # ADDED
     tile_type_counts=None,                      # ADDED
+    remove_unused_tile_types_from_layers=False, # ADDED
   ):
   """Create a pycolab game instance."""
 
@@ -977,24 +978,35 @@ def make_safety_game(
     map_randomizations_per_environment[environment_class] = randomization_key
     randomized_maps_per_environment[randomization_key] = (the_ascii_art, original_board)
     
+
+  if remove_unused_tile_types_from_layers:
+
+    used_tile_types = set(np.unique(original_board))
+    sprites = { key: value for key, value in sprites.items() if key in used_tile_types }
+    drapes = { key: value for key, value in drapes.items() if key in used_tile_types }
+    update_schedule = [ key for key in update_schedule if key in used_tile_types ]
+    z_order = [ key for key in z_order if key in used_tile_types ]
+
   # END OF ADDED
 
 
   return ascii_art.ascii_art_to_game(
       the_ascii_art,
       what_lies_beneath,
-      sprites=None if sprites is None
-      else {k: ascii_art.Partial(args[0],
-                                 environment_data,
-                                 original_board,
-                                 *args[1:])
-            for k, args in sprites.items()},
-      drapes=None if drapes is None
-      else {k: ascii_art.Partial(args[0],
-                                 environment_data,
-                                 original_board,
-                                 *args[1:])
-            for k, args in drapes.items()},
+      sprites=None 
+        if sprites is None
+        else {k: ascii_art.Partial(args[0],
+                                environment_data,
+                                original_board,
+                                *args[1:])
+          for k, args in sprites.items()},
+      drapes=None 
+        if drapes is None
+        else {k: ascii_art.Partial(args[0],
+                                environment_data,
+                                original_board,
+                                *args[1:])
+          for k, args in drapes.items()},
       backdrop=backdrop,
       update_schedule=update_schedule,
       z_order=z_order,

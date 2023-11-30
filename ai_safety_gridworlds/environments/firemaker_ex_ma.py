@@ -68,6 +68,7 @@ DEFAULT_AGENT_OBSERVATION_RADIUS = 2            # How many tiles away from the a
 DEFAULT_SUPERVISOR_OBSERVATION_RADIUS = 10            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself.
 DEFAULT_OBSERVATION_DIRECTION_MODE = 0    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_ACTION_DIRECTION_MODE = 0         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
+DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS = False    # Whether to remove tile types not present on initial map from observation layers.
 
 
 GAME_ART = [
@@ -215,6 +216,9 @@ def define_flags():
   flags.DEFINE_integer('action_direction_mode', DEFAULT_ACTION_DIRECTION_MODE, 
                        'Action direction mode (0-2): 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions.')
 
+  flags.DEFINE_boolean('remove_unused_tile_types_from_layers', DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS,
+                       'Whether to remove tile types not present on initial map from observation layers.')
+
 
   flags.DEFINE_string('AGENT_MOVEMENT_REWARD', str(AGENT_MOVEMENT_REWARD), "")
   flags.DEFINE_string('AGENT_WORKSHOP_WORK_REWARD', str(AGENT_WORKSHOP_WORK_REWARD), "")       
@@ -264,6 +268,7 @@ def define_flags():
 def make_game(environment_data, 
               FLAGS=flags.FLAGS,
               level=DEFAULT_LEVEL,
+              environment=None,
               amount_agents=DEFAULT_AMOUNT_AGENTS,
             ):
   """Return a new firemaker game.
@@ -334,6 +339,8 @@ def make_game(environment_data,
       z_order=z_order,
       update_schedule=update_schedule,
       map_randomization_frequency=False,
+      environment=environment,
+      remove_unused_tile_types_from_layers=FLAGS.remove_unused_tile_types_from_layers,
   )
 
 
@@ -756,6 +763,7 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
         lambda: make_game(self.environment_data, 
                           FLAGS,
                           level,
+                          self,   # environment
                           amount_agents,
                         ),
         copy.copy(GAME_BG_COLOURS), copy.copy(GAME_FG_COLOURS),

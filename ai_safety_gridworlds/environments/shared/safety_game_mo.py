@@ -1492,6 +1492,7 @@ def make_safety_game_mo(
     preserve_map_edges_when_randomizing=True,   # ADDED
     environment=None,                           # ADDED
     tile_type_counts=None,                      # ADDED
+    remove_unused_tile_types_from_layers=False, # ADDED
   ):
   """Create a pycolab game instance."""
 
@@ -1511,4 +1512,5 @@ def make_safety_game_mo(
     preserve_map_edges_when_randomizing,    # ADDED   # TODO: this now here only for backwards compatibility with old maps
     environment,                            # ADDED
     tile_type_counts,                       # ADDED
+    remove_unused_tile_types_from_layers,   # ADDED
   )
