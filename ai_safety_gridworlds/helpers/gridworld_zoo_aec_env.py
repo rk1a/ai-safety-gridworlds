@@ -288,7 +288,7 @@ class GridworldZooAecEnv(AECEnv):
     def observe(self, agent, transition_from_agents_last_step_result=False):
 
         # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, we get current agent's perspective computed after that latest step made by any agent.
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: # are agent perspectives enabled and available?
+        if hasattr(self._env, "agent_perspectives"): # are agent perspectives enabled and available?
             board = self._last_agent_observations_after_some_agents_step[agent].board
         else:
             board = copy.deepcopy(self._last_observation["board"])
@@ -404,7 +404,7 @@ class GridworldZooAecEnv(AECEnv):
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
                 self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
 
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: 
+        if hasattr(self._env, "agent_perspectives"): 
             # TODO: for step() method, calculate observations and coordinates only for current agent 
 
             agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates)
@@ -444,7 +444,7 @@ class GridworldZooAecEnv(AECEnv):
         if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
             info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
 
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
+        if hasattr(self._env, "agent_perspectives"):
             info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observations_after_some_agents_step[agent_name].board
 
             if self._layers_in_observation:

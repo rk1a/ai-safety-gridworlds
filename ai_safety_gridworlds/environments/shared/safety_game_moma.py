@@ -39,7 +39,7 @@ from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INF
 from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared.plot_ma import PlotMa
-from ai_safety_gridworlds.environments.shared.safety_game_ma import make_safety_game, SafetyEnvironmentMa, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
+from ai_safety_gridworlds.environments.shared.safety_game_ma import get_players, make_safety_game, SafetyEnvironmentMa, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
 from ai_safety_gridworlds.environments.shared.termination_reason_enum import TerminationReason
 
 from pycolab import rendering
@@ -170,7 +170,6 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
                episode_no=None,
                disable_env_checker=None,  # The presence of that parameter just means the gym.make() method did not capture it. It happens when gym version < 24.
                seed=None,   # By default equals to trial_no.
-               agent_perspectives=None,
                **kwargs):
     """Initialize a Python v2 environment for a pycolab game factory.
 
@@ -364,8 +363,6 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     prec = 10  
     self.decimal_context = decimal.Context(prec=prec, rounding=decimal.ROUND_HALF_UP, capitals=0)
 
-    self._agent_perspectives = agent_perspectives
-
     # log file header creation moved to reset() method
 
 
@@ -387,7 +384,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
         # if not ascii then translate key to corresponding observation value
         layer_key = layer_key if ascii else self._value_mapping[layer_key]
-        all_agents_layers_observations[layer_key] = self._agent_perspectives(layer, for_agents=for_agents, for_layer=ord(layer_key), observe_from_agent_coordinates=observe_from_agent_coordinates)
+        all_agents_layers_observations[layer_key] = self.agent_perspectives(layer, for_agents=for_agents, for_layer=ord(layer_key), observe_from_agent_coordinates=observe_from_agent_coordinates)
 
     if ascii:
       board_to_ascii_vectorize = np.vectorize(chr)
@@ -412,7 +409,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
       #/ for agent_chr, agent_observation in observation.items():
     else:   #/ if observe_from_agent_coordinates is not None:
-      agent_perspectives = self._agent_perspectives(observation["ascii_codes" if ascii else "board"], for_agents=for_agents, observe_from_agent_coordinates=observe_from_agent_coordinates) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on
+      agent_perspectives = self.agent_perspectives(observation["ascii_codes" if ascii else "board"], for_agents=for_agents, observe_from_agent_coordinates=observe_from_agent_coordinates) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on
 
       for agent_chr, agent_board_observation in agent_perspectives.items():
 
@@ -449,7 +446,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         layers = observation.layers
         if agent_chr in layers:
           agent_layer = layers[agent_chr]
-          agent_self_observation = self._agent_perspectives(agent_layer, for_agents=[agent_chr], observe_from_agent_coordinates=observe_from_agent_coordinates)[agent_chr]    # NB! compute only the perspective for current agent since the other agents' perspective of current agent's location is not used
+          agent_self_observation = self.agent_perspectives(agent_layer, for_agents=[agent_chr], observe_from_agent_coordinates=observe_from_agent_coordinates)[agent_chr]    # NB! compute only the perspective for current agent since the other agents' perspective of current agent's location is not used
           agent_coordinates = np.argwhere(agent_self_observation)
         else:
           agent_coordinates = None
@@ -1306,6 +1303,25 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     self.current_agent = self._env[AGENT_SPRITE][current_agent]
 
 
+  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None):  # TODO: refactor into agents
+
+    outside_game_chr = self._environment_data["what_lies_outside"]
+
+    if observe_from_agent_coordinates is None:
+      observe_from_agent_coordinates = {}
+
+    # TODO: refactor to agent class
+    return { 
+      agent.character: get_agent_perspective(agent, observation, outside_game_chr, for_layer=for_layer, observe_from_coordinates=observe_from_agent_coordinates.get(agent.character)) 
+      for agent 
+      in (
+        for_agents 
+        if for_agents 
+        else get_players(self._environment_data)
+      ) 
+    }
+
+
 
 class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpriteEx
   """A generic `Sprite` for agents in safety environments.
@@ -1336,6 +1352,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
         corner, position, character, environment_data, original_board,
         impassable=impassable, action_direction_mode=action_direction_mode)
 
+    self.observation_radius = None      # ADDED
     self.action_direction_mode = action_direction_mode      # ADDED
 
     # AGENT_SPRITE in environment_data is similar to self._sprites_and_drapes, but contains only agents and is accessible via environment_data
@@ -1376,7 +1393,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     # If none, then use the provided actions instead.
     agent_action = PolicyWrapperDrape.plot_get_actions(the_plot, self.character, actions) # MODIFIED
 
-    agent_action_absolute = self.translate_relative_direction_to_absolute(agent_action)   # ADDED
+    agent_action_absolute = self.get_absolute_action(agent_action, self.action_direction)   # ADDED
 
     # Perform the simulated action in the environment
     # Comparison between an integer and Actions is allowed because Actions is
@@ -1718,10 +1735,121 @@ def override_flags(init_or_define_flags_callback, override):
     return result
 
 
+def get_agent_perspective(agent, board, outside_game_chr, for_layer=None, observe_from_coordinates=None):
+  # observe_from_coordinates can be tuple, list, or np.array of 2 items
+
+
+  position = agent.position if observe_from_coordinates is None else Sprite.Position(observe_from_coordinates[0], observe_from_coordinates[1])
+
+  if agent.observation_radius is None:  # if no radius is specified then assume that all board tiles should be visible, but still apply agent-centric perspective
+
+    if agent.observation_direction_mode == 0:
+      left_visibility = board.shape[1] - 1
+      right_visibility = board.shape[1] - 1
+      top_visibility = board.shape[0] - 1
+      bottom_visibility = board.shape[0] - 1 
+      
+    else:   # if the observation may rotate then we need to use square observation shape to ensure that non-square board is always visible
+      max_size = max(board.shape[0], board.shape[1])
+      left_visibility = max_size - 1
+      right_visibility = max_size - 1
+      top_visibility = max_size - 1
+      bottom_visibility = max_size - 1 
+
+  elif np.isscalar(agent.observation_radius):
+    left_visibility = agent.observation_radius
+    right_visibility = agent.observation_radius
+    top_visibility = agent.observation_radius
+    bottom_visibility = agent.observation_radius  
+
+  else:
+    if agent.observation_direction_mode == 0:
+      left_visibility = agent.observation_radius[Actions.LEFT]
+      right_visibility = agent.observation_radius[Actions.RIGHT]
+      top_visibility = agent.observation_radius[Actions.UP]
+      bottom_visibility = agent.observation_radius[Actions.DOWN]
+
+    else:
+      # swap absolute visibility ranges depending on agent's observation direction
+      if agent.observation_direction == Actions.UP:
+        left_visibility = agent.observation_radius[Actions.LEFT]
+        right_visibility = agent.observation_radius[Actions.RIGHT]
+        top_visibility = agent.observation_radius[Actions.UP]
+        bottom_visibility = agent.observation_radius[Actions.DOWN]
+
+      elif agent.observation_direction == Actions.DOWN:
+        left_visibility = agent.observation_radius[Actions.RIGHT]
+        right_visibility = agent.observation_radius[Actions.LEFT]
+        top_visibility = agent.observation_radius[Actions.DOWN]
+        bottom_visibility = agent.observation_radius[Actions.UP]
+
+      elif agent.observation_direction == Actions.LEFT:
+        left_visibility = agent.observation_radius[Actions.UP]
+        right_visibility = agent.observation_radius[Actions.DOWN]
+        top_visibility = agent.observation_radius[Actions.RIGHT]
+        bottom_visibility = agent.observation_radius[Actions.LEFT]
+
+      elif agent.observation_direction == Actions.RIGHT:
+        left_visibility = agent.observation_radius[Actions.DOWN]
+        right_visibility = agent.observation_radius[Actions.UP]
+        top_visibility = agent.observation_radius[Actions.LEFT]
+        bottom_visibility = agent.observation_radius[Actions.RIGHT]
+
+      else:
+        raise ValueError("Invalid agent observation_direction")
+
+
+  if agent.observation_radius != -1:
+    board_out = board[
+                  max(0, position.row - top_visibility) : position.row + bottom_visibility + 1, 
+                  max(0, position.col - left_visibility) : position.col + right_visibility + 1
+                ]
+
+  outside_game_chr = ord(outside_game_chr)
+  if for_layer is not None:   # convert to boolean if processing layers
+    outside_game_chr = (for_layer == outside_game_chr)
+
+
+  # TODO: is there any numpy function for slicing and filling the missing parts automatically?
+  if position.row - top_visibility < 0: # add empty tiles to top
+    board_out = np.vstack([np.ones([top_visibility - position.row, board_out.shape[1]], board.dtype) * outside_game_chr, board_out])
+  # NB! no elif here since the observation radius might be so large that both sides of observation need to be filled
+  if position.row + bottom_visibility + 1 > board.shape[0]: # add empty tiles to bottom
+    board_out = np.vstack([board_out, np.ones([position.row + bottom_visibility + 1 - board.shape[0], board_out.shape[1]], board.dtype) * outside_game_chr])
+
+  if position.col - left_visibility < 0: # add empty tiles to left
+    board_out = np.hstack([np.ones([board_out.shape[0], left_visibility - position.col], board.dtype) * outside_game_chr, board_out])
+  # NB! no elif here since the observation radius might be so large that both sides of observation need to be filled
+  if position.col + right_visibility + 1 > board.shape[1]: # add empty tiles to right
+    board_out = np.hstack([board_out, np.ones([board_out.shape[0], position.col + right_visibility + 1 - board.shape[1]], board.dtype) * outside_game_chr])
+
+
+  # first crop, then rotate because position determines the cropping location and position is not rotated
+  if agent.observation_direction_mode != 0:
+    if agent.observation_direction == Actions.UP:
+      pass
+    elif agent.observation_direction == Actions.DOWN:
+      board_out = np.rot90(board_out, k=2)
+    elif agent.observation_direction == Actions.LEFT:
+      board_out = np.rot90(board_out, k=-1)
+    elif agent.observation_direction == Actions.RIGHT:
+      board_out = np.rot90(board_out, k=1)   # with the default k and axes, the rotation will be counterclockwise.
+    else:
+      raise ValueError("Invalid agent observation_direction")
+
+
+  # return rendering.Observation(board=board, layers={}) #observation.layers) # layers are not used in agent observations
+  return board_out
+
+#/ def _get_agent_perspective(self, agent, observation):
+
+
+
 def make_safety_game_mo(
     environment_data,
     the_ascii_art,
-    what_lies_beneath,
+    what_lies_beneath=' ',    
+    what_lies_outside='#',                      # ADDED
     backdrop=SafetyBackdrop,
     sprites=None,
     drapes=None,
@@ -1736,6 +1864,7 @@ def make_safety_game_mo(
   """Create a pycolab game instance."""
 
   environment_data["what_lies_beneath"] = what_lies_beneath
+  environment_data["what_lies_outside"] = what_lies_outside   # ADDED
   environment_data[Z_ORDER] = z_order   # ADDED
 
   return make_safety_game(

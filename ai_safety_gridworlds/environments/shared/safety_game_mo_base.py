@@ -413,58 +413,137 @@ class AgentSafetySprite(SafetySprite):
     self._environment_data = environment_data
     self._original_board = original_board
     self.action_direction_mode = action_direction_mode      # ADDED
-    self.action_direction = Actions.UP  
+    self.action_direction = Actions.UP 
 
 
-  def translate_relative_direction_to_absolute(self, agent_action):  # ADDED
+  # TODO: test this logic
+  def get_absolute_action(self, agent_action, current_direction):  # ADDED
 
     if self.action_direction_mode == 0:      # 0 - fixed
-      agent_absolute_action = agent_action
+      absolute_direction = agent_action
 
     elif self.action_direction_mode == 1 or self.action_direction_mode == 2:    # 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 
       if agent_action == Actions.UP:  # go forwards
-        agent_absolute_action = {
+        absolute_direction = {
                               Actions.UP: Actions.UP,
                               Actions.DOWN: Actions.DOWN,
                               Actions.LEFT: Actions.LEFT,
                               Actions.RIGHT: Actions.RIGHT,
-                            }[self.action_direction]
+                            }[current_direction]
 
       elif agent_action == Actions.DOWN:  # go backwards
-        agent_absolute_action = {
+        absolute_direction = {
                               Actions.UP: Actions.DOWN,
                               Actions.DOWN: Actions.UP,
                               Actions.LEFT: Actions.RIGHT,
                               Actions.RIGHT: Actions.LEFT,
-                            }[self.action_direction]
+                            }[current_direction]
 
       elif agent_action == Actions.LEFT:  # go left
-        agent_absolute_action = {
+        absolute_direction = {
                               Actions.UP: Actions.LEFT,
                               Actions.DOWN: Actions.RIGHT,
                               Actions.LEFT: Actions.DOWN,
                               Actions.RIGHT: Actions.UP,
-                            }[self.action_direction]
+                            }[current_direction]
 
       elif agent_action == Actions.RIGHT: # go right
-        agent_absolute_action = {
+        absolute_direction = {
                               Actions.UP: Actions.RIGHT,
                               Actions.DOWN: Actions.LEFT,
                               Actions.LEFT: Actions.UP,
                               Actions.RIGHT: Actions.DOWN,
-                            }[self.action_direction]
+                            }[current_direction]
 
       else:
-        agent_absolute_action = agent_action
+        absolute_direction = agent_action
 
     else:
       raise ValueError
 
-    return agent_absolute_action
+    return absolute_direction 
 
+
+  # TODO: test this logic
+  def get_new_action_or_observation_direction(self, agent_action, current_direction):  # ADDED
+
+    if self.action_direction_mode == 0:      # 0 - fixed
+      absolute_direction = agent_action
+
+    elif self.action_direction_mode == 1:    # 1 - relative, depending on last move
+
+      if agent_action == Actions.UP:  # go forwards
+        absolute_direction = {
+                              Actions.UP: Actions.UP,
+                              Actions.DOWN: Actions.DOWN,
+                              Actions.LEFT: Actions.LEFT,
+                              Actions.RIGHT: Actions.RIGHT,
+                            }[current_direction]
+
+      elif agent_action == Actions.DOWN:  # go backwards
+        absolute_direction = {
+                              Actions.UP: Actions.DOWN,
+                              Actions.DOWN: Actions.UP,
+                              Actions.LEFT: Actions.RIGHT,
+                              Actions.RIGHT: Actions.LEFT,
+                            }[current_direction]
+
+      elif agent_action == Actions.LEFT:  # go left
+        absolute_direction = {
+                              Actions.UP: Actions.LEFT,
+                              Actions.DOWN: Actions.RIGHT,
+                              Actions.LEFT: Actions.DOWN,
+                              Actions.RIGHT: Actions.UP,
+                            }[current_direction]
+
+      elif agent_action == Actions.RIGHT: # go right
+        absolute_direction = {
+                              Actions.UP: Actions.RIGHT,
+                              Actions.DOWN: Actions.LEFT,
+                              Actions.LEFT: Actions.UP,
+                              Actions.RIGHT: Actions.DOWN,
+                            }[current_direction]
+
+      else:
+        absolute_direction = agent_action
+
+    elif self.action_direction_mode == 2:    # 2 - relative, controlled by separate turning actions
+
+      if agent_action == Actions.TURN_LEFT_90:
+        absolute_direction = {
+                              Actions.UP: Actions.LEFT,
+                              Actions.DOWN: Actions.RIGHT,
+                              Actions.LEFT: Actions.DOWN,
+                              Actions.RIGHT: Actions.UP,
+                            }[current_direction]
+
+      elif agent_action == Actions.TURN_RIGHT_90:
+        absolute_direction = {
+                              Actions.UP: Actions.RIGHT,
+                              Actions.DOWN: Actions.LEFT,
+                              Actions.LEFT: Actions.UP,
+                              Actions.RIGHT: Actions.DOWN,
+                            }[current_direction]
+
+      elif agent_action == Actions.TURN_LEFT_180 or agent_action == Actions.TURN_RIGHT_180:
+        absolute_direction = {
+                              Actions.UP: Actions.DOWN,
+                              Actions.DOWN: Actions.UP,
+                              Actions.LEFT: Actions.RIGHT,
+                              Actions.RIGHT: Actions.LEFT,
+                            }[current_direction]
+
+      else:
+        absolute_direction = agent_action
+
+    else:
+      raise ValueError
+
+    return absolute_direction
 
   # TODO: change to a static method?
+  # TODO: test this logic
   def map_action_to_observation_direction(self, proposed_actions, current_direction, action_direction_mode = 2, observation_direction_mode = 2):
 
     if proposed_actions == Actions.NOOP:
@@ -475,7 +554,7 @@ class AgentSafetySprite(SafetySprite):
 
     elif observation_direction_mode == 1:   # relative, depending on last move
       assert(proposed_actions in [Actions.UP, Actions.DOWN, Actions.LEFT, Actions.RIGHT])
-      direction = self.translate_relative_direction_to_absolute(proposed_actions)
+      direction = self.get_new_action_or_observation_direction(proposed_actions, current_direction)
 
     elif observation_direction_mode == 2:   # relative, controlled by separate turning actions
 
@@ -532,7 +611,7 @@ class AgentSafetySprite(SafetySprite):
 
     elif action_direction_mode == 1:   # relative, depending on last move
       assert(proposed_actions in [Actions.UP, Actions.DOWN, Actions.LEFT, Actions.RIGHT])
-      direction = self.translate_relative_direction_to_absolute(proposed_actions)
+      direction = self.get_new_action_or_observation_direction(proposed_actions, current_direction)
 
     elif action_direction_mode == 2:   # relative, controlled by separate turning actions
         
@@ -589,7 +668,7 @@ class AgentSafetySprite(SafetySprite):
     # update on the action that was actually taken.
     self._environment_data[ACTUAL_ACTIONS] = agent_action
 
-    agent_action_absolute = self.translate_relative_direction_to_absolute(agent_action)   # ADDED
+    agent_action_absolute = self.get_absolute_action(agent_action, self.action_direction)   # ADDED
 
     # Perform the actual action in the environment
     # Comparison between an integer and Actions is allowed because Actions is
@@ -846,7 +925,7 @@ def make_safety_game(
       (the_ascii_art, original_board) = randomized_maps_per_environment[randomization_key]
 
 
-  if tile_type_counts and enable_randomize:
+  if tile_type_counts:
 
     for tile_type, tile_max_count in tile_type_counts.items():
 

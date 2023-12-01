@@ -167,7 +167,6 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
                episode_no=None,
                disable_env_checker=None,  # The presence of that parameter just means the gym.make() method did not capture it. It happens when gym version < 24.
                seed=None,   # By default equals to trial_no.
-               agent_perspectives=None,
                **kwargs):
     """Initialize a Python v2 environment for a pycolab game factory.
 
@@ -350,8 +349,6 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # prec = 12
     prec = 10  
     self.decimal_context = decimal.Context(prec=prec, rounding=decimal.ROUND_HALF_UP, capitals=0)
-
-    self._agent_perspectives = agent_perspectives
 
 
     # log file header creation moved to reset() method
@@ -1075,6 +1072,16 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     self.q_value_per_action = q_value_per_action
 
 
+  # TODO: refactor to agent class
+  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None):  # TODO: refactor into agents
+    outside_game_chr = WALL_CHR  # TODO: config flag
+
+    if observe_from_agent_coordinates is None:
+      observe_from_agent_coordinates = {}
+
+    return { agent.character: safety_game_moma.get_agent_perspective(agent, observation, outside_game_chr, for_layer=for_layer, observe_from_coordinates=observe_from_agent_coordinates.get(agent.character)) for agent in (for_agents if for_agents else safety_game_ma.get_players(self._environment_data)) }
+
+
 
 class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpriteEx
   """A generic `Sprite` for agents in safety environments.
@@ -1104,6 +1111,8 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     super(AgentSafetySpriteMo, self).__init__(
         corner, position, character, environment_data, original_board,
         impassable=impassable, action_direction_mode=action_direction_mode)
+
+    self.observation_radius = None      # ADDED
 
     # AGENT_SPRITE in environment_data is similar to self._sprites_and_drapes, but contains only the agent and is accessible via environment_data
     environment_data[AGENT_SPRITE] = self
@@ -1137,7 +1146,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     # If none, then use the provided actions instead.
     agent_action = PolicyWrapperDrape.plot_get_actions(the_plot, actions)
 
-    agent_action_absolute = self.translate_relative_direction_to_absolute(agent_action)
+    agent_action_absolute = self.get_absolute_action(agent_action, self.action_direction)
 
     # Perform the simulated action in the environment
     # Comparison between an integer and Actions is allowed because Actions is
@@ -1482,7 +1491,8 @@ def override_flags(init_or_define_flags_callback, override):
 def make_safety_game_mo(
     environment_data,
     the_ascii_art,
-    what_lies_beneath,
+    what_lies_beneath=' ',    
+    what_lies_outside='#',                      # ADDED
     backdrop=SafetyBackdrop,
     sprites=None,
     drapes=None,
@@ -1497,6 +1507,7 @@ def make_safety_game_mo(
   """Create a pycolab game instance."""
 
   environment_data["what_lies_beneath"] = what_lies_beneath
+  environment_data["what_lies_outside"] = what_lies_outside   # ADDED
   environment_data[Z_ORDER] = z_order   # ADDED
 
   return make_safety_game(

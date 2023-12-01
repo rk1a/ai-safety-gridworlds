@@ -54,16 +54,6 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
   environment in the same way (e.g. if `SafetyEnvironment` gets derived).
   """
 
-  #def __init__(self, 
-  #             *args, 
-  #             agent_perspectives=None,
-  #             **kwargs):   # ADDED
-    
-  #  self._agent_perspectives = agent_perspectives
-
-  #  super(SafetyCursesUiEx, self).__init__(*args, **kwargs)
-
-
   def is_game_over(self):   # ADDED
 
     if isinstance(self._env._game_over, dict): # pylint: disable=protected-access
@@ -133,8 +123,8 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     if self._repainter: observation = self._repainter(observation)
         
     observations = [observation]                      # ADDED
-    if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:          # ADDED  # TODO: change _agent_perspectives to attribute agent_perspectives
-      agent_observations = self._env._agent_perspectives(observation.board).values() # ADDED
+    if hasattr(self._env, "agent_perspectives"):          # ADDED  
+      agent_observations = self._env.agent_perspectives(observation.board).values() # ADDED
       agent_observations = [rendering.Observation(board=x, layers={}) for x in agent_observations]  # ADDED 
       observations += list(agent_observations) # ADDED
 
@@ -191,8 +181,8 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
       elapsed = datetime.datetime.now() - self._start_time
         
       observations = [observation]                      # ADDED
-      if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:            # ADDED
-        agent_observations = self._env._agent_perspectives(observation.board).values() # ADDED
+      if hasattr(self._env, "agent_perspectives"):            # ADDED
+        agent_observations = self._env.agent_perspectives(observation.board).values() # ADDED
         agent_observations = [rendering.Observation(board=x, layers={}) for x in agent_observations] # ADDED  
         observations += list(agent_observations) # ADDED
 

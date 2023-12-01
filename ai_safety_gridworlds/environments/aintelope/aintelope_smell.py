@@ -29,6 +29,7 @@ import sys
 # Dependency imports
 from absl import app
 from absl import flags
+from ast import literal_eval
 
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_ma
@@ -58,7 +59,7 @@ DEFAULT_THIRST_HUNGER_DEATH = False       # Whether the agent dies if it does no
 DEFAULT_PENALISE_OVERSATIATION = True    # Whether to penalise non stop consumption of the drink and food resources.
 DEFAULT_USE_SATIATION_PROPORTIONAL_REWARD = False   # TODO: description
 DEFAULT_MAP_RANDOMIZATION_FREQUENCY = 3                 # Whether to randomize the map.   # 0 - off, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance), 3 - once per training episode
-DEFAULT_OBSERVATION_RADIUS = 4            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself.
+DEFAULT_OBSERVATION_RADIUS = [4, 4, 4, 4]            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.
 DEFAULT_OBSERVATION_DIRECTION_MODE = 2    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_ACTION_DIRECTION_MODE = 2         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS = False    # Whether to remove tile types not present on initial map from observation layers.
@@ -226,8 +227,8 @@ def define_flags():
   flags.DEFINE_integer('map_randomization_frequency', DEFAULT_MAP_RANDOMIZATION_FREQUENCY,
                         'Whether and when to randomize the map. 0 - off, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance), 3 - once per training episode.')
   
-  flags.DEFINE_integer('observation_radius', DEFAULT_OBSERVATION_RADIUS, 
-                       'How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself.')
+  flags.DEFINE_string('observation_radius', str(DEFAULT_OBSERVATION_RADIUS), 
+                       'How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.')
   flags.DEFINE_integer('observation_direction_mode', DEFAULT_OBSERVATION_DIRECTION_MODE, 
                        'Observation direction mode (0-2): 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions.')
   flags.DEFINE_integer('action_direction_mode', DEFAULT_ACTION_DIRECTION_MODE, 
@@ -292,6 +293,9 @@ def define_flags():
   else:
     FLAGS([""])
 
+
+  # convert observation radius flag from string format to list/numeric format
+  FLAGS.observation_radius = literal_eval(FLAGS.observation_radius) if FLAGS.observation_radius else None
 
   # convert multi-objective reward flags from string format to object format
   FLAGS.MOVEMENT_REWARD = mo_reward.parse(FLAGS.MOVEMENT_REWARD)
@@ -844,7 +848,6 @@ class AIntelopeSmellBasedExplorationEnvironmentMa(safety_game_moma.SafetyEnviron
         max_iterations=max_iterations, 
         log_arguments=log_arguments,
         FLAGS=FLAGS,
-        agent_perspectives=self.agent_perspectives,
         **kwargs)
 
 
@@ -858,72 +861,6 @@ class AIntelopeSmellBasedExplorationEnvironmentMa(safety_game_moma.SafetyEnviron
 
   def repainter(self, observation):
     return observation  # TODO
-
-
-  def _get_agent_perspective(self, agent, board, outside_game_chr, for_layer=None, observe_from_coordinates=None):
-    # observe_from_coordinates can be tuple, list, or np.array of 2 items
-
-
-    # board = observation.board
-
-
-    position = agent.position if observe_from_coordinates is None else Sprite.Position(observe_from_coordinates[0], observe_from_coordinates[1])
-
-
-    left_visibility = agent.observation_radius
-    right_visibility = agent.observation_radius
-    top_visibility = agent.observation_radius
-    bottom_visibility = agent.observation_radius
-
-    # TODO: refactor into a shared helper method
-    if agent.observation_radius != -1:
-      board_out = board[
-                    max(0, position.row - top_visibility) : position.row + bottom_visibility + 1, 
-                    max(0, position.col - left_visibility) : position.col + right_visibility + 1
-                  ]
-
-    outside_game_chr = ord(outside_game_chr)
-    if for_layer is not None:
-      outside_game_chr = (for_layer == outside_game_chr)
-
-    # TODO: is there any numpy function for slicing and filling the missing parts automatically?
-    if position.row - top_visibility < 0: # add empty tiles to top
-      board_out = np.vstack([np.ones([top_visibility - position.row, board_out.shape[1]], board.dtype) * outside_game_chr, board_out])
-    elif position.row + bottom_visibility + 1 > board.shape[0]: # add empty tiles to bottom
-      board_out = np.vstack([board_out, np.ones([position.row + bottom_visibility + 1 - board.shape[0], board_out.shape[1]], board.dtype) * outside_game_chr])
-
-    if position.col - left_visibility < 0: # add empty tiles to left
-      board_out = np.hstack([np.ones([board_out.shape[0], left_visibility - position.col], board.dtype) * outside_game_chr, board_out])
-    elif position.col + right_visibility + 1 > board.shape[1]: # add empty tiles to right
-      board_out = np.hstack([board_out, np.ones([board_out.shape[0], position.col + right_visibility + 1 - board.shape[1]], board.dtype) * outside_game_chr])
-
-
-    if agent.observation_direction_mode != 0:
-      if agent.observation_direction == safety_game.Actions.UP:
-        pass
-      elif agent.observation_direction == safety_game.Actions.DOWN:
-        board = np.rot90(board, k=2)
-      elif agent.observation_direction == safety_game.Actions.LEFT:
-        board = np.rot90(board, k=-1)
-      elif agent.observation_direction == safety_game.Actions.RIGHT:
-        board = np.rot90(board, k=1)   # with the default k and axes, the rotation will be counterclockwise.
-      else:
-        raise ValueError("Invalid agent observation_direction")
-
-
-    # return rendering.Observation(board=board, layers={}) #observation.layers) # layers are not used in agent observations
-    return board_out
-
-  #/ def _get_agent_perspective(self, agent, observation):
-
-
-  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None):  # TODO: refactor into agents
-    outside_game_chr = WALL_CHR  # TODO: config flag
-
-    if observe_from_agent_coordinates is None:
-      observe_from_agent_coordinates = {}
-
-    return { agent.character: self._get_agent_perspective(agent, observation, outside_game_chr, for_layer=for_layer, observe_from_coordinates=observe_from_agent_coordinates.get(agent.character)) for agent in (for_agents if for_agents else safety_game_ma.get_players(self._environment_data)) }
 
 
 

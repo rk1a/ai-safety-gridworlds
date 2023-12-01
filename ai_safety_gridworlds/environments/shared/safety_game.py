@@ -50,9 +50,9 @@ class Actions(enum.IntEnum):
   DOWN = 1
   LEFT = 2
   RIGHT = 3
-  NOOP = 4
+  NOOP = 8    # CHANGED
   # Human only.
-  QUIT = 5
+  QUIT = 9    # CHANGED
 
 
 # Colours common in all environments.

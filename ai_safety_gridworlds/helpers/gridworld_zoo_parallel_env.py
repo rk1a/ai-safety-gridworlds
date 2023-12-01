@@ -211,7 +211,7 @@ class GridworldZooParallelEnv(ParallelEnv):
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
                 self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
 
-        if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None: 
+        if hasattr(self._env, "agent_perspectives"): 
             # TODO: for step() method, calculate observations and coordinates only for current agent 
 
             agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates)
@@ -253,7 +253,7 @@ class GridworldZooParallelEnv(ParallelEnv):
                 for agent in self.possible_agents:
                     infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube   # shared global observation must be returned via agent keys
 
-            if hasattr(self._env, "_agent_perspectives") and self._env._agent_perspectives is not None:
+            if hasattr(self._env, "agent_perspectives"):
                 for agent in self.possible_agents:
                     infos[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent].board
 
