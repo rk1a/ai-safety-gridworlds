@@ -323,12 +323,12 @@ class GridworldZooAecEnv(AECEnv):
         return info
 
 
-    # def observe_from_location(self, agent_name, agent_coordinates):
-    def observe_infos_from_location(self, agents_coordinates: Dict):
+    # def observe_from_location(self, agent_name, agent_coordinates, agents_observation_directions: Dict):
+    def observe_infos_from_location(self, agents_coordinates: Dict, agents_observation_directions: Dict):
         """This method is read-only (does not change the actual state of the environment nor the actual state of agents).
         Each given agent observes the environment as well as itself as if it was in the given location."""
         
-        #timestep = self._env.observe_from_location(agents_coordinates)       # CHANGED: added *args, **kwargs      
+        #timestep = self._env.observe_from_location(agents_coordinates, agents_observation_directions)       # CHANGED: added *args, **kwargs      
 
         #board = copy.deepcopy(timestep.observation["board"])   # TODO: option to return observation as character array
 
@@ -336,7 +336,9 @@ class GridworldZooAecEnv(AECEnv):
         obs = self._last_observation
         # board = obs["board"]
         agents_coordinates2 = { self.agent_name_mapping[agent_name]: coordinate for agent_name, coordinate in agents_coordinates.items() }
-        self._process_observation(obs, agents_coordinates2)
+        agents_observation_directions2 = { self.agent_name_mapping[agent_name]: direction for agent_name, direction in agents_observation_directions.items() }
+
+        self._process_observation(obs, agents_coordinates2, agents_observation_directions2)
 
         infos = {}
         for agent in agents_coordinates.keys():
@@ -391,7 +393,7 @@ class GridworldZooAecEnv(AECEnv):
         return self.last_for_agent(self._next_agent, observe)
 
 
-    def _process_observation(self, obs, observe_from_agent_coordinates = None):
+    def _process_observation(self, obs, observe_from_agent_coordinates = None, observe_from_agent_directions = None):
         """Computes observation perspectives."""
 
         self._last_observation = obs
@@ -400,18 +402,18 @@ class GridworldZooAecEnv(AECEnv):
         if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
             self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, occlusion_in_layers=self._occlusion_in_layers, ascii=self._ascii_observation_format, agent_coordinates_override=observe_from_agent_coordinates)
 
-        if observe_from_agent_coordinates is None:
+        if observe_from_agent_coordinates is None and observe_from_agent_directions is None:
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
                 self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
 
         if hasattr(self._env, "agent_perspectives"): 
             # TODO: for step() method, calculate observations and coordinates only for current agent 
 
-            agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates)
+            agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions)
             self._last_agent_observations_after_some_agents_step = { agent_name: agent_observations[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
 
             if self._object_coordinates_in_observation:
-                agent_observations_coordinates = self._env.calculate_agents_observation_coordinates(obs, agent_observations, occlusion_in_layers=self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates)
+                agent_observations_coordinates = self._env.calculate_agents_observation_coordinates(obs, agent_observations, occlusion_in_layers=self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions)
                 self._last_agent_observations_coordinates = { agent_name: agent_observations_coordinates[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
 
             if self._layers_order_in_cube_per_agent is not None:

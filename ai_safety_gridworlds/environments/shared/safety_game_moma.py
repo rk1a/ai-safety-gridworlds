@@ -366,7 +366,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     # log file header creation moved to reset() method
 
 
-  def agent_perspectives_with_layers(self, observation, include_layers=True, ascii=True, observe_from_agent_coordinates=None): # TODO: configuration option to disable layers if not needed
+  def agent_perspectives_with_layers(self, observation, include_layers=True, ascii=True, observe_from_agent_coordinates=None, observe_from_agent_directions=None): # TODO: configuration option to disable layers if not needed
 
     for_agents = [self.environment_data[AGENT_SPRITE][key] for key in observe_from_agent_coordinates.keys()] if observe_from_agent_coordinates is not None else None
 
@@ -376,15 +376,16 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       layers = observation["layers"]
       for layer_key, layer in layers.items():
 
-        # if called from observe_infos_from_location then replace agent cordinates with provided coordinates so that the agent is observing itself and the environment as if that agent were in that alternate location
+        # If called from observe_infos_from_location then replace agent coordinates with provided coordinates so that the agent is observing itself and the environment as if that agent were in that alternate location.
+        # NB! All agent coordinates are replaced at once, so all agents observe each other at altered locations.
         if observe_from_agent_coordinates is not None and layer_key in observe_from_agent_coordinates:
           layer = np.zeros_like(layer)
           coordinate = observe_from_agent_coordinates[layer_key]
-          layer[coordinate[0], coordinate[1]] = True
+          layer[coordinate[0], coordinate[1]] = True    # observe_from_agent_directions does not need to be considered in this code block. It is important only below during call to agent_perspectives().
 
         # if not ascii then translate key to corresponding observation value
         layer_key = layer_key if ascii else self._value_mapping[layer_key]
-        all_agents_layers_observations[layer_key] = self.agent_perspectives(layer, for_agents=for_agents, for_layer=ord(layer_key), observe_from_agent_coordinates=observe_from_agent_coordinates)
+        all_agents_layers_observations[layer_key] = self.agent_perspectives(layer, for_agents=for_agents, for_layer=ord(layer_key), observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions)
 
     if ascii:
       board_to_ascii_vectorize = np.vectorize(chr)
@@ -392,7 +393,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     # get board observation perspectives for all agents
     result = {}
     if observe_from_agent_coordinates is not None:
-      # TODO: replace agent locations in the board according to observe_from_agent_coordinates
+      # agent locations in the board are already overridden according to observe_from_agent_coordinates in the above code
 
       for agent_chr in observe_from_agent_coordinates.keys():
 
@@ -409,7 +410,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
       #/ for agent_chr, agent_observation in observation.items():
     else:   #/ if observe_from_agent_coordinates is not None:
-      agent_perspectives = self.agent_perspectives(observation["ascii_codes" if ascii else "board"], for_agents=for_agents, observe_from_agent_coordinates=observe_from_agent_coordinates) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on
+      agent_perspectives = self.agent_perspectives(observation["ascii_codes" if ascii else "board"], for_agents=for_agents) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on    # NB! No observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions arguments here since they are supposed to be Null in this if-else branch
 
       for agent_chr, agent_board_observation in agent_perspectives.items():
 
@@ -430,7 +431,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     return result
 
 
-  def calculate_agents_observation_coordinates(self, observation, agent_observations, occlusion_in_layers=False, ascii=True, observe_from_agent_coordinates=None):
+  def calculate_agents_observation_coordinates(self, observation, agent_observations, occlusion_in_layers=False, ascii=True, observe_from_agent_coordinates=None, observe_from_agent_directions=None):
 
     agents = self.environment_data[AGENT_SPRITE]
 
@@ -446,7 +447,8 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         layers = observation.layers
         if agent_chr in layers:
           agent_layer = layers[agent_chr]
-          agent_self_observation = self.agent_perspectives(agent_layer, for_agents=[agent_chr], observe_from_agent_coordinates=observe_from_agent_coordinates)[agent_chr]    # NB! compute only the perspective for current agent since the other agents' perspective of current agent's location is not used
+          # if the observe_from_agent_coordinates is set then the agent_layer already contains the agent at the overriden location
+          agent_self_observation = self.agent_perspectives(agent_layer, for_agents=[agent_chr], observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions)[agent_chr]    # NB! compute only the perspective for current agent since the other agents' perspective of current agent's location is not used
           agent_coordinates = np.argwhere(agent_self_observation)
         else:
           agent_coordinates = None
@@ -462,7 +464,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
           relative_agent_layer_coordinates = []
 
           # TODO: configuration flag specifying whether agent coordinates should be relative or absolute. Consider that in this case the layer_coordinates are already offset by the corner of the agent's perspective.
-          # subtract agent perspective center, considering agent's observation direction
+          # subtract agent perspective center, considering agent's observation direction. Agent direction is already considered while calculating agent_self_observation above.
           for x, y in layer_coordinates:
             x -= agent_coordinates_x  
             y -= agent_coordinates_y
@@ -473,7 +475,6 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         result[agent_chr] = relative_agent_layers_coordinates
 
       else:
-
         result[agent_chr] = []  # agent not found in layers. Did the agent go outside of the game boundaries?
 
       #/ if agent_coordinates is not None and len(agent_coordinates[0]) > 0:
@@ -511,7 +512,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       chars_coordinates = {}
       for char in chars:
         if agent_coordinates_override is not None and char in agent_coordinates_override:
-          # TODO: replace agent locations in the board according to observe_from_agent_coordinates
+          # TODO: replace agent locations in the board according to agent_coordinates_override
           raise NotImplementedError()
         else:
           # coordinates = (board == char).nonzero()
@@ -1303,16 +1304,25 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     self.current_agent = self._env[AGENT_SPRITE][current_agent]
 
 
-  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None):  # TODO: refactor into agents
+  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None, observe_from_agent_directions=None):  # TODO: refactor into agents
 
     outside_game_chr = self._environment_data["what_lies_outside"]
 
     if observe_from_agent_coordinates is None:
       observe_from_agent_coordinates = {}
+    if observe_from_agent_directions is None:
+      observe_from_agent_directions = {}
 
     # TODO: refactor to agent class
     return { 
-      agent.character: get_agent_perspective(agent, observation, outside_game_chr, for_layer=for_layer, observe_from_coordinates=observe_from_agent_coordinates.get(agent.character)) 
+      agent.character: get_agent_perspective(
+        agent, 
+        observation, 
+        outside_game_chr, 
+        for_layer=for_layer, 
+        observe_from_coordinate=observe_from_agent_coordinates.get(agent.character),
+        observe_from_agent_direction=observe_from_agent_directions.get(agent.character),
+      ) 
       for agent 
       in (
         for_agents 
@@ -1735,11 +1745,12 @@ def override_flags(init_or_define_flags_callback, override):
     return result
 
 
-def get_agent_perspective(agent, board, outside_game_chr, for_layer=None, observe_from_coordinates=None):
+def get_agent_perspective(agent, board, outside_game_chr, for_layer=None, observe_from_coordinate=None, observe_from_agent_direction=None):
   # observe_from_coordinates can be tuple, list, or np.array of 2 items
 
 
-  position = agent.position if observe_from_coordinates is None else Sprite.Position(observe_from_coordinates[0], observe_from_coordinates[1])
+  position = agent.position if observe_from_coordinate is None else Sprite.Position(observe_from_coordinate[0], observe_from_coordinate[1])
+  observation_direction = agent.observation_direction if observe_from_agent_direction is None else observe_from_agent_direction
 
   if agent.observation_radius is None:  # if no radius is specified then assume that all board tiles should be visible, but still apply agent-centric perspective
 
@@ -1771,25 +1782,25 @@ def get_agent_perspective(agent, board, outside_game_chr, for_layer=None, observ
 
     else:
       # swap absolute visibility ranges depending on agent's observation direction
-      if agent.observation_direction == Actions.UP:
+      if observation_direction == Actions.UP:
         left_visibility = agent.observation_radius[Actions.LEFT]
         right_visibility = agent.observation_radius[Actions.RIGHT]
         top_visibility = agent.observation_radius[Actions.UP]
         bottom_visibility = agent.observation_radius[Actions.DOWN]
 
-      elif agent.observation_direction == Actions.DOWN:
+      elif observation_direction == Actions.DOWN:
         left_visibility = agent.observation_radius[Actions.RIGHT]
         right_visibility = agent.observation_radius[Actions.LEFT]
         top_visibility = agent.observation_radius[Actions.DOWN]
         bottom_visibility = agent.observation_radius[Actions.UP]
 
-      elif agent.observation_direction == Actions.LEFT:
+      elif observation_direction == Actions.LEFT:
         left_visibility = agent.observation_radius[Actions.UP]
         right_visibility = agent.observation_radius[Actions.DOWN]
         top_visibility = agent.observation_radius[Actions.RIGHT]
         bottom_visibility = agent.observation_radius[Actions.LEFT]
 
-      elif agent.observation_direction == Actions.RIGHT:
+      elif observation_direction == Actions.RIGHT:
         left_visibility = agent.observation_radius[Actions.DOWN]
         right_visibility = agent.observation_radius[Actions.UP]
         top_visibility = agent.observation_radius[Actions.LEFT]
@@ -1826,13 +1837,13 @@ def get_agent_perspective(agent, board, outside_game_chr, for_layer=None, observ
 
   # first crop, then rotate because position determines the cropping location and position is not rotated
   if agent.observation_direction_mode != 0:
-    if agent.observation_direction == Actions.UP:
+    if observation_direction == Actions.UP:
       pass
-    elif agent.observation_direction == Actions.DOWN:
+    elif observation_direction == Actions.DOWN:
       board_out = np.rot90(board_out, k=2)
-    elif agent.observation_direction == Actions.LEFT:
+    elif observation_direction == Actions.LEFT:
       board_out = np.rot90(board_out, k=-1)
-    elif agent.observation_direction == Actions.RIGHT:
+    elif observation_direction == Actions.RIGHT:
       board_out = np.rot90(board_out, k=1)   # with the default k and axes, the rotation will be counterclockwise.
     else:
       raise ValueError("Invalid agent observation_direction")
