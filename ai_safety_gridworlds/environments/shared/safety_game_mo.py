@@ -396,7 +396,9 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
         layers_order.sort()
 
       for layer_key in layers_order:
-        layer = layers[layer_key]
+        layer = layers.get(layer_key)
+        if layer is None:   # NB! allow layers_order to refer to non-existing layers for cross-environment observation format compatibility purposes
+          layer = np.zeros_like(next(iter(layers.values())))
         layers_list.append(layer)
 
       return np.array(layers_list)

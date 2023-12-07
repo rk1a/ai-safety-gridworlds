@@ -324,7 +324,7 @@ class GridworldZooAecEnv(AECEnv):
 
 
     # def observe_from_location(self, agent_name, agent_coordinates, agents_observation_directions: Dict):
-    def observe_infos_from_location(self, agents_coordinates: Dict, agents_observation_directions: Dict):
+    def observe_infos_from_location(self, agents_coordinates: Dict, agents_observation_directions: Dict = None):
         """This method is read-only (does not change the actual state of the environment nor the actual state of agents).
         Each given agent observes the environment as well as itself as if it was in the given location."""
         
