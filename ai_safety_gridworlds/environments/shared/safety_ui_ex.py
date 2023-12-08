@@ -54,11 +54,17 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
   environment in the same way (e.g. if `SafetyEnvironment` gets derived).
   """
 
+
+  def get_alive_agents(self):   # ADDED
+
+    return [agent for agent in self._env._environment_data[AGENT_SPRITE].values() 
+            if not self._env._game_over.get(agent.character)]
+
+
   def is_game_over(self):   # ADDED
 
     if isinstance(self._env._game_over, dict): # pylint: disable=protected-access
-      return all( self._env._game_over.get(agent) 
-                  for agent in self._env._environment_data[AGENT_SPRITE].keys() )   # TODO: refactor into a shared method in EnvironmentMa     # pylint: disable=protected-access
+      return len(self.get_alive_agents()) == 0   # TODO: refactor into a shared method in EnvironmentMa     # pylint: disable=protected-access
     else:
       return self._env._game_over # pylint: disable=protected-access
 
@@ -130,7 +136,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
     if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
       self._env.current_agent_index = 0
-      self._env.current_agent = list(self._env._environment_data[AGENT_SPRITE].values())[self._env.current_agent_index] # NB! current agent needs to be set AFTER calling .reset() above, else you get the agent object from some earlier reset() call, like during _compute_observation_spec etc. This is important when the map is randomised during each reset() call
+      self._env.current_agent = self.get_alive_agents()[self._env.current_agent_index] # NB! current agent needs to be set AFTER calling .reset() above, else you get the agent object from some earlier reset() call, like during _compute_observation_spec etc. This is important when the map is randomised during each reset() call
 
     self._display(screen, observations, self._env.episode_return, # CHANGED
                   elapsed=datetime.timedelta())
@@ -152,6 +158,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         paint_console = True
       elif False and keycode == curses.KEY_NPAGE:  # Page Down? Hide the game console.
         paint_console = False
+
       elif keycode in self._keycodes_to_actions:
         # Convert the keycode to a game action and send that to the engine.
         # Receive a new observation, reward, pcontinue; update total return.
@@ -168,13 +175,19 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         if self._repainter: observation = self._repainter(observation)
       
 
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-          self._env.current_agent_index += 1
-          self._env.current_agent_index = self._env.current_agent_index % len(self._env._environment_data[AGENT_SPRITE])
-          self._env.current_agent = list(self._env._environment_data[AGENT_SPRITE].values())[self._env.current_agent_index]
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):   # ADDED
+          if not self.is_game_over():   # avoid infinite loop below
+            agents = list(self._env._environment_data[AGENT_SPRITE].values())
+            while True:   # loop over all agents until next alive agent is found
+              self._env.current_agent_index += 1
+              # cannot use self.get_alive_agents() here since if last stepped agent dies then next agent would be skipped because of changed agents order
+              self._env.current_agent_index = self._env.current_agent_index % len(agents)
+              self._env.current_agent = agents[self._env.current_agent_index]
+              if not self._env._game_over.get(self._env.current_agent.character):
+                break
         
       else:
-        update_time_counter_only = True   # optimisation and flicker reduction: if keycode is -1 and delay does not trigger no-op (-1 not in self._keycodes_to_actions) then just update the time counter and not the whole screen
+        update_time_counter_only = True   # optimisation and flicker reduction: if keycode is -1 and delay does not trigger no-op (-1 not in self._keycodes_to_actions) then just update the time counter and not the whole screen    # ADDED
 
       # Update the game display, regardless of whether we've called the game's
       # play() method.

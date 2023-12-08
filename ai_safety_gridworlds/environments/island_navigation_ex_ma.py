@@ -58,7 +58,7 @@ from pycolab import rendering
 from pycolab.things import Sprite
 
 
-DEFAULT_LEVEL = 10   # 0-10
+DEFAULT_LEVEL = 9   # 0-10
 DEFAULT_MAX_ITERATIONS = 100
 DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
 DEFAULT_SUSTAINABILITY_CHALLENGE = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
@@ -223,7 +223,7 @@ FOOD_GROWTH_LIMIT = 20        # Need to be at least 10 else the agent dies. The 
 FOOD_AVAILABILITY_INITIAL = FOOD_GROWTH_LIMIT 
 
 
-DEFAULT_AMOUNT_AGENTS = 1
+DEFAULT_AMOUNT_AGENTS = 2
 
 
 # Set up game specific base colours.
