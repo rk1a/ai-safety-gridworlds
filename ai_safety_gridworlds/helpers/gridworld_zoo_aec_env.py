@@ -109,7 +109,9 @@ class GridworldZooAecEnv(AECEnv):
                  occlusion_in_atribute_layers=False, 
                  observable_attribute_categories=["expression", "action_direction", "observation_direction", "numeric_message", "public_metrics"], 
                  # observable_attribute_value_mapping:dict[str, dict[str, float]]={},  
-                 observable_attribute_value_mapping:dict[str, float]={},  
+                 observable_attribute_value_mapping:dict[str, float]={}, 
+                 
+                 agents_stepping_order=None,  # stepping order is specified as a list of map characters
 
                  *args, **kwargs
                 ):
@@ -145,11 +147,16 @@ class GridworldZooAecEnv(AECEnv):
 
             agents = safety_game_ma.get_players(self._env.environment_data)
             # num_agents = len(agents)
-            self.possible_agents = [f"agent_{agent.character}" for agent in agents]  # TODO: make it readonly
-            self.agent_name_mapping = dict(
-                zip(self.possible_agents, [agent.character for agent in agents])
-            )
-            # TODO: agent step sequence configuration
+            if agents_stepping_order is None:
+              self.possible_agents = [f"agent_{agent.character}" for agent in agents]  # TODO: make it readonly
+              self.agent_name_mapping = dict(
+                  zip(self.possible_agents, [agent.character for agent in agents])
+              )
+            else:
+              self.possible_agents = [f"agent_{character}" for character in agents_stepping_order]  # TODO: make it readonly
+              self.agent_name_mapping = dict(
+                  zip(self.possible_agents, list(agents_stepping_order))
+              )
         else:
             #if len(observable_attribute_categories) > 0:
             #    raise ValueError("observable_attribute_categories")
