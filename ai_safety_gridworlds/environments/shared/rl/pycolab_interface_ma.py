@@ -48,6 +48,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
                observation_distiller, continuous_actions=None,
                max_iterations=float('inf'),
                randomize_agent_actions_order=True,    # ADDED
+               **kwargs                             # ignore unknown arguments that are consumed as flags    # ADDED
               ):
     """Construct a `Base` adapter that wraps a pycolab game.
 

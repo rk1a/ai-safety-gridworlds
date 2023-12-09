@@ -252,7 +252,6 @@ class GridworldZooAecEnv(AECEnv):
             self._next_agent_index = (self._next_agent_index + 1) % len(self.possible_agents) # loop over agents repeatedly     # https://pettingzoo.farama.org/content/basic_usage/#interacting-with-environments  
             agent = self.possible_agents[self._next_agent_index]                
 
-            done = False
             if gym_v26:
                 done = self.terminations[agent] or self.truncations[agent]
             else:
@@ -397,7 +396,18 @@ class GridworldZooAecEnv(AECEnv):
         """Returns observation, cumulative reward, terminated, truncated, info for the current agent (specified by self.agent_selection).
         
         If observe flag is True then current board state is observed. If observe flag is False then the observation that was made after current agent's latest move is returned."""
-        return self.last_for_agent(self._next_agent, observe)
+        result = self.last_for_agent(self._next_agent, observe)
+
+        if gym_v26:
+            (state, reward, terminated, truncated, info) = result
+            if observe == False:      # thats how Zoo API test requires it to be
+                state = None
+            return (state, reward, terminated, truncated, info)
+        else:
+            (state, reward, done, info) = result
+            if observe == False:      # thats how Zoo API test requires it to be
+                state = None
+            return (state, reward, done, info)
 
 
     def _process_observation(self, obs, observe_from_agent_coordinates = None, observe_from_agent_directions = None):
@@ -502,7 +512,8 @@ class GridworldZooAecEnv(AECEnv):
         self.infos[self._next_agent] = info
 
 
-        reward = { agent: 0.0 for agent in self.agent_name_mapping.values() } if timestep.reward is None else timestep.reward
+        rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward[agent_chr] 
+                    for agent_name, agent_chr in self.agent_name_mapping.items() }
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
@@ -517,11 +528,12 @@ class GridworldZooAecEnv(AECEnv):
 
         info.update({
             INFO_HIDDEN_REWARD: hidden_reward,
-            INFO_OBSERVED_REWARD: reward,
+            INFO_OBSERVED_REWARD: rewards[self._next_agent],
             INFO_DISCOUNT: timestep.discount,            
         })
 
-        self.rewards[self._next_agent] = reward
+        # self.rewards[self._next_agent] = reward
+        self.rewards.update(rewards)
 
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
@@ -550,11 +562,11 @@ class GridworldZooAecEnv(AECEnv):
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminated = done
             truncated = False    # TODO      
-            self._given_agents_last_step_result[self._next_agent] = (state, reward, terminated, truncated, info)            
+            self._given_agents_last_step_result[self._next_agent] = (state, rewards[self._next_agent], terminated, truncated, info)            
             self.terminations[self._next_agent] = terminated
             self.truncations[self._next_agent] = truncated
         else:
-            self._given_agents_last_step_result[self._next_agent] = (state, reward, done, info)
+            self._given_agents_last_step_result[self._next_agent] = (state, rewards[self._next_agent], done, info)
             self.dones[self._next_agent] = done
 
         self._move_to_next_agent()    # https://pettingzoo.farama.org/content/basic_usage/#interacting-with-environments  
@@ -589,7 +601,7 @@ class GridworldZooAecEnv(AECEnv):
         self._next_agent_index = 0
         self._all_agents_done = False
 
-        reward = None
+        reward = 0.0    # Zoo api_test requires reward to be 0 upon reset()
         self.rewards = { agent: reward for agent in self.possible_agents }
 
 

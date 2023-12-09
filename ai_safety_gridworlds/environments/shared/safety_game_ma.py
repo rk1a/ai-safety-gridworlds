@@ -995,7 +995,7 @@ def get_players(environment_data):
 
 
 
-map_randomizations_per_environment = {}
+# map_randomizations_per_environment = {}
 randomized_maps_per_environment = {}
 
 def make_safety_game(
@@ -1029,20 +1029,25 @@ def make_safety_game(
 
   else:
     environment_class = environment.__class__.__module__ + "." + environment.__class__.__qualname__
-    last_randomization_done_for_environment = map_randomizations_per_environment.get(environment_class)
+    # last_randomization_done_for_environment = map_randomizations_per_environment.get(environment_class)
     trial_no = environment.get_trial_no()
     episode_no = environment.get_episode_no()
 
+    # need to consider tile_type_counts in randomization_key since tests create different environment configurations in one go
+    tile_type_counts_key = list(tile_type_counts.items())
+    tile_type_counts_key.sort()
+
     if map_randomization_frequency == 1:    # 1 - once per experiment run
-      randomization_key = ""
+      randomization_key = environment_class + "|" + str(tile_type_counts_key)
     elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance)
-      randomization_key = str(trial_no)
+      randomization_key = environment_class + "|" + str(trial_no) + "|" + str(tile_type_counts_key)
     elif map_randomization_frequency == 3:  # 3 - once per training episode
-      randomization_key = str(trial_no) + "|" + str(episode_no)
+      randomization_key = environment_class + "|" + str(trial_no) + "|" + str(episode_no) + "|" + str(tile_type_counts_key)
     else:
       raise ValueError("map_randomization_frequency")
 
-    enable_randomize = (last_randomization_done_for_environment != randomization_key)
+    # enable_randomize = (last_randomization_done_for_environment != randomization_key)
+    enable_randomize = randomization_key not in randomized_maps_per_environment
 
     if not enable_randomize:  # obtain earlier randomized map
       (the_ascii_art, original_board) = randomized_maps_per_environment[randomization_key]
@@ -1103,7 +1108,7 @@ def make_safety_game(
   
   
   if enable_randomize and environment is not None:  # obtain earlier randomized map
-    map_randomizations_per_environment[environment_class] = randomization_key
+    # map_randomizations_per_environment[environment_class] = randomization_key
     randomized_maps_per_environment[randomization_key] = (the_ascii_art, original_board)
     
 

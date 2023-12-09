@@ -41,7 +41,9 @@ class EnvironmentMo(safety_game.SafetyEnvironment):
 
   def __init__(self, game_factory, discrete_actions, default_reward,
                observation_distiller, continuous_actions=None,
-               max_iterations=float('inf')):
+               max_iterations=float('inf'),               
+               **kwargs                             # ignore unknown arguments that are consumed as flags    # ADDED
+              ):
     """Construct a `Base` adapter that wraps a pycolab game.
 
     For each episode, a new pycolab game is supplied by the `game_factory`
