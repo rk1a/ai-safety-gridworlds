@@ -164,11 +164,11 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
 
-        self.np_random = np.random
-        self.action_spaces = {  # TODO: make it readonly
+        self._np_random = np.random
+        self._action_spaces = {  # TODO: make it readonly
             agent: GridworldsActionSpace(self, agent) for agent in self.possible_agents
         }  
-        self.observation_spaces = {  # TODO: make it readonly
+        self._observation_spaces = {  # TODO: make it readonly
             agent: GridworldsObservationSpace(self, use_transitions, flatten_observations) for agent in self.possible_agents
         }
 
@@ -177,6 +177,13 @@ class GridworldZooParallelEnv(ParallelEnv):
             self._viewer.close()
             self._viewer = None
 
+    @property
+    def action_spaces(self):
+        return self._action_spaces
+
+    @property
+    def observation_spaces(self):
+        return self._observation_spaces
 
     @property
     def agents(self):
@@ -195,10 +202,10 @@ class GridworldZooParallelEnv(ParallelEnv):
         return self._state
 
     def observation_space(self, agent):
-        return self.observation_spaces[agent]
+        return self._observation_spaces[agent]
 
     def action_space(self, agent):
-        return self.action_spaces[agent]
+        return self._action_spaces[agent]
 
 
     def _process_observation(self, obs, observe_from_agent_coordinates = None, observe_from_agent_directions = None):
@@ -504,9 +511,9 @@ class GridworldZooParallelEnv(ParallelEnv):
     #    return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
-        # self.np_random, seed = seeding.np_random(seed)
+        # self._np_random, seed = seeding.np_random(seed)
         # return [seed]
-        self.np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+        self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
     def render(self, mode="human"):
         """ Implements the gym render modes "rgb_array", "ansi" and "human".
@@ -583,7 +590,7 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
                 nvec=self.n, dtype=action_spec.dtype
             )
 
-        self._np_random = self._env.np_random
+        self._np_random = self._env._np_random
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
         if self._env._dones[self._agent]:
@@ -595,9 +602,9 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
         return result
 
         #if mask is None:
-        #    return self._env.np_random.randint(self.min_action, self.max_action)
+        #    return self._env._np_random.randint(self.min_action, self.max_action)
         #else:
-        #    return self.min_action + self._env.np_random.choice(np.where(mask == 1)[0])
+        #    return self.min_action + self._env._np_random.choice(np.where(mask == 1)[0])
 
     def contains(self, x):
         """

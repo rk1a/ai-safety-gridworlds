@@ -121,15 +121,23 @@ class GridworldGymEnv(gym.Env):
         self._last_observation_layers_cube = None
 
         # TODO: make these fields readonly
-        self.action_space = GridworldsActionSpace(self)
-        self.observation_space = GridworldsObservationSpace(self, use_transitions, flatten_observations)
+        self._action_space = GridworldsActionSpace(self)
+        self._observation_space = GridworldsObservationSpace(self, use_transitions, flatten_observations)
 
-        self.np_random = np.random
+        self._np_random = np.random
 
     def close(self):
         if self._viewer is not None:
             self._viewer.close()
             self._viewer = None
+
+    @property
+    def action_space(self):
+        return self._action_space
+
+    @property
+    def observation_space(self):
+        return self._observation_spaces
 
     def _process_observation(self, obs):
 
@@ -262,9 +270,9 @@ class GridworldGymEnv(gym.Env):
         return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
-        # self.np_random, seed = seeding.np_random(seed)
+        # self._np_random, seed = seeding.np_random(seed)
         # return [seed]
-        self.np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+        self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
     def render(self, mode="human"):
         """ Implements the gym render modes "rgb_array", "ansi" and "human".
@@ -319,9 +327,9 @@ class GridworldsActionSpace(Discrete):  # gym.Space
 
     def sample(self, mask: Optional[np.ndarray] = None) -> int:
         if mask is None:
-            return self._env.np_random.randint(self.min_action, self.max_action)
+            return self._env._np_random.randint(self.min_action, self.max_action)
         else:
-            return self.min_action + self._env.np_random.choice(np.where(mask == 1)[0])
+            return self.min_action + self._env._np_random.choice(np.where(mask == 1)[0])
 
     def contains(self, x):
         """

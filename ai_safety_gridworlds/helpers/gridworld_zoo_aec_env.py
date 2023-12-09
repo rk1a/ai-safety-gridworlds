@@ -178,8 +178,8 @@ class GridworldZooAecEnv(AECEnv):
         reward = None
         info = None
 
-        self.rewards = { agent: reward for agent in self.possible_agents }  # TODO: make it readonly for callers
-        self.infos = { agent: info for agent in self.possible_agents }  # TODO: make it readonly for callers
+        self._rewards = { agent: reward for agent in self.possible_agents }  # TODO: make it readonly for callers
+        self._infos = { agent: info for agent in self.possible_agents }  # TODO: make it readonly for callers
 
         if gym_v26:
             self._given_agents_last_step_result = { agent: (state, reward, False, False, info) for agent in self.possible_agents }
@@ -189,11 +189,11 @@ class GridworldZooAecEnv(AECEnv):
             self._given_agents_last_step_result = { agent: (state, reward, False, info) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
 
-        self.np_random = np.random
-        self.action_spaces = {  # TODO: make it readonly
+        self._np_random = np.random
+        self._action_spaces = {  # TODO: make it readonly
             agent: GridworldsActionSpace(self, agent) for agent in self.possible_agents
         }  
-        self.observation_spaces = {  # TODO: make it readonly
+        self._observation_spaces = {  # TODO: make it readonly
             agent: GridworldsObservationSpace(self, use_transitions, flatten_observations) for agent in self.possible_agents
         }
 
@@ -202,6 +202,21 @@ class GridworldZooAecEnv(AECEnv):
             self._viewer.close()
             self._viewer = None
 
+    @property
+    def rewards(self):
+        return self._rewards
+
+    @property
+    def infos(self):
+        return self._infos
+
+    @property
+    def action_spaces(self):
+        return self._action_spaces
+
+    @property
+    def observation_spaces(self):
+        return self._observation_spaces
 
     @property
     def agents(self):
@@ -230,10 +245,10 @@ class GridworldZooAecEnv(AECEnv):
         return self._state
 
     def observation_space(self, agent):
-        return self.observation_spaces[agent]
+        return self._observation_spaces[agent]
 
     def action_space(self, agent):
-        return self.action_spaces[agent]
+        return self._action_spaces[agent]
 
 
     def agent_iter(self, max_iter = 2**63):     
@@ -512,7 +527,7 @@ class GridworldZooAecEnv(AECEnv):
         obs = timestep.observation
         self._process_observation(obs)
         info = self._compute_info(obs, self._next_agent)
-        self.infos[self._next_agent] = info
+        self._infos[self._next_agent] = info
 
 
         rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward[agent_chr] 
@@ -535,8 +550,8 @@ class GridworldZooAecEnv(AECEnv):
             INFO_DISCOUNT: timestep.discount,            
         })
 
-        # self.rewards[self._next_agent] = reward
-        self.rewards.update(rewards)
+        # self._rewards[self._next_agent] = reward
+        self._rewards.update(rewards)
 
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
@@ -592,7 +607,7 @@ class GridworldZooAecEnv(AECEnv):
 
         obs = timestep.observation
         self._process_observation(obs)
-        self.infos = { agent: self._compute_info(obs, agent) for agent in self.possible_agents }
+        self._infos = { agent: self._compute_info(obs, agent) for agent in self.possible_agents }
 
 
         if self._use_transitions:
@@ -609,15 +624,15 @@ class GridworldZooAecEnv(AECEnv):
         self._all_agents_done = False
 
         reward = 0.0    # Zoo api_test requires reward to be 0 upon reset()
-        self.rewards = { agent: reward for agent in self.possible_agents }
+        self._rewards = { agent: reward for agent in self.possible_agents }
 
 
         if gym_v26:
-            self._given_agents_last_step_result = { agent: (state, reward, False, False, self.infos[agent]) for agent in self.possible_agents }
+            self._given_agents_last_step_result = { agent: (state, reward, False, False, self._infos[agent]) for agent in self.possible_agents }
             self.terminations = { agent: False for agent in self.possible_agents }
             self.truncations = { agent: False for agent in self.possible_agents }  
         else:
-            self._given_agents_last_step_result = { agent: (state, reward, False, self.infos[agent]) for agent in self.possible_agents }
+            self._given_agents_last_step_result = { agent: (state, reward, False, self._infos[agent]) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }
 
         # return state
@@ -642,9 +657,9 @@ class GridworldZooAecEnv(AECEnv):
     #    return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
-        # self.np_random, seed = seeding.np_random(seed)
+        # self._np_random, seed = seeding.np_random(seed)
         # return [seed]
-        self.np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+        self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
     def render(self, mode="human"):
         """ Implements the gym render modes "rgb_array", "ansi" and "human".
@@ -721,7 +736,7 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
                 nvec=self.n, dtype=action_spec.dtype
             )
 
-        self._np_random = self._env.np_random
+        self._np_random = self._env._np_random
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
         if self._env.terminations[self._agent] or self._env.truncations[self._agent]:
@@ -733,9 +748,9 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
         return result
 
         #if mask is None:
-        #    return self._env.np_random.randint(self.min_action, self.max_action)
+        #    return self._env._np_random.randint(self.min_action, self.max_action)
         #else:
-        #    return self.min_action + self._env.np_random.choice(np.where(mask == 1)[0])
+        #    return self.min_action + self._env._np_random.choice(np.where(mask == 1)[0])
 
     def contains(self, x):
         """
