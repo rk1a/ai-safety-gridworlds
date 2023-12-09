@@ -46,11 +46,11 @@ class Actions(enum.IntEnum):
   in future iterations of the library. Always refer to all the action using
   their respective enum names.
   """
-  UP = 0
-  DOWN = 1
-  LEFT = 2
-  RIGHT = 3
-  NOOP = 8    # CHANGED
+  NOOP = 0    # CHANGED
+  UP = 1    # CHANGED
+  DOWN = 2    # CHANGED
+  LEFT = 3    # CHANGED
+  RIGHT = 4    # CHANGED
   # Human only.
   QUIT = 9    # CHANGED
 

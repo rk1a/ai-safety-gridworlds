@@ -345,7 +345,7 @@ def make_game(environment_data,
   tile_type_counts = {}
 
   # removing extra agents from the map
-  # TODO: implement a way to optionally randomise the agent locations as well and move agent amount setting / extra agent disablement code to the make_safety_game method
+  # TODO: implement a way to optionally randomize the agent locations as well and move agent amount setting / extra agent disablement code to the make_safety_game method
   for agent_character in AGENT_CHRS[amount_agents:]:
     tile_type_counts[agent_character] = 0
 

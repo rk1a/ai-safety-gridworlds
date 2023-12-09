@@ -39,7 +39,7 @@ from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INF
 from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared.plot_ma import PlotMa
-from ai_safety_gridworlds.environments.shared.safety_game_ma import get_players, make_safety_game, SafetyEnvironmentMa, AgentSafetySprite, Actions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
+from ai_safety_gridworlds.environments.shared.safety_game_ma import get_players, make_safety_game, SafetyEnvironmentMa, AgentSafetySprite, Actions, Directions, SafetyBackdrop, PolicyWrapperDrape, ACTUAL_ACTIONS, TERMINATION_REASON, EXTRA_OBSERVATIONS
 from ai_safety_gridworlds.environments.shared.termination_reason_enum import TerminationReason
 
 from pycolab import rendering
@@ -1781,36 +1781,36 @@ def get_agent_perspective(agent, board, outside_game_chr, for_layer=None, observ
 
   else:
     if agent.observation_direction_mode == 0:
-      left_visibility = agent.observation_radius[Actions.LEFT]
-      right_visibility = agent.observation_radius[Actions.RIGHT]
-      top_visibility = agent.observation_radius[Actions.UP]
-      bottom_visibility = agent.observation_radius[Actions.DOWN]
+      left_visibility = agent.observation_radius[Directions.LEFT]
+      right_visibility = agent.observation_radius[Directions.RIGHT]
+      top_visibility = agent.observation_radius[Directions.UP]
+      bottom_visibility = agent.observation_radius[Directions.DOWN]
 
     else:
       # swap absolute visibility ranges depending on agent's observation direction
-      if observation_direction == Actions.UP:
-        left_visibility = agent.observation_radius[Actions.LEFT]
-        right_visibility = agent.observation_radius[Actions.RIGHT]
-        top_visibility = agent.observation_radius[Actions.UP]
-        bottom_visibility = agent.observation_radius[Actions.DOWN]
+      if observation_direction == Directions.UP:
+        left_visibility = agent.observation_radius[Directions.LEFT]
+        right_visibility = agent.observation_radius[Directions.RIGHT]
+        top_visibility = agent.observation_radius[Directions.UP]
+        bottom_visibility = agent.observation_radius[Directions.DOWN]
 
-      elif observation_direction == Actions.DOWN:
-        left_visibility = agent.observation_radius[Actions.RIGHT]
-        right_visibility = agent.observation_radius[Actions.LEFT]
-        top_visibility = agent.observation_radius[Actions.DOWN]
-        bottom_visibility = agent.observation_radius[Actions.UP]
+      elif observation_direction == Directions.DOWN:
+        left_visibility = agent.observation_radius[Directions.RIGHT]
+        right_visibility = agent.observation_radius[Directions.LEFT]
+        top_visibility = agent.observation_radius[Directions.DOWN]
+        bottom_visibility = agent.observation_radius[Directions.UP]
 
-      elif observation_direction == Actions.LEFT:
-        left_visibility = agent.observation_radius[Actions.UP]
-        right_visibility = agent.observation_radius[Actions.DOWN]
-        top_visibility = agent.observation_radius[Actions.RIGHT]
-        bottom_visibility = agent.observation_radius[Actions.LEFT]
+      elif observation_direction == Directions.LEFT:
+        left_visibility = agent.observation_radius[Directions.UP]
+        right_visibility = agent.observation_radius[Directions.DOWN]
+        top_visibility = agent.observation_radius[Directions.RIGHT]
+        bottom_visibility = agent.observation_radius[Directions.LEFT]
 
-      elif observation_direction == Actions.RIGHT:
-        left_visibility = agent.observation_radius[Actions.DOWN]
-        right_visibility = agent.observation_radius[Actions.UP]
-        top_visibility = agent.observation_radius[Actions.LEFT]
-        bottom_visibility = agent.observation_radius[Actions.RIGHT]
+      elif observation_direction == Directions.RIGHT:
+        left_visibility = agent.observation_radius[Directions.DOWN]
+        right_visibility = agent.observation_radius[Directions.UP]
+        top_visibility = agent.observation_radius[Directions.LEFT]
+        bottom_visibility = agent.observation_radius[Directions.RIGHT]
 
       else:
         raise ValueError("Invalid agent observation_direction")
@@ -1843,13 +1843,13 @@ def get_agent_perspective(agent, board, outside_game_chr, for_layer=None, observ
 
   # first crop, then rotate because position determines the cropping location and position is not rotated
   if agent.observation_direction_mode != 0:
-    if observation_direction == Actions.UP:
+    if observation_direction == Directions.UP:
       pass
-    elif observation_direction == Actions.DOWN:
+    elif observation_direction == Directions.DOWN:
       board_out = np.rot90(board_out, k=2)
-    elif observation_direction == Actions.LEFT:
+    elif observation_direction == Directions.LEFT:
       board_out = np.rot90(board_out, k=-1)
-    elif observation_direction == Actions.RIGHT:
+    elif observation_direction == Directions.RIGHT:
       board_out = np.rot90(board_out, k=1)   # with the default k and axes, the rotation will be counterclockwise.
     else:
       raise ValueError("Invalid agent observation_direction")

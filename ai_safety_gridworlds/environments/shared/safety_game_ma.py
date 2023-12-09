@@ -21,6 +21,8 @@ from __future__ import print_function
 
 import abc
 
+from collections import OrderedDict
+
 # Dependency imports
 from ai_safety_gridworlds.environments.shared import observation_distiller_ex   # CHANGED
 from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward        # ADDED
@@ -45,6 +47,20 @@ from six.moves import range
 AGENT_SPRITE = 'agent_sprite'   # TODO: use safety_game_moma.AGENT_SPRITE instead
 
 
+class Directions(enum.IntEnum):
+  """Enum for observation and action directions of all the players.
+
+  Warning: Do not rely on these numbers staying as they are, they might change
+  in future iterations of the library. Always refer to all the action using
+  their respective enum names.
+  """
+  # currently the numbers should be in range 0-3 in order for the agent.observation_radius field to work
+  UP = 0
+  DOWN = 1
+  LEFT = 2
+  RIGHT = 3
+
+
 class Actions(enum.IntEnum):
   """Enum for actions all the players can take.
 
@@ -52,15 +68,15 @@ class Actions(enum.IntEnum):
   in future iterations of the library. Always refer to all the action using
   their respective enum names.
   """
-  UP = 0
-  DOWN = 1
-  LEFT = 2
-  RIGHT = 3
-  TURN_LEFT_90 = 4    # ADDED
-  TURN_RIGHT_90 = 5    # ADDED
-  TURN_LEFT_180 = 6    # ADDED
-  TURN_RIGHT_180 = 7    # ADDED
-  NOOP = 8    # CHANGED
+  NOOP = 0    # CHANGED
+  UP = 1    # CHANGED
+  DOWN = 2    # CHANGED
+  LEFT = 3    # CHANGED
+  RIGHT = 4    # CHANGED
+  TURN_LEFT_90 = 5    # ADDED
+  TURN_RIGHT_90 = 6    # ADDED
+  TURN_LEFT_180 = 7    # ADDED
+  TURN_RIGHT_180 = 8    # ADDED
   # Human only. Needs to be the last action in order for the action space sampling to work properly.
   QUIT = 9    # CHANGED
 
@@ -104,6 +120,7 @@ ACTUAL_ACTIONS = 'actual_actions'
 CURSES = 'curses'
 TERMINATION_REASON = 'termination_reason'
 HIDDEN_REWARD = 'hidden_reward'
+ASCII_ART = 'ascii_art'   # ADDED
 
 # Constants for the observations dictionary to the agent.
 EXTRA_OBSERVATIONS = 'extra_observations'
@@ -202,7 +219,8 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
         observation_distiller=pycolab_interface_ma.Distiller(
             repainter=repainter,
             array_converter=array_converter),
-        max_iterations=max_iterations)
+        max_iterations=max_iterations,
+        **kwargs)    # ADDED
 
   def set_observable_attribute_categories(self, observable_attribute_categories=[], observable_attribute_value_mapping:dict[str, dict[str, float]]={}):   # ADDED   
     #self.observable_attribute_categories = observable_attribute_categories
@@ -457,7 +475,7 @@ class AgentSafetySprite(SafetySprite):
     self._environment_data = environment_data
     self._original_board = original_board
     self.action_direction_mode = action_direction_mode      # ADDED
-    self.action_direction = Actions.UP       # ADDED
+    self.action_direction = Directions.UP       # ADDED
     self.observable_attributes = {}       # ADDED
 
 
@@ -465,89 +483,89 @@ class AgentSafetySprite(SafetySprite):
   def get_absolute_action(self, agent_action, current_direction):  # ADDED
 
     if self.action_direction_mode == 0:      # 0 - fixed
-      absolute_direction = agent_action
+      absolute_action = agent_action
 
     elif self.action_direction_mode == 1 or self.action_direction_mode == 2:    # 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 
       if agent_action == Actions.UP:  # go forwards
-        absolute_direction = {
-                              Actions.UP: Actions.UP,
-                              Actions.DOWN: Actions.DOWN,
-                              Actions.LEFT: Actions.LEFT,
-                              Actions.RIGHT: Actions.RIGHT,
+        absolute_action = {
+                              Directions.UP: Actions.UP,
+                              Directions.DOWN: Actions.DOWN,
+                              Directions.LEFT: Actions.LEFT,
+                              Directions.RIGHT: Actions.RIGHT,
                             }[current_direction]
 
       elif agent_action == Actions.DOWN:  # go backwards
-        absolute_direction = {
-                              Actions.UP: Actions.DOWN,
-                              Actions.DOWN: Actions.UP,
-                              Actions.LEFT: Actions.RIGHT,
-                              Actions.RIGHT: Actions.LEFT,
+        absolute_action = {
+                              Directions.UP: Actions.DOWN,
+                              Directions.DOWN: Actions.UP,
+                              Directions.LEFT: Actions.RIGHT,
+                              Directions.RIGHT: Actions.LEFT,
                             }[current_direction]
 
       elif agent_action == Actions.LEFT:  # go left
-        absolute_direction = {
-                              Actions.UP: Actions.LEFT,
-                              Actions.DOWN: Actions.RIGHT,
-                              Actions.LEFT: Actions.DOWN,
-                              Actions.RIGHT: Actions.UP,
+        absolute_action = {
+                              Directions.UP: Actions.LEFT,
+                              Directions.DOWN: Actions.RIGHT,
+                              Directions.LEFT: Actions.DOWN,
+                              Directions.RIGHT: Actions.UP,
                             }[current_direction]
 
       elif agent_action == Actions.RIGHT: # go right
-        absolute_direction = {
-                              Actions.UP: Actions.RIGHT,
-                              Actions.DOWN: Actions.LEFT,
-                              Actions.LEFT: Actions.UP,
-                              Actions.RIGHT: Actions.DOWN,
+        absolute_action = {
+                              Directions.UP: Actions.RIGHT,
+                              Directions.DOWN: Actions.LEFT,
+                              Directions.LEFT: Actions.UP,
+                              Directions.RIGHT: Actions.DOWN,
                             }[current_direction]
 
       else:
-        absolute_direction = agent_action
+        absolute_action = agent_action
 
     else:
       raise ValueError
 
-    return absolute_direction
+    return absolute_action
 
 
   # TODO: test this logic
   def get_new_action_or_observation_direction(self, agent_action, current_direction):  # ADDED
 
     if self.action_direction_mode == 0:      # 0 - fixed
-      absolute_direction = agent_action
+      absolute_direction = current_direction
 
     elif self.action_direction_mode == 1:    # 1 - relative, depending on last move
 
       if agent_action == Actions.UP:  # go forwards
         absolute_direction = {
-                              Actions.UP: Actions.UP,
-                              Actions.DOWN: Actions.DOWN,
-                              Actions.LEFT: Actions.LEFT,
-                              Actions.RIGHT: Actions.RIGHT,
+                              Directions.UP: Directions.UP,
+                              Directions.DOWN: Directions.DOWN,
+                              Directions.LEFT: Directions.LEFT,
+                              Directions.RIGHT: Directions.RIGHT,
                             }[current_direction]
 
       elif agent_action == Actions.DOWN:  # go backwards
         absolute_direction = {
-                              Actions.UP: Actions.DOWN,
-                              Actions.DOWN: Actions.UP,
-                              Actions.LEFT: Actions.RIGHT,
-                              Actions.RIGHT: Actions.LEFT,
+                              Directions.UP: Directions.DOWN,
+                              Directions.DOWN: Directions.UP,
+                              Directions.LEFT: Directions.RIGHT,
+                              Directions.RIGHT: Directions.LEFT,
                             }[current_direction]
 
       elif agent_action == Actions.LEFT:  # go left
         absolute_direction = {
-                              Actions.UP: Actions.LEFT,
-                              Actions.DOWN: Actions.RIGHT,
-                              Actions.LEFT: Actions.DOWN,
-                              Actions.RIGHT: Actions.UP,
+                              Directions.UP: Directions.LEFT,
+                              Directions.DOWN: Directions.RIGHT,
+                              Directions.LEFT: Directions.DOWN,
+                              Directions.RIGHT: Directions.UP,
                             }[current_direction]
 
       elif agent_action == Actions.RIGHT: # go right
         absolute_direction = {
-                              Actions.UP: Actions.RIGHT,
-                              Actions.DOWN: Actions.LEFT,
-                              Actions.LEFT: Actions.UP,
-                              Actions.RIGHT: Actions.DOWN,
+                              Directions.UP: Directions.RIGHT,
+                              Directions.DOWN: Directions.LEFT,
+                              Directions.LEFT: Directions.UP,
+                              Directions.RIGHT: Directions.DOWN,
                             }[current_direction]
 
       else:
@@ -557,30 +575,35 @@ class AgentSafetySprite(SafetySprite):
 
       if agent_action == Actions.TURN_LEFT_90:
         absolute_direction = {
-                              Actions.UP: Actions.LEFT,
-                              Actions.DOWN: Actions.RIGHT,
-                              Actions.LEFT: Actions.DOWN,
-                              Actions.RIGHT: Actions.UP,
+                              Directions.UP: Directions.LEFT,
+                              Directions.DOWN: Directions.RIGHT,
+                              Directions.LEFT: Directions.DOWN,
+                              Directions.RIGHT: Directions.UP,
                             }[current_direction]
 
       elif agent_action == Actions.TURN_RIGHT_90:
         absolute_direction = {
-                              Actions.UP: Actions.RIGHT,
-                              Actions.DOWN: Actions.LEFT,
-                              Actions.LEFT: Actions.UP,
-                              Actions.RIGHT: Actions.DOWN,
+                              Directions.UP: Directions.RIGHT,
+                              Directions.DOWN: Directions.LEFT,
+                              Directions.LEFT: Directions.UP,
+                              Directions.RIGHT: Directions.DOWN,
                             }[current_direction]
 
       elif agent_action == Actions.TURN_LEFT_180 or agent_action == Actions.TURN_RIGHT_180:
         absolute_direction = {
-                              Actions.UP: Actions.DOWN,
-                              Actions.DOWN: Actions.UP,
-                              Actions.LEFT: Actions.RIGHT,
-                              Actions.RIGHT: Actions.LEFT,
+                              Directions.UP: Directions.DOWN,
+                              Directions.DOWN: Directions.UP,
+                              Directions.LEFT: Directions.RIGHT,
+                              Directions.RIGHT: Directions.LEFT,
                             }[current_direction]
 
       else:
-        absolute_direction = agent_action
+        absolute_direction = {
+                              Actions.UP: Directions.UP,
+                              Actions.DOWN: Directions.DOWN,
+                              Actions.LEFT: Directions.LEFT,
+                              Actions.RIGHT: Directions.RIGHT,
+                            }[agent_action]
 
     else:
       raise ValueError
@@ -612,26 +635,26 @@ class AgentSafetySprite(SafetySprite):
         
         if proposed_actions == Actions.TURN_LEFT_90:
           direction = {
-                                Actions.UP: Actions.LEFT,
-                                Actions.DOWN: Actions.RIGHT,
-                                Actions.LEFT: Actions.DOWN,
-                                Actions.RIGHT: Actions.UP,
+                                Directions.UP: Directions.LEFT,
+                                Directions.DOWN: Directions.RIGHT,
+                                Directions.LEFT: Directions.DOWN,
+                                Directions.RIGHT: Directions.UP,
                               }[current_direction]
 
         elif proposed_actions == Actions.TURN_RIGHT_90:
           direction = {
-                                Actions.UP: Actions.RIGHT,
-                                Actions.DOWN: Actions.LEFT,
-                                Actions.LEFT: Actions.UP,
-                                Actions.RIGHT: Actions.DOWN,
+                                Directions.UP: Directions.RIGHT,
+                                Directions.DOWN: Directions.LEFT,
+                                Directions.LEFT: Directions.UP,
+                                Directions.RIGHT: Directions.DOWN,
                               }[current_direction]
 
         elif proposed_actions == Actions.TURN_LEFT_180 or proposed_actions == Actions.TURN_RIGHT_180:
           direction = {
-                                Actions.UP: Actions.DOWN,
-                                Actions.DOWN: Actions.UP,
-                                Actions.LEFT: Actions.RIGHT,
-                                Actions.RIGHT: Actions.LEFT,
+                                Directions.UP: Directions.DOWN,
+                                Directions.DOWN: Directions.UP,
+                                Directions.LEFT: Directions.RIGHT,
+                                Directions.RIGHT: Directions.LEFT,
                               }[current_direction]
 
         else:
@@ -666,26 +689,26 @@ class AgentSafetySprite(SafetySprite):
         
       if proposed_actions == Actions.TURN_LEFT_90:
         direction = {
-                              Actions.UP: Actions.LEFT,
-                              Actions.DOWN: Actions.RIGHT,
-                              Actions.LEFT: Actions.DOWN,
-                              Actions.RIGHT: Actions.UP,
+                              Directions.UP: Directions.LEFT,
+                              Directions.DOWN: Directions.RIGHT,
+                              Directions.LEFT: Directions.DOWN,
+                              Directions.RIGHT: Directions.UP,
                             }[current_direction]
 
       elif proposed_actions == Actions.TURN_RIGHT_90:
         direction = {
-                              Actions.UP: Actions.RIGHT,
-                              Actions.DOWN: Actions.LEFT,
-                              Actions.LEFT: Actions.UP,
-                              Actions.RIGHT: Actions.DOWN,
+                              Directions.UP: Directions.RIGHT,
+                              Directions.DOWN: Directions.LEFT,
+                              Directions.LEFT: Directions.UP,
+                              Directions.RIGHT: Directions.DOWN,
                             }[current_direction]
 
       elif proposed_actions == Actions.TURN_LEFT_180 or proposed_actions == Actions.TURN_RIGHT_180:
         direction = {
-                              Actions.UP: Actions.DOWN,
-                              Actions.DOWN: Actions.UP,
-                              Actions.LEFT: Actions.RIGHT,
-                              Actions.RIGHT: Actions.LEFT,
+                              Directions.UP: Directions.DOWN,
+                              Directions.DOWN: Directions.UP,
+                              Directions.LEFT: Directions.RIGHT,
+                              Directions.RIGHT: Directions.LEFT,
                             }[current_direction]
 
       else:
@@ -1069,6 +1092,9 @@ def make_safety_game(
     drapes = { key: value for key, value in drapes.items() if key in used_tile_types }
     update_schedule = [ key for key in update_schedule if key in used_tile_types ]
     z_order = [ key for key in z_order if key in used_tile_types ]
+
+
+  environment_data[ASCII_ART] = the_ascii_art     # for debugging
 
   # END OF ADDED
 

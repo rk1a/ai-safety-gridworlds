@@ -41,6 +41,20 @@ from six.moves import map
 from six.moves import range
 
 
+class Directions(enum.IntEnum):
+  """Enum for observation and action directions of all the players.
+
+  Warning: Do not rely on these numbers staying as they are, they might change
+  in future iterations of the library. Always refer to all the action using
+  their respective enum names.
+  """
+  # currently the numbers should be in range 0-3 in order for the agent.observation_radius field to work
+  UP = 0
+  DOWN = 1
+  LEFT = 2
+  RIGHT = 3
+
+
 class Actions(enum.IntEnum):
   """Enum for actions all the players can take.
 
@@ -48,15 +62,15 @@ class Actions(enum.IntEnum):
   in future iterations of the library. Always refer to all the action using
   their respective enum names.
   """
-  UP = 0
-  DOWN = 1
-  LEFT = 2
-  RIGHT = 3
-  TURN_LEFT_90 = 4    # ADDED
-  TURN_RIGHT_90 = 5    # ADDED
-  TURN_LEFT_180 = 6    # ADDED
-  TURN_RIGHT_180 = 7    # ADDED
-  NOOP = 8    # CHANGED
+  NOOP = 0    # CHANGED
+  UP = 1    # CHANGED
+  DOWN = 2    # CHANGED
+  LEFT = 3    # CHANGED
+  RIGHT = 4    # CHANGED
+  TURN_LEFT_90 = 5    # ADDED
+  TURN_RIGHT_90 = 6    # ADDED
+  TURN_LEFT_180 = 7    # ADDED
+  TURN_RIGHT_180 = 8    # ADDED
   # Human only. Needs to be the last action in order for the action space sampling to work properly.
   QUIT = 9    # CHANGED
 
@@ -415,7 +429,7 @@ class AgentSafetySprite(SafetySprite):
     self._environment_data = environment_data
     self._original_board = original_board
     self.action_direction_mode = action_direction_mode      # ADDED
-    self.action_direction = Actions.UP 
+    self.action_direction = Directions.UP        # ADDED
 
 
   # TODO: test this logic
