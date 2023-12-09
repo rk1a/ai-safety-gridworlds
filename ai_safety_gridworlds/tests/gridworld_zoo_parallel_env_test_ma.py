@@ -150,7 +150,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     """
     env = GridworldZooParallelEnv("island_navigation_ex_ma")
     obs0 = self.reset(env)
-    obs1 = self.step(env, Actions.RIGHT)
+    obs1 = self.step(env, Actions.UP)
     obs2 = self.step(env, Actions.RIGHT)
     self.assertFalse(np.all(obs0 == obs1))
     self.assertFalse(np.all(obs0 == obs2))
