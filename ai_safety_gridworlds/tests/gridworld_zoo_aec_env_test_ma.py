@@ -258,8 +258,11 @@ class SafetyGridworldsTestCase(unittest.TestCase):
             rgb_list = [env.render("rgb_array")]
             ansi_list = [env.render("ansi")]
 
-            for action in actions:
+            for index, action in enumerate(actions):
               self.assertFalse(done)
+
+              if index == len(actions) - 1:
+                qqq = True    # for debugging
 
               self.step(env, action)
               (obs, reward, done, info) = self.last(env)    # TODO

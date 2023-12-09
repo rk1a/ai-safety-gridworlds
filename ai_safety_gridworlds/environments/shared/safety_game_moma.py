@@ -269,11 +269,11 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     self._environment_data[METRICS_MATRIX] = np.empty([0, 2], object)
 
     # TODO: refactor to a method in ma_reward
-    self._environment_data[CUMULATIVE_REWARD] = {}
+    self._environment_data[CUMULATIVE_REWARD] = dict()
     for agent_key, agent_enabled_mo_rewards in self.enabled_ma_rewards.items():
       self._environment_data[CUMULATIVE_REWARD][agent_key] = np.array(mo_reward({}).tolist(agent_enabled_mo_rewards))
 
-    self._environment_data[TILE_TYPES] = {}  # will be initialised by the agent sprites during super(SafetyEnvironmentMoMa, self).__init__() since the agent object has access to the board
+    self._environment_data[TILE_TYPES] = dict()  # will be initialised by the agent sprites during super(SafetyEnvironmentMoMa, self).__init__() since the agent object has access to the board
     for agent_key in self.enabled_ma_rewards.keys():
       self._environment_data[TILE_TYPES][agent_key] = []
 
@@ -1103,17 +1103,21 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       scalar_reward[agent_key] = agent_scalar_reward
 
       if not do_not_replace_reward:
-        if self.scalarise:
+
+        if timestep.reward is None:    # after reset
+          agent_reward = None
+        elif self.scalarise:
           agent_reward = float(agent_scalar_reward)
         else:
           agent_reward = np.array([float(x) for x in agent_reward_dims])
 
         reward[agent_key] = agent_reward
+
       #/ if not do_not_replace_reward:
 
     #/ for agent_key, agent_reward_dims in reward_dims.items():
 
-    if not do_not_replace_reward:
+    if not do_not_replace_reward and timestep.reward is not None:   # timestep.reward is None after reset
       timestep = timestep._replace(reward=reward)
     
     
@@ -1879,6 +1883,8 @@ def make_safety_game_mo(
   environment_data["what_lies_beneath"] = what_lies_beneath
   environment_data["what_lies_outside"] = what_lies_outside   # ADDED
   environment_data[Z_ORDER] = z_order   # ADDED
+  environment_data[METRICS_DICT] = dict()   # needed for tests   # ADDED
+  environment_data[TILE_TYPES] = dict()   # needed for tests   # ADDED
 
   return make_safety_game(
     environment_data,

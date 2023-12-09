@@ -21,7 +21,7 @@ from __future__ import print_function
 
 # Dependency imports
 
-import collections
+from collections import OrderedDict
 import random
 
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
@@ -46,7 +46,9 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
 
   def __init__(self, game_factory, discrete_actions, default_reward,
                observation_distiller, continuous_actions=None,
-               max_iterations=float('inf')):
+               max_iterations=float('inf'),
+               randomize_agent_actions_order=True,    # ADDED
+              ):
     """Construct a `Base` adapter that wraps a pycolab game.
 
     For each episode, a new pycolab game is supplied by the `game_factory`
@@ -123,6 +125,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     self._default_reward = default_reward
     self._observation_distiller = observation_distiller
     self._max_iterations = max_iterations
+    self._randomize_agent_actions_order = randomize_agent_actions_order     # ADDED
 
     # These slots comprise an EnvironmentMa's internal state. They are:
     self._state = {}                # Current EnvironmentMa game step state.
@@ -161,11 +164,14 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     """Apply action, step the world forward, and return observations."""
 
     # randomize the order the agent actions are carried out in order to resolve any tile collisions and resource availability collisions randomly
-    agents_actions = list(agents_actions.items())
-    random.shuffle(agents_actions)    # TODO: ensure that this can be controlled by seed
-    agents_actions = collections.OrderedDict(agents_actions)
+    if self._randomize_agent_actions_order:
+      agents_actions = list(agents_actions.items())
+      random.shuffle(agents_actions)    # TODO: ensure that this can be controlled by seed
+      agents_actions = OrderedDict(agents_actions)
 
     for agent, action in agents_actions.items(): # ADDED 
+
+      # print(agent + ": " + str(action))
 
       if self._action_size == 1:
         # Handle a float or single-element arrays of any dimensionality. Strictly
@@ -267,7 +273,8 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     # First discrete actions:
     if discrete_actions is not None:
 
-      # CHANGED: lets avoid expected exceptions in user code, this makes debugging less convenient
+
+      # CHANGED: lets avoid "pythonic" expected exceptions in user code, this makes debugging less convenient
 
       #try:
       #  # Get an array of upper and lower bounds for each discrete action.
@@ -278,9 +285,9 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
       #  min_, max_ = discrete_actions  # Enforces 2-tuple.
       #  shape = (1,)
 
-      if not isinstance(discrete_actions, tuple):   
+      if not isinstance(discrete_actions, tuple):   # list of tuples provided, not a single tuple 
         # Get an array of upper and lower bounds for each discrete action.
-        min_, max_ = list(zip(*discrete_actions))
+        min_, max_ = list(zip(*discrete_actions))   # list of min values, list of max values
         # Total number of discrete actions provided on each time step.
         shape = (len(discrete_actions),)
       else:
@@ -296,14 +303,27 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
 
     # Then continuous actions:
     if continuous_actions is not None:
-      try:
+
+      # CHANGED: lets avoid "pythonic" expected exceptions in user code, this makes debugging less convenient
+
+      #try:
+      #  # Get an array of upper and lower bounds for each continuous action.
+      #  min_, max_ = list(zip(*continuous_actions))
+      #  # Total number of continuous actions provided on each time step.
+      #  shape = (len(continuous_actions),)
+      #except TypeError:
+      #  min_, max_ = continuous_actions  # Enforces 2-tuple
+      #  shape = (1,)
+
+      if not isinstance(continuous_actions, tuple):   # list of tuples provided, not a single tuple 
         # Get an array of upper and lower bounds for each continuous action.
-        min_, max_ = list(zip(*continuous_actions))
+        min_, max_ = list(zip(*continuous_actions))   # list of min values, list of max values
         # Total number of continuous actions provided on each time step.
         shape = (len(continuous_actions),)
-      except TypeError:
-        min_, max_ = continuous_actions  # Enforces 2-tuple
+      else:
+        min_, max_ = continuous_actions  # Enforces 2-tuple.
         shape = (1,)
+
       spec = specs.BoundedArraySpec(shape=shape,
                                     dtype='float32',
                                     minimum=min_,
@@ -311,8 +331,9 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
                                     name='continuous')
       valid_actions.append(spec)
 
+
     # And in total we have this many actions.
-    action_size = sum(value.shape[0] for value in valid_actions)
+    action_size = sum(value.shape[0] for value in valid_actions)    # computes number of dimensions per action
 
     if action_size <= 0:
       raise ValueError('A pycolab EnvironmentMa adapter was initialised '

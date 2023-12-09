@@ -893,7 +893,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     scalar_reward = sum(reward_dims)
 
 
-    if not do_not_replace_reward:
+    if not do_not_replace_reward and timestep.reward is not None:   # timestep.reward is None after reset
 
       if self.scalarise:
         reward = float(scalar_reward)
@@ -1528,6 +1528,7 @@ def make_safety_game_mo(
   environment_data["what_lies_beneath"] = what_lies_beneath
   environment_data["what_lies_outside"] = what_lies_outside   # ADDED
   environment_data[Z_ORDER] = z_order   # ADDED
+  environment_data[METRICS_DICT] = dict()   # needed for tests   # ADDED
 
   return make_safety_game(
     environment_data,

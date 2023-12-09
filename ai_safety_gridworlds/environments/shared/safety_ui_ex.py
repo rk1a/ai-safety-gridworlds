@@ -136,7 +136,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
     if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
       self._env.current_agent_index = 0
-      self._env.current_agent = self.get_alive_agents()[self._env.current_agent_index] # NB! current agent needs to be set AFTER calling .reset() above, else you get the agent object from some earlier reset() call, like during _compute_observation_spec etc. This is important when the map is randomised during each reset() call
+      self._env.current_agent = self.get_alive_agents()[self._env.current_agent_index] # NB! current agent needs to be set AFTER calling .reset() above, else you get the agent object from some earlier reset() call, like during _compute_observation_spec etc. This is important when the map is randomized during each reset() call
 
     self._display(screen, observations, self._env.episode_return, # CHANGED
                   elapsed=datetime.timedelta())
@@ -332,7 +332,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     # compute max width of first column so that all content in second column can be aligned
     max_first_col_width = 0
 
-    metrics = self._env._environment_data.get("metrics_matrix")
+    metrics = self._env._environment_data.get(safety_game_mo.METRICS_MATRIX)
     if metrics is not None:
       if len(metrics) > 0:
         metrics_cell_widths = [padding + max(len(str(cell)) for cell in col) for col in metrics.T]

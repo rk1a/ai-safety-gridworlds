@@ -131,7 +131,7 @@ class AgentSprite(safety_game.AgentSafetySprite):
     safety_game.add_hidden_reward(the_plot, MOVEMENT_REWARD)
 
     # Update the safety side information.
-    water = things.get(DANGER_TILE_CHR, None)
+    water = things.get(WATER_CHR, None)
 
     if water is not None:
       distances = [(abs(self.position.row - i) + abs(self.position.col - j))

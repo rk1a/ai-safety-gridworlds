@@ -80,6 +80,7 @@ ACTUAL_ACTIONS = 'actual_actions'
 CURSES = 'curses'
 TERMINATION_REASON = 'termination_reason'
 HIDDEN_REWARD = 'hidden_reward'
+ASCII_ART = 'ascii_art'   # ADDED
 
 # Constants for the observations dictionary to the agent.
 EXTRA_OBSERVATIONS = 'extra_observations'
@@ -174,7 +175,8 @@ class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
         observation_distiller=pycolab_interface_mo.Distiller(
             repainter=repainter,
             array_converter=array_converter),
-        max_iterations=max_iterations)
+        max_iterations=max_iterations,
+        **kwargs)    # ADDED
 
   @property
   def environment_data(self):
@@ -988,6 +990,9 @@ def make_safety_game(
     drapes = { key: value for key, value in drapes.items() if key in used_tile_types }
     update_schedule = [ key for key in update_schedule if key in used_tile_types ]
     z_order = [ key for key in z_order if key in used_tile_types ]
+
+
+  environment_data[ASCII_ART] = the_ascii_art     # for debugging
 
   # END OF ADDED
 

@@ -65,6 +65,7 @@ eps = 1e-15 # avoid division by zero in case fire spread exclusive max distance 
 DEFAULT_LEVEL = 0
 DEFAULT_MAX_ITERATIONS = 1000
 DEFAULT_NOOPS = True                      # Whether to include NOOP as a possible agent action.
+DEFAULT_RANDOMIZE_AGENT_ACTIONS_ORDER = True    # Whether to randomize the order the agent actions are carried out in order to resolve any tile collisions and resource availability collisions randomly.
 DEFAULT_AGENT_OBSERVATION_RADIUS = [2, 2, 2, 2]            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.
 DEFAULT_SUPERVISOR_OBSERVATION_RADIUS = None            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.
 DEFAULT_OBSERVATION_DIRECTION_MODE = 0    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
@@ -199,6 +200,8 @@ def define_flags():
   flags.DEFINE_bool('eval', False, 'Which type of information to print.') # recover flag defined in safety_ui.py
 
 
+  # TODO: refactor standard flags to a shared method
+
   flags.DEFINE_integer('level',
                         DEFAULT_LEVEL,
                         'Which firemaker game level to play.')
@@ -207,6 +210,8 @@ def define_flags():
 
   flags.DEFINE_boolean('noops', DEFAULT_NOOPS, 
                         'Whether to include NOOP as a possible agent action.')
+  flags.DEFINE_boolean('randomize_agent_actions_order', DEFAULT_RANDOMIZE_AGENT_ACTIONS_ORDER, 
+                        'Whether to randomize the order the agent actions are carried out in order to resolve any tile collisions and resource availability collisions randomly.')
 
   flags.DEFINE_string('agent_observation_radius', str(DEFAULT_AGENT_OBSERVATION_RADIUS), 
                        'How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.')
@@ -287,7 +292,8 @@ def make_game(environment_data,
   """
 
 
-  environment_data['safety'] = 3   # used for tests
+  for agent_index in range(0, amount_agents):
+    environment_data['safety_' + AGENT_CHRS[agent_index]] = 3   # used for tests
 
 
   metrics_labels = list(METRICS_LABELS_TEMPLATE)   # NB! need to clone since this constructor is going to be called multiple times
@@ -313,7 +319,8 @@ def make_game(environment_data,
 
 
   sprites = {
-              AGENT_CHRS[agent_index]: [AgentSprite, FLAGS, None, FLAGS.agent_observation_radius, FLAGS.observation_direction_mode, FLAGS.action_direction_mode] for agent_index in range(0, amount_agents)
+              AGENT_CHRS[agent_index]: [AgentSprite, FLAGS, None, FLAGS.agent_observation_radius, FLAGS.observation_direction_mode, FLAGS.action_direction_mode] 
+              for agent_index in range(0, amount_agents)
             }
   sprites.update({
               SUPERVISOR_CHR: [AgentSprite, FLAGS, None, FLAGS.supervisor_observation_radius, FLAGS.observation_direction_mode, FLAGS.action_direction_mode]
@@ -413,9 +420,6 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     if proposed_actions != safety_game.Actions.NOOP:
 
-      # TODO: turning actions + action schema
-      self.observation_direction = self.map_action_to_observation_direction(proposed_actions, self.observation_direction, self.action_direction_mode, self.observation_direction_mode)   # TODO: move to base class?
-
       if self.character == SUPERVISOR_CHR:
         the_plot.add_ma_reward(self, self.FLAGS.SUPERVISOR_MOVEMENT_REWARD)
       else:
@@ -449,6 +453,8 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     actions = agents_actions.get(self.character) if agents_actions is not None else None
     if actions is not None:
+      # TODO: turning actions + action schema
+      self.observation_direction = self.map_action_to_observation_direction(actions, self.observation_direction, self.action_direction_mode, self.observation_direction_mode)   # TODO: move to base class?
 
       # metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
 
@@ -699,6 +705,7 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
                level=DEFAULT_LEVEL, 
                max_iterations=DEFAULT_MAX_ITERATIONS, 
                noops=DEFAULT_NOOPS,
+               randomize_agent_actions_order=DEFAULT_RANDOMIZE_AGENT_ACTIONS_ORDER,
                amount_agents=DEFAULT_AMOUNT_AGENTS,
                **kwargs):
     """Builds a `FiremakerExMa` python environment.
@@ -764,7 +771,7 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
     })
 
 
-    action_set = safety_game_ma.DEFAULT_ACTION_SET
+    action_set = list(safety_game_ma.DEFAULT_ACTION_SET)    # NB! clone since it will be modified
     if noops:
       action_set += [safety_game_ma.Actions.NOOP]
 
@@ -786,6 +793,7 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
         # repainter=self.repainter,
         max_iterations=max_iterations, 
         log_arguments=log_arguments,
+        randomize_agent_actions_order=randomize_agent_actions_order,
         FLAGS=FLAGS,
         **kwargs)
 
