@@ -189,14 +189,13 @@ class GridworldZooAecEnv(AECEnv):
             self._given_agents_last_step_result = { agent: (state, reward, False, info) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
 
+        self.np_random = np.random
         self.action_spaces = {  # TODO: make it readonly
             agent: GridworldsActionSpace(self, agent) for agent in self.possible_agents
         }  
         self.observation_spaces = {  # TODO: make it readonly
             agent: GridworldsObservationSpace(self, use_transitions, flatten_observations) for agent in self.possible_agents
         }
-
-        self.np_random = np.random
 
     def close(self):
         if self._viewer is not None:
@@ -722,10 +721,21 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
                 nvec=self.n, dtype=action_spec.dtype
             )
 
-    def sample(self):
+        self._np_random = self._env.np_random
+
+    def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
         if self._env.terminations[self._agent] or self._env.truncations[self._agent]:
-            raise ValueError(f"Agent {self._agent} is terminated or truncated")
-        return self._env.np_random.randint(self.min_action, self.max_action)
+            raise ValueError(f"Agent {self._agent} is done")
+
+        result = super(GridworldsActionSpace, self).sample(mask)
+        if not gym_v26:
+            result += self.min_action
+        return result
+
+        #if mask is None:
+        #    return self._env.np_random.randint(self.min_action, self.max_action)
+        #else:
+        #    return self.min_action + self._env.np_random.choice(np.where(mask == 1)[0])
 
     def contains(self, x):
         """

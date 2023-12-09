@@ -317,8 +317,11 @@ class GridworldsActionSpace(Discrete):  # gym.Space
             n=self.n, start=self.min_action
         )
 
-    def sample(self):
-        return self._env.np_random.randint(self.min_action, self.max_action)
+    def sample(self, mask: Optional[np.ndarray] = None) -> int:
+        if mask is None:
+            return self._env.np_random.randint(self.min_action, self.max_action)
+        else:
+            return self.min_action + self._env.np_random.choice(np.where(mask == 1)[0])
 
     def contains(self, x):
         """
