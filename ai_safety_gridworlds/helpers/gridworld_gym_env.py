@@ -13,11 +13,13 @@ import random
 try:
   import gymnasium as gym
   from gymnasium import error
+  from gymnasium.spaces import Discrete
   from gymnasium.utils import seeding
   gym_v26 = True
 except:
   import gym
   from gym import error
+  from gym.spaces import Discrete
   from gym.utils import seeding
   gym_v26 = False
 
@@ -119,8 +121,10 @@ class GridworldGymEnv(gym.Env):
         self._last_observation_layers_cube = None
 
         # TODO: make these fields readonly
-        self.action_space = GridworldsActionSpace(self._env)
-        self.observation_space = GridworldsObservationSpace(self._env, use_transitions, flatten_observations)
+        self.action_space = GridworldsActionSpace(self)
+        self.observation_space = GridworldsObservationSpace(self, use_transitions, flatten_observations)
+
+        self.np_random = np.random
 
     def close(self):
         if self._viewer is not None:
@@ -214,7 +218,10 @@ class GridworldGymEnv(gym.Env):
         else:
             return (state, reward, done, info)
 
-    def reset(self, *args, **kwargs):                     # CHANGED: added *args, **kwargs
+    def reset(self, seed=None, *args, **kwargs):                     # CHANGED: added seed, *args, **kwargs
+
+        if seed is not None:
+            self.seed(seed=seed)    # ADDED
 
         timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      
 
@@ -255,8 +262,9 @@ class GridworldGymEnv(gym.Env):
         return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+        # self.np_random, seed = seeding.np_random(seed)
+        # return [seed]
+        self.np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
     def render(self, mode="human"):
         """ Implements the gym render modes "rgb_array", "ansi" and "human".
@@ -293,10 +301,11 @@ class GridworldGymEnv(gym.Env):
             super(GridworldEnv, self).render(mode=mode)  # just raise an exception
 
 
-class GridworldsActionSpace(gym.Space):
+class GridworldsActionSpace(Discrete):  # gym.Space
 
     def __init__(self, env):
-        action_spec = env.action_spec()
+        self._env = env
+        action_spec = env._env.action_spec()
         assert action_spec.name == "discrete"
         assert action_spec.dtype == "int32"
         assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
@@ -304,11 +313,12 @@ class GridworldsActionSpace(gym.Space):
         self.max_action = int(action_spec.maximum)
         self.n = (self.max_action - self.min_action) + 1
         super(GridworldsActionSpace, self).__init__(
-            shape=action_spec.shape, dtype=action_spec.dtype
+            # shape=action_spec.shape, dtype=action_spec.dtype
+            n=self.n, start=self.min_action
         )
 
     def sample(self):
-        return random.randint(self.min_action, self.max_action)
+        return self._env.np_random.randint(self.min_action, self.max_action)
 
     def contains(self, x):
         """
@@ -322,7 +332,8 @@ class GridworldsActionSpace(gym.Space):
 class GridworldsObservationSpace(gym.Space):
 
     def __init__(self, env, use_transitions, flatten_observations):
-        self.observation_spec_dict = env.observation_spec()
+        self._env = env
+        self.observation_spec_dict = env._env.observation_spec()
         self.use_transitions = use_transitions
         self.flatten_observations = flatten_observations
 

@@ -203,7 +203,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
                 for agent2 in self.environment_data[AGENT_SPRITE].keys() ):   # drop episode only when all agents are terminated    # ADDED
           self._drop_last_episode()
         else:     # ignore any commands on the agent that is terminated    # ADDED
-          continue    # TODO: raise any warnings about commands sent to terminated agents?    # ADDED
+          raise ValueError(f"Agent {agent} is done")    # ADDED
 
       if self._current_game is None:
         return self.reset(do_not_replace_reward=True) # NB! do_not_replace_reward=True since self._process_timestep(timestep) will be called after .step()
