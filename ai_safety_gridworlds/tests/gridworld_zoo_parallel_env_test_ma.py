@@ -125,9 +125,14 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     return obs
 
   def step(self, env, action):
-    agents_actions = {
-      agent: action for agent in env.possible_agents
-    }  
+    if isinstance(env, safety_game_moma.SafetyEnvironmentMoMa):
+      agents_actions = {
+        agent: { "step": action } for agent in env.possible_agents
+      }  
+    else:
+      agents_actions = {
+        agent: action for agent in env.possible_agents
+      } 
 
     if gym_v26:
       obs, _, _, _, _ = env.step(agents_actions)

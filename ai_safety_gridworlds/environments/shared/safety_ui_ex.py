@@ -165,7 +165,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         action = self._keycodes_to_actions[keycode]
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):          
-          agents_actions = { self._env.current_agent.character: action }
+          agents_actions = { self._env.current_agent.character: { "step": action } }
           self._env.step(agents_actions)
         else:
           self._env.step(action)

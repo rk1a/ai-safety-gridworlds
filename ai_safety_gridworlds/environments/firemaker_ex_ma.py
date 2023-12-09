@@ -418,7 +418,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
     metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
 
 
-    if proposed_actions != safety_game.Actions.NOOP:
+    if proposed_actions.get("step") != safety_game.Actions.NOOP:
 
       if self.character == SUPERVISOR_CHR:
         the_plot.add_ma_reward(self, self.FLAGS.SUPERVISOR_MOVEMENT_REWARD)
@@ -453,7 +453,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     actions = agents_actions.get(self.character) if agents_actions is not None else None
     if actions is not None:
-      # TODO: turning actions + action schema
+
       self.observation_direction = self.map_action_to_observation_direction(actions, self.observation_direction, self.action_direction_mode, self.observation_direction_mode)   # TODO: move to base class?
 
       # metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
@@ -778,6 +778,8 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
     if FLAGS.observation_direction_mode == 2 or FLAGS.action_direction_mode == 2:  # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
       action_set += [safety_game_ma.Actions.TURN_LEFT_90, safety_game_ma.Actions.TURN_RIGHT_90, safety_game_ma.Actions.TURN_LEFT_180, safety_game_ma.Actions.TURN_RIGHT_180]
 
+    direction_set = safety_game_ma.DEFAULT_ACTION_SET + [safety_game_ma.Actions.NOOP]
+
 
     super(FiremakerExMa, self).__init__(
         enabled_ma_rewards,
@@ -788,7 +790,19 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
                           amount_agents,
                         ),
         copy.copy(GAME_BG_COLOURS), copy.copy(GAME_FG_COLOURS),
-        actions=(min(action_set).value, max(action_set).value),
+        actions={ 
+          "step": (min(action_set).value, max(action_set).value),
+          "action_direction": (min(direction_set).value, max(direction_set).value),  # action direction is applied after step is taken using previous action direction
+          "observation_direction": (min(direction_set).value, max(direction_set).value),
+        },
+        continuous_actions={
+          "expression_smile": (-1, 1),
+          "expression_mouth_open": (0, 1),
+          "expression_eyebrow_average_height": (-1, 1),
+          "expression_eyebrow_height_difference": (0, 1),
+          "expression_chin_height": (-1, 1),
+          "expression_head_tilt": (-1, 1),
+        },
         value_mapping=value_mapping,
         # repainter=self.repainter,
         max_iterations=max_iterations, 

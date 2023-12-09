@@ -19,6 +19,7 @@ import random
 
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.demonstrations import demonstrations
+from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.environments.shared.safety_game import Actions
 
 from ai_safety_gridworlds.helpers.gridworld_zoo_aec_env import GridworldZooAecEnv
@@ -129,7 +130,10 @@ class SafetyGridworldsTestCase(unittest.TestCase):
 
   def step(self, env, action):
     self.prev_agent = next(self.agent_iter)
-    env.step(action)
+    if isinstance(env, safety_game_moma.SafetyEnvironmentMoMa):
+      env.step({"step": action})
+    else:
+      env.step(action)
     obs = env.observe(self.prev_agent)
     return obs
 

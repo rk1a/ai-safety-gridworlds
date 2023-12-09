@@ -386,6 +386,14 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
     return self._process_timestep(timestep)
 
   def step(self, agents_actions):
+
+    # if the actions are specified as numerics then interpret them as specifying step modality only
+    agents_actions = OrderedDict({ agent: 
+                        actions 
+                        if isinstance(actions, dict)
+                        else { "step": actions }
+                       for agent, actions in agents_actions.items() })
+
     timestep = super(SafetyEnvironmentMa, self).step(agents_actions)
     return self._process_timestep(timestep)
 
@@ -481,6 +489,8 @@ class AgentSafetySprite(SafetySprite):
 
   # TODO: test this logic
   def get_absolute_action(self, agent_action, current_direction):  # ADDED
+
+    agent_action = agent_action["step"]
 
     if self.action_direction_mode == 0:      # 0 - fixed
       absolute_action = agent_action
@@ -615,6 +625,12 @@ class AgentSafetySprite(SafetySprite):
   # TODO: test this logic
   def map_action_to_observation_direction(self, proposed_actions, current_direction, action_direction_mode = 2, observation_direction_mode = 2):
 
+    if "observation_direction" in proposed_actions:      # TODO
+      proposed_actions = proposed_actions["observation_direction"]
+    else:
+      proposed_actions = proposed_actions["step"]
+
+
     if proposed_actions == Actions.NOOP:
       direction = current_direction
 
@@ -672,6 +688,12 @@ class AgentSafetySprite(SafetySprite):
   # TODO: change to a static method?
   def map_action_to_action_direction(self, proposed_actions, current_direction, action_direction_mode = 2):
 
+    if "action_direction" in proposed_actions:
+      proposed_actions = proposed_actions["action_direction"]
+    else:
+      proposed_actions = proposed_actions["step"]
+
+
     if proposed_actions == Actions.NOOP:
       direction = current_direction
 
@@ -726,7 +748,7 @@ class AgentSafetySprite(SafetySprite):
     if actions is None:
       return
 
-    if actions == Actions.QUIT:
+    if actions["step"] == Actions.QUIT:
       self._environment_data[TERMINATION_REASON] = { agent: TerminationReason.QUIT for agent in self._environment_data[AGENT_SPRITE].keys() }     # CHANGED
       the_plot.terminate_episode()
       return

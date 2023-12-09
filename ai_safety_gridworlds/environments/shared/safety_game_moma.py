@@ -829,9 +829,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
         # adapted from GridworldsActionSpace.__init__() in safe_grid_gym\envs\gridworlds_env.py in https://github.com/n0p2/gym_ai_safety_gridworlds
         action_spec = self.action_spec()  # TODO: different action specs per agent?
-        assert action_spec.name == "discrete"
-        assert action_spec.dtype == np.int32
-        assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
+        assert action_spec[0].name == "discrete"
+        assert action_spec[0].dtype == np.int32
+        assert len(action_spec[0].shape) == 1 and action_spec[0].shape[0] == 1    # TODO: multimodal and continuous actions Q-value logging
 
         q_value_per_location = {}
         q_value_per_tiletype = {}  

@@ -539,18 +539,37 @@ class GridworldsActionSpace(gym.Space):
 
     def __init__(self, env):
         action_spec = env.action_spec()
-        assert action_spec.name == "discrete"
-        assert action_spec.dtype == "int32"
-        assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
-        self.min_action = int(action_spec.minimum)
-        self.max_action = int(action_spec.maximum)
+
+        if isinstance(env, safety_game_moma.SafetyEnvironmentMoMa):
+            assert action_spec[0].name == "discrete"
+            assert action_spec[0].dtype == "int32"
+            assert action_spec[1].name == "continuous"
+            assert action_spec[1].dtype == "float32"
+            # self.min_action = action_spec[0].minimum.astype(int)
+            # self.max_action = action_spec[0].maximum.astype(int)
+            self.min_action = action_spec[0].minimum.astype(int)[0]   # spec for step modality
+            self.max_action = action_spec[0].maximum.astype(int)[0]   # spec for step modality
+            # TODO: multimodal action spec
+            action_spec = action_spec[0]
+            shape = (1,)
+        else:
+            assert action_spec.name == "discrete"
+            assert action_spec.dtype == "int32"
+            assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
+            self.min_action = int(action_spec.minimum)
+            self.max_action = int(action_spec.maximum)
+            shape = action_spec.shape
+
         self.n = (self.max_action - self.min_action) + 1
         super(GridworldsActionSpace, self).__init__(
-            shape=action_spec.shape, dtype=action_spec.dtype
+            shape=shape, dtype=action_spec.dtype
         )
 
     def sample(self):
-        return random.randint(self.min_action, self.max_action)
+        if self.shape[0] == 1:
+            return random.randint(self.min_action, self.max_action)
+        else:
+            return np.random.randint(self.min_action, self.max_action)
 
     def contains(self, x):
         """
@@ -558,7 +577,10 @@ class GridworldsActionSpace(gym.Space):
         pycolab validate function, because that expects a numpy array and not
         an individual action.
         """
-        return self.min_action <= x <= self.max_action
+        if self.shape[0] == 1:
+            return self.min_action <= x <= self.max_action
+        else:
+            return all(self.min_action <= x <= self.max_action)
 
 
 class GridworldsObservationSpace(gym.Space):

@@ -178,10 +178,19 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
         # speaking, a single-element list will also work, but it's best not to
         # confuse matters in the docstring with this option.
         all_actions = [np.asarray(action).item()]
+      elif isinstance(action, dict):    # ADDED
+        all_actions = {key: np.asarray(value).item() for key, value in action.items()}    # ADDED
       else:
         all_actions = [np.asarray(a).item() for a in action]
 
-      if len(all_actions) != self._action_size:
+      # TODO: support for optional action dimensions
+      #if len(all_actions) != self._action_size:   
+      #  raise RuntimeError("A pycolab EnvironmentMa adapter's step method "
+      #                     'was called with actions that were not compatible '
+      #                     'with what the pycolab game expects.')
+      if (len(all_actions) == 0 
+          or len(all_actions) > self._action_size 
+          or "step" not in all_actions):   
         raise RuntimeError("A pycolab EnvironmentMa adapter's step method "
                            'was called with actions that were not compatible '
                            'with what the pycolab game expects.')
@@ -273,6 +282,8 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     # First discrete actions:
     if discrete_actions is not None:
 
+      if isinstance(discrete_actions, dict):                # ADDED
+        discrete_actions = discrete_actions.values()        # ADDED
 
       # CHANGED: lets avoid "pythonic" expected exceptions in user code, this makes debugging less convenient
 
@@ -303,6 +314,9 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
 
     # Then continuous actions:
     if continuous_actions is not None:
+
+      if isinstance(continuous_actions, dict):                # ADDED
+        continuous_actions = continuous_actions.values()      # ADDED
 
       # CHANGED: lets avoid "pythonic" expected exceptions in user code, this makes debugging less convenient
 
