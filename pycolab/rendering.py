@@ -468,8 +468,8 @@ class ObservationToArray(object):
         self._depth = len(n)    # ADDED
         self._is_3d = True
       else:    # ADDED
-        self._depth = 1  # Again, the array is always 3-D behind the scenes.        # roland
-        self._is_3d = False                                                         # roland
+        self._depth = 1  # Again, the array is always 3-D behind the scenes.
+        self._is_3d = False
     except TypeError:
       self._depth = 1  # Again, the array is always 3-D behind the scenes.
       self._is_3d = False

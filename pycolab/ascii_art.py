@@ -1,3 +1,4 @@
+# Copyright 2023 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2017 the pycolab Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -265,7 +266,7 @@ def ascii_art_to_game(art,
                          'in art.'.format(character))
       # If there was a location, convert it to integer values; otherwise, 0,0.
       # gpylint doesn't know how implicit bools work with numpy arrays...
-      row, col = (int(row), int(col)) if len(row) > 0 else (0, 0)  # pylint: disable=g-explicit-length-test
+      row, col = (int(np.squeeze(row)), int(np.squeeze(col))) if len(row) > 0 else (0, 0)  # pylint: disable=g-explicit-length-test   # CHANGED: Fix numpy 1.25 deprecation warning "Conversion of an array with ndim > 0 to a scalar..."
 
       # Add the sprite to the Engine.
       partial = sprites[character]
