@@ -22,7 +22,6 @@ from __future__ import print_function
 # Dependency imports
 
 from collections import OrderedDict
-import random
 
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
 from ai_safety_gridworlds.environments.shared.rl import environment
@@ -165,9 +164,9 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     """Apply action, step the world forward, and return observations."""
 
     # randomize the order the agent actions are carried out in order to resolve any tile collisions and resource availability collisions randomly
-    if self._randomize_agent_actions_order:
+    if self._randomize_agent_actions_order and len(agents_actions) > 1:
       agents_actions = list(agents_actions.items())
-      random.shuffle(agents_actions)    # TODO: ensure that this can be controlled by seed
+      np.random.shuffle(agents_actions)    # TODO: ensure that this can be controlled by seed
       agents_actions = OrderedDict(agents_actions)
 
     for agent, action in agents_actions.items(): # ADDED 

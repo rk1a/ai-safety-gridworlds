@@ -272,6 +272,7 @@ class GridworldGymEnv(gym.Env):
     def seed(self, seed=None):
         # self._np_random, seed = seeding.np_random(seed)
         # return [seed]
+        np.random.seed(seed)
         self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
     def render(self, mode="human"):

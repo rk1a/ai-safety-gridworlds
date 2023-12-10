@@ -513,6 +513,7 @@ class GridworldZooParallelEnv(ParallelEnv):
     def seed(self, seed=None):
         # self._np_random, seed = seeding.np_random(seed)
         # return [seed]
+        np.random.seed(seed)
         self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
     def render(self, mode="human"):
@@ -590,11 +591,13 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
                 nvec=self.n, dtype=action_spec.dtype
             )
 
-        self._np_random = self._env._np_random
+        # self._np_random = self._env._np_random
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
         if self._env._dones[self._agent]:
             raise ValueError(f"Agent {self._agent} is done")
+
+        self._np_random = self._env._np_random    # NB! update on each call since env may have been reset after constructing
 
         result = super(GridworldsActionSpace, self).sample(mask)
         if not gym_v26:

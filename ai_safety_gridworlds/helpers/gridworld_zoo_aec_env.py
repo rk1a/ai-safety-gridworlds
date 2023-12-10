@@ -308,7 +308,7 @@ class GridworldZooAecEnv(AECEnv):
             else: 
                 raise StopIteration
 
-    # TODO: function to observe with info
+    # TODO: return dictionary if agent is None?
     def observe(self, agent, transition_from_agents_last_step_result=False):
 
         # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, we get current agent's perspective computed after that latest step made by any agent.
@@ -339,7 +339,8 @@ class GridworldZooAecEnv(AECEnv):
         return state
 
 
-    def observe_info(self, agent):
+    # TODO: return dictionary if agent is None?
+    def observe_info(self, agent):  
 
         # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, _compute_info will use current agent's perspective computed after that latest step made by any agent.
         obs = self._last_observation
@@ -395,7 +396,7 @@ class GridworldZooAecEnv(AECEnv):
             agent = self._next_agent
 
         if observe:
-            state = self.observe(agent)
+            state = GridworldZooAecEnv.observe(self, agent)   # NB! do not call overridden methods in inherited class
         else:
             state = self._given_agents_last_step_result[agent][0] # take state part from _given_agents_last_step_result tuple
             if self._flatten_observations:
@@ -414,7 +415,7 @@ class GridworldZooAecEnv(AECEnv):
         """Returns observation, cumulative reward, terminated, truncated, info for the current agent (specified by self.agent_selection).
         
         If observe flag is True then current board state is observed. If observe flag is False then the observation that was made after current agent's latest move is returned."""
-        result = self.last_for_agent(self._next_agent, observe)
+        result = GridworldZooAecEnv.last_for_agent(self, self._next_agent, observe)   # NB! do not call overridden methods in inherited class
 
         if gym_v26:
             (state, reward, terminated, truncated, info) = result
@@ -550,9 +551,6 @@ class GridworldZooAecEnv(AECEnv):
             INFO_DISCOUNT: timestep.discount,            
         })
 
-        # self._rewards[self._next_agent] = reward
-        self._rewards.update(rewards)
-
 
         board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
 
@@ -572,6 +570,12 @@ class GridworldZooAecEnv(AECEnv):
         else:
             # done = { agent: timestep.step_type.last() for agent in self.agent_name_mapping.values() }
             done = timestep.step_type.last()
+
+
+        # self._rewards[self._next_agent] = reward
+        self._rewards.update(rewards)   # NB! clone the updates so that if the agent is deleted from self._rewards, then it is still preserved in rewards for the code below for storing for use in .last() method
+        if done:    # terminated agents are not allowed in .rewards
+            del self._rewards[self._next_agent]            
 
 
         if gym_v26:
@@ -623,7 +627,7 @@ class GridworldZooAecEnv(AECEnv):
         self._next_agent_index = 0
         self._all_agents_done = False
 
-        reward = 0.0    # Zoo api_test requires reward to be 0 upon reset()
+        reward = 0.0    # Zoo api_test requires reward to be initialised 0 upon reset() and the keys should be present in the .rewards dictionary
         self._rewards = { agent: reward for agent in self.possible_agents }
 
 
@@ -659,6 +663,7 @@ class GridworldZooAecEnv(AECEnv):
     def seed(self, seed=None):
         # self._np_random, seed = seeding.np_random(seed)
         # return [seed]
+        np.random.seed(seed)
         self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
     def render(self, mode="human"):
@@ -736,11 +741,13 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
                 nvec=self.n, dtype=action_spec.dtype
             )
 
-        self._np_random = self._env._np_random
+        # self._np_random = self._env._np_random
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
         if self._env.terminations[self._agent] or self._env.truncations[self._agent]:
             raise ValueError(f"Agent {self._agent} is done")
+
+        self._np_random = self._env._np_random    # NB! update on each call since env may have been reset after constructing
 
         result = super(GridworldsActionSpace, self).sample(mask)
         if not gym_v26:
