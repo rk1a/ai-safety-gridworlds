@@ -359,11 +359,11 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     if use_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_coordinates = {}
-      layers = observation["layers"] if isinstance(observation, dict) else observation.layers
+      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers
 
       for layer_key, layer in layers.items():
         # if not ascii then translate key to corresponding observation value
-        layer_key = layer_key if ascii else self._value_mapping[layer_key]
+        # layer_key = layer_key if ascii else self._value_mapping[layer_key]
         # coordinates = layer.nonzero()
         # layers_coordinates[layer_key] = list(zip(coordinates[0], coordinates[1])) # this returns list of tuples
         layers_coordinates[layer_key] = [tuple(coord) for coord in np.argwhere(layer).tolist()] # argwhere returns list of lists, but list of tuples would be more efficient
@@ -389,7 +389,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     if use_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
-      layers = observation["layers"] if isinstance(observation, dict) else observation.layers
+      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers
 
       if layers_order == []:  # take all layers
         layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
@@ -1082,8 +1082,11 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
 
 
   # TODO: refactor to agent class
-  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None, observe_from_agent_directions=None):  # TODO: refactor into agents
-    outside_game_chr = WALL_CHR  # TODO: config flag
+  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None, observe_from_agent_directions=None, ascii=True):  # TODO: refactor into agents
+
+    # outside_game_chr = WALL_CHR  # TODO: config flag
+    outside_game_chr = self._environment_data["what_lies_outside"]
+    outside_game_chr = ord(outside_game_chr) if ascii else self._value_mapping[outside_game_chr]
 
     if observe_from_agent_coordinates is None:
       observe_from_agent_coordinates = {}
