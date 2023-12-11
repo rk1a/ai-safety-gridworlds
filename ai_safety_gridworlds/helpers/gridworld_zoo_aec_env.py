@@ -135,6 +135,7 @@ class GridworldZooAecEnv(AECEnv):
         self._observable_attribute_value_mapping = observable_attribute_value_mapping
 
         self._last_board = None
+        self._state = None
         self._last_observed_agent_board = {}
         self._last_observation = None
         self._last_observation_coordinates = None
@@ -242,7 +243,16 @@ class GridworldZooAecEnv(AECEnv):
 
     @property
     def state(self):
-        return self._state
+        """State returns a global view of the environment.
+
+        It is appropriate for centralized training decentralized execution methods like QMIX
+        """
+        state = self._state
+
+        if self._flatten_observations:   # flatten only when returning state
+            state = state.flatten()
+
+        return state 
 
     def observation_space(self, agent):
         return self._observation_spaces[agent]
@@ -563,6 +573,8 @@ class GridworldZooAecEnv(AECEnv):
         #if self._flatten_observations:   # flatten only when returning state, not yet here
         #    state = state.flatten()
 
+        self._state = state
+
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             # done = { self._next_agent: timestep.step_type[self.agent_name_mapping[self._next_agent]].last() }
@@ -622,6 +634,9 @@ class GridworldZooAecEnv(AECEnv):
 
         #if self._flatten_observations:   # flatten only when returning state, not yet here
         #    state = state.flatten()
+
+        self._state = state
+
                     
         self._next_agent = self.possible_agents[0]
         self._next_agent_index = 0

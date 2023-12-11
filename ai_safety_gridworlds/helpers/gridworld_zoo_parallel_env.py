@@ -132,7 +132,6 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._observable_attribute_categories = observable_attribute_categories
         self._observable_attribute_value_mapping = observable_attribute_value_mapping
 
-        self._last_board = None
         self._last_observation = None
         self._last_observation_coordinates = None
         self._last_observation_layers_cube = None
@@ -159,7 +158,10 @@ class GridworldZooParallelEnv(ParallelEnv):
                 zip(self.possible_agents, [str(r) for r in range(0, num_agents)])
             )
             
+        self._last_board = None
+        self._last_agent_boards = {agent_name: None for agent_name in self.possible_agents}
         self._state = None
+        self._agent_states = {agent_name: None for agent_name in self.possible_agents} 
         self._dones = {agent_name: False for agent_name in self.possible_agents} 
 
         self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
@@ -199,6 +201,11 @@ class GridworldZooParallelEnv(ParallelEnv):
 
     @property
     def state(self):
+        """Returns the state.
+
+        State returns a global view of the environment appropriate for
+        centralized training decentralized execution methods like QMIX
+        """
         return self._state
 
     def observation_space(self, agent):
@@ -417,6 +424,35 @@ class GridworldZooParallelEnv(ParallelEnv):
             state = state.flatten()
 
         self._state = state
+
+
+        if hasattr(self._env, "agent_perspectives"):
+
+            for agent in self.possible_agents:
+
+                board = self._last_agent_observations[agent].board
+
+                # TODO: apply transitions to agent observations as well
+                if self._use_transitions:
+                    state = np.stack([self._last_agent_boards[agent], board], axis=0)
+                    self._last_agent_boards[agent] = board
+                else:
+                    state = board[np.newaxis, :]
+
+                # TODO: apply flatten to agent observations as well
+                if self._flatten_observations:
+                    state = state.flatten()
+
+                self._agent_states[agent] = state
+
+            #/ for agent in self.possible_agents:
+
+        else:
+
+            for agent in self.possible_agents:
+                self._agent_states[agent] = self._state
+
+        #/ if hasattr(self._env, "agent_perspectives"):
             
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -427,34 +463,15 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._dones = dones
 
 
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-
-            # TODO
-
-            if gym_v26:
-                # https://gymnasium.farama.org/content/migration-guide/
-                # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
-                # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
-                terminateds = dones
-                truncateds = {agent: False for agent in self.possible_agents}    # TODO        
-                return (state, reward, terminateds, truncateds, infos)
-            else:
-                return (state, reward, dones, infos)
-
-        else:   #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-
-            agent_name = self.possible_agents[0]
-            if gym_v26:
-                # https://gymnasium.farama.org/content/migration-guide/
-                # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
-                # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
-                terminateds = dones
-                truncateds = {agent: False for agent in self.possible_agents}    # TODO                
-                return ({agent_name: state}, {agent_name: reward}, terminateds, truncateds, infos)
-            else:
-                return ({agent_name: state}, {agent_name: reward}, dones, infos)
-
-        #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+        if gym_v26:
+            # https://gymnasium.farama.org/content/migration-guide/
+            # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
+            # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
+            terminateds = dones
+            truncateds = {agent: False for agent in self.possible_agents}    # TODO        
+            return (self._agent_states, reward, terminateds, truncateds, infos)
+        else:
+            return (self._agent_states, reward, dones, infos)
 
     def reset(self, seed=None, *args, **kwargs):                     # CHANGED: added seed, *args, **kwargs
 
@@ -486,9 +503,39 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         self._state = state
 
+
+        if hasattr(self._env, "agent_perspectives"):
+
+            for agent in self.possible_agents:
+
+                board = self._last_agent_observations[agent].board
+
+                # TODO: apply transitions to agent observations as well
+                if self._use_transitions:
+                    state = np.stack([np.zeros_like(board), board], axis=0)
+                    self._last_agent_boards[agent] = board
+                else:
+                    state = board[np.newaxis, :]
+
+                # TODO: apply flatten to agent observations as well
+                if self._flatten_observations:
+                    state = state.flatten()
+
+                self._agent_states[agent] = state
+
+            #/ for agent in self.possible_agents:
+
+        else:
+
+            for agent in self.possible_agents:
+                self._agent_states[agent] = self._state
+
+        #/ if hasattr(self._env, "agent_perspectives"):
+
+
         self._dones = {agent_name: False for agent_name in self.possible_agents} 
 
-        obs = {agent_name: state for agent_name in self.possible_agents}    
+        obs = self._agent_states  
         return obs, infos
 
     def get_reward_unit_space(self):                    # ADDED
