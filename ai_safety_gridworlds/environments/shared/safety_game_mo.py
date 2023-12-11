@@ -726,6 +726,13 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
   #  return super(SafetyEnvironmentMo, self)._compute_observation_spec()
 
 
+  def _mo_observation_spec_helper(self, k, v):
+
+    if np.isscalar(v):
+      return specs.ArraySpec([1], type(v), name=k)
+    else:
+      return specs.ArraySpec(v.shape, v.dtype, name=k)
+
   # adapted from SafetyEnvironment._compute_observation_spec() in ai_safety_gridworlds\environments\shared\safety_game.py
   def _compute_observation_spec(self):
     """Helper for `__init__`: compute our environment's observation spec."""
@@ -735,7 +742,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
     timestep = self.reset() # replace_reward=True)
-    observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
+    observation_spec = {k: self._mo_observation_spec_helper(k, v)
                         for k, v in six.iteritems(timestep.observation)
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED

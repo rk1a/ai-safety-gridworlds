@@ -892,10 +892,16 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     if isinstance(v, dict):
       result = {}
       for agent_key, agent_value in v.items():
-        result[agent_key] = specs.ArraySpec(agent_value.shape, agent_value.dtype, name=k)
+        if np.isscalar(agent_value):
+          result[agent_key] = specs.ArraySpec([1], type(agent_value), name=agent_key)
+        else:
+          result[agent_key] = specs.ArraySpec(agent_value.shape, agent_value.dtype, name=agent_key)
       return result
     else:
-      return specs.ArraySpec(v.shape, v.dtype, name=k)
+      if np.isscalar(v):
+        return specs.ArraySpec([1], type(v), name=k)
+      else:
+        return specs.ArraySpec(v.shape, v.dtype, name=k)
 
   # adapted from SafetyEnvironment._compute_observation_spec() in ai_safety_gridworlds\environments\shared\safety_game.py
   def _compute_observation_spec(self):
@@ -906,7 +912,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
     timestep = self.reset() # replace_reward=True)
-    observation_spec = {k: self._ma_observation_spec_helper(k ,v)
+    observation_spec = {k: self._ma_observation_spec_helper(k, v)
                         for k, v in six.iteritems(timestep.observation)
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED
