@@ -143,7 +143,14 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     # by starting a new episode, inspecting the observations returned in the
     # first step, then closing the episode and resetting internal variables
     # to a default value.
-    self._observation_spec = self._compute_observation_spec()
+    self._agent_observation_specs = {}
+    self._observation_spec, observation = self._compute_observation_spec()
+
+    if hasattr(self, "agent_perspectives"):
+      agent_observations = self.agent_perspectives_with_layers(observation, include_layers=True, ascii=False, observe_from_agent_coordinates=None, observe_from_agent_directions=None)  # NB! In observation spec, ascii = False always, both for global observation and for agent observations
+      for agent_char, agent in self._environment_data[AGENT_SPRITE].items():        
+        self._agent_observation_specs[agent_char], _ = self._compute_observation_spec(agent_observations[agent_char])
+
 
   def reset(self):
     """Start a new episode."""
@@ -228,8 +235,11 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
       observation=self.last_observations_for_agents(agents_actions.keys())  # TODO: compute observation for all agents, not only for those who performed an action?
     )
 
-  def observation_spec(self):
-    return self._observation_spec
+  def observation_spec(self, agent=None):
+    if agent is None:
+      return self._observation_spec
+    else:
+      return self._agent_observation_specs[agent]
 
   def action_spec(self):
     return self._valid_actions
@@ -359,27 +369,36 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
 
     return valid_actions, action_size
 
-  def _compute_observation_spec(self):
+  def _compute_observation_spec(self, observation=None):    # CHANGED
     """Helper for `__init__`: compute our environment's observation spec."""
     # Start an environment, examine the values it gives to us, and reset things
-    # back to default.
-    timestep = self.reset()
+    # back to default.    
+    if observation is None:   # ADDED
+      timestep = self.reset()
+      observation2 = timestep.observation
+    else:
+      observation2 = { "board": observation.board }   # ADDED
+
     observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
-                        for k, v in six.iteritems(timestep.observation)}
+                        for k, v in six.iteritems(observation2)}   # CHANGED
+
     # As long as we've got environment result data, we try checking to make sure
     # that the reward types can be added together---a very weak way of measuring
     # whether they are compatible.
-    if timestep.reward is not None:
-      try:
-        _ = timestep.reward + self._default_reward
-      except TypeError:
-        raise TypeError(
-            'A pycolab game wrapped by an EnvironmentMa adapter returned '
-            'a first reward whose type is incompatible with the default reward '
-            "given to the adapter's `__init__`.")
+    if observation is None:   # ADDED
+      if timestep.reward is not None:
+        try:
+          _ = timestep.reward + self._default_reward
+        except TypeError:
+          raise TypeError(
+              'A pycolab game wrapped by an EnvironmentMa adapter returned '
+              'a first reward whose type is incompatible with the default reward '
+              "given to the adapter's `__init__`.")
 
-    self._drop_last_episode()
-    return observation_spec
+      self._drop_last_episode()
+    #/ if observation is None:
+
+    return observation_spec, observation2   # CHANGED
 
   def _update_for_game_step(self, observations, reward, discount):
     """Update internal state with data from an environment interaction."""

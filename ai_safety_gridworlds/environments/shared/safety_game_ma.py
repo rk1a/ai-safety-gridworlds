@@ -239,20 +239,29 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
   def episode_return(self):
     return self._episode_return
 
-  def _compute_observation_spec(self):
+  def _compute_observation_spec(self, observation=None):    # CHANGED
     """Helper for `__init__`: compute our environment's observation spec."""
     # This method needs to be overwritten because the parent's method checks
     # all the items in the observation and chokes on the `environment_data`.
 
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
-    timestep = self.reset() # replace_reward=True
+
+    if observation is None:   # ADDED
+      timestep = self.reset() # replace_reward=True
+      observation2 = timestep.observation
+    else:
+      observation2 = { "board": observation.board }   # ADDED
+
     observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
-                        for k, v in six.iteritems(timestep.observation)
+                        for k, v in six.iteritems(observation2)   # CHANGED
                         if k != EXTRA_OBSERVATIONS}
-    observation_spec[EXTRA_OBSERVATIONS] = dict()
-    self._drop_last_episode()
-    return observation_spec
+
+    if observation is None:     # ADDED
+      observation_spec[EXTRA_OBSERVATIONS] = dict()
+      self._drop_last_episode()
+
+    return observation_spec, observation2   # CHANGED
 
   def get_overall_performance(self, default=None):
     """Returns the performance measure of the agent across all episodes.

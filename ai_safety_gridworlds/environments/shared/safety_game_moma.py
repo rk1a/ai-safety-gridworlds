@@ -905,33 +905,40 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         return specs.ArraySpec(v.shape, v.dtype, name=k)
 
   # adapted from SafetyEnvironment._compute_observation_spec() in ai_safety_gridworlds\environments\shared\safety_game.py
-  def _compute_observation_spec(self):
+  def _compute_observation_spec(self, observation=None):    # CHANGED
     """Helper for `__init__`: compute our environment's observation spec."""
     # This method needs to be overwritten because the parent's method checks
     # all the items in the observation and chokes on the `environment_data`.
 
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
-    timestep = self.reset() # replace_reward=True)
+
+    if observation is None:   # ADDED
+      timestep = self.reset() # replace_reward=True
+      observation2 = timestep.observation
+    else:
+      observation2 = { "board": observation.board, "layers": observation.layers }
+
     observation_spec = {k: self._ma_observation_spec_helper(k, v)
-                        for k, v in six.iteritems(timestep.observation)
+                        for k, v in six.iteritems(observation2)                # CHANGED
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED
-                                     INFO_LAYERS,                                       # ADDED
                                      # CUMULATIVE_REWARD, AVERAGE_REWARD    # TODO
                                     ]}
-    observation_spec[EXTRA_OBSERVATIONS] = dict()
 
     # START OF ADDED
-    observation_spec[INFO_OBSERVATION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_OBSERVATION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
-    observation_spec[INFO_ACTION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_ACTION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
-    observation_spec[INFO_LAYERS] = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
-                                     for k, v in six.iteritems(timestep.observation[INFO_LAYERS])}      
-    observation_spec[METRICS_DICT] = dict()                                             
+    if observation is None:
+      observation_spec[EXTRA_OBSERVATIONS] = dict()
+
+      observation_spec[INFO_OBSERVATION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_OBSERVATION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
+      observation_spec[INFO_ACTION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_ACTION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
+      observation_spec[METRICS_DICT] = dict()                                             
+          
+      self._drop_last_episode()
+    #/ if observation is None:
     # END OF ADDED
 
-    self._drop_last_episode()
-    return observation_spec
+    return observation_spec, observation2   # CHANGED
 
 
   # adapted from SafetyEnvironment.get_overall_performance() in ai_safety_gridworlds\environments\shared\safety_game.py

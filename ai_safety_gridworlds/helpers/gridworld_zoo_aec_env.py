@@ -195,7 +195,7 @@ class GridworldZooAecEnv(AECEnv):
             agent: GridworldsActionSpace(self, agent) for agent in self.possible_agents
         }  
         self._observation_spaces = {  # TODO: make it readonly
-            agent: GridworldsObservationSpace(self, use_transitions, flatten_observations) for agent in self.possible_agents
+            agent: GridworldsObservationSpace(self, agent, use_transitions, flatten_observations) for agent in self.possible_agents
         }
 
     def close(self):
@@ -253,6 +253,8 @@ class GridworldZooAecEnv(AECEnv):
             state = state.flatten()
 
         return state 
+
+    # TODO: implement global info property as well
 
     def observation_space(self, agent):
         return self._observation_spaces[agent]
@@ -788,9 +790,12 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
 
 class GridworldsObservationSpace(gym.Space):
 
-    def __init__(self, env, use_transitions, flatten_observations):
+    def __init__(self, env, agent, use_transitions, flatten_observations):
         self._env = env
-        self.observation_spec_dict = env._env.observation_spec()
+        if isinstance(env._env, safety_game_moma.SafetyEnvironmentMoMa):
+            self.observation_spec_dict = env._env.observation_spec(env.agent_name_mapping[agent])
+        else:
+            self.observation_spec_dict = env._env.observation_spec()
         self.use_transitions = use_transitions
         self.flatten_observations = flatten_observations
 
