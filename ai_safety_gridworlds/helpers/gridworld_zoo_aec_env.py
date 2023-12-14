@@ -36,6 +36,7 @@ except:
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game_ma import Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
+from ai_safety_gridworlds.environments.shared import safety_game_mo
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.helpers import factory
@@ -121,7 +122,13 @@ class GridworldZooAecEnv(AECEnv):
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
-        self._env = factory.get_environment_obj(env_name, *args, **kwargs)
+
+        try:
+            self._env = factory.get_environment_obj(env_name, *args, **kwargs)
+        except TypeError:   # .__init__() got an unexpected keyword argument 'scalarise'  # happens in tests when non-multiobjective environment is selected
+            self._env = factory.get_environment_obj(env_name)
+            # TODO: log warning
+
         self._rgb = None
         self._use_transitions = use_transitions
         self._flatten_observations = flatten_observations
@@ -632,7 +639,11 @@ class GridworldZooAecEnv(AECEnv):
         if seed is not None:
             self.seed(seed=seed)    # ADDED
 
-        timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      
+        if (isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa)
+            or isinstance(self._env, safety_game_mo.SafetyEnvironmentMo)):
+            timestep = self._env.reset(*args, **kwargs)       # CHANGED: added *args, **kwargs      
+        else:
+            timestep = self._env.reset()
 
         if self._viewer is not None:
             self._viewer.reset_time()

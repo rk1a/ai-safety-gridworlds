@@ -24,6 +24,8 @@ from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 
 from pycolab import plot
 
+import numpy as np
+
 
 # AGENT_SPRITE = 'agent_sprite'
 

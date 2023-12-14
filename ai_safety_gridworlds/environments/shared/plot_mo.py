@@ -20,6 +20,8 @@ from __future__ import print_function
 
 from pycolab import plot
 
+import numpy as np
+
 
 class PlotMo(plot.Plot):
 

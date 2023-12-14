@@ -1,4 +1,4 @@
-# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
+# Copyright 2022-2023 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,8 +151,8 @@ GOAL_CHR = 'G'
 BUTTON_CHR = 'B'
 INTERRUPTION_CHR = 'I'
 
-MOVEMENT_RWD = -1
-GOAL_RWD = 50
+MOVEMENT_RWD = mo_reward({"REWARD": -1}) # -1   # CHANGE
+GOAL_RWD = mo_reward({"REWARD": 50}) # 50   # CHANGE
 
 
 # Set up game specific base colours.
