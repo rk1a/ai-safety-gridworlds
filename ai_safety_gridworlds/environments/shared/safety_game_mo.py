@@ -354,39 +354,47 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # log file header creation moved to reset() method
 
 
-  def calculate_observation_coordinates(self, observation, use_layers=True, ascii=True):
+  def calculate_observation_coordinates(self, observation, occlusion_in_layers=True, ascii=True, agent_coordinates_override=None):
 
-    if use_layers:  # return coordinates of all objects, including the overlapped ones
+    if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_coordinates = {}
-      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers
+      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
       for layer_key, layer in layers.items():
         # if not ascii then translate key to corresponding observation value
         # layer_key = layer_key if ascii else self._value_mapping[layer_key]
         # coordinates = layer.nonzero()
         # layers_coordinates[layer_key] = list(zip(coordinates[0], coordinates[1])) # this returns list of tuples
-        layers_coordinates[layer_key] = [tuple(coord) for coord in np.argwhere(layer).tolist()] # argwhere returns list of lists, but list of tuples would be more efficient
+        if agent_coordinates_override is not None and layer_key in agent_coordinates_override:
+          coord = agent_coordinates_override[layer_key]
+          layers_coordinates[layer_key] = [tuple(coord)]
+        else:
+          layers_coordinates[layer_key] = [tuple(coord) for coord in np.argwhere(layer).tolist()] # argwhere returns list of lists, but list of tuples would be more efficient
 
       return layers_coordinates
 
     else:  # return coordinates of only the topmost objects visible on the board
 
-      board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board
+      board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board   # when called on agent perspectives then the observation is of Observation type
       chars = np.unique(board)
             
       chars_coordinates = {}
       for char in chars:
-        # coordinates = (board == char).nonzero()
-        # chars_coordinates[key] = list(zip(coordinates[0], coordinates[1]))
-        chars_coordinates[key] = np.argwhere(board == char).tolist()[0]
+        if agent_coordinates_override is not None and char in agent_coordinates_override:
+          # TODO: replace agent locations in the board according to agent_coordinates_override
+          raise NotImplementedError()
+        else:
+          # coordinates = (board == char).nonzero()
+          # chars_coordinates[key] = list(zip(coordinates[0], coordinates[1]))
+          chars_coordinates[key] = np.argwhere(board == char).tolist()[0]
 
       return chars_coordinates
 
 
-  def calculate_observation_layers_cube(self, observation, use_layers=True, layers_order=[]):
+  def calculate_observation_layers_cube(self, observation, occlusion_in_layers=True, layers_order=[]):
 
-    if use_layers:  # return coordinates of all objects, including the overlapped ones
+    if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
       layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers
@@ -401,7 +409,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
           layer = np.zeros_like(next(iter(layers.values())))
         layers_list.append(layer)
 
-      return np.array(layers_list)
+      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
 
     else:  # return coordinates of only the topmost objects visible on the board
 
@@ -417,7 +425,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
         layer = (board == layer_key)
         layers_list.append(layer)
 
-      return np.array(layers_list)
+      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
@@ -725,13 +733,21 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
   #  self._current_game._the_plot = PlotMo()    # incoming mo_reward argument to add_reward() has to be treated as immutable else rewards across timesteps will be accumulated in per timestep accumulator
   #  return super(SafetyEnvironmentMo, self)._compute_observation_spec()
 
+  def _observation_spec_helper(self, k, v):
 
-  def _mo_observation_spec_helper(self, k, v):
-
-    if np.isscalar(v):
-      return specs.ArraySpec([1], type(v), name=k)
+    if isinstance(v, dict):
+      result = {}
+      for key, value in v.items():
+        if np.isscalar(value):
+          result[key] = specs.ArraySpec([1], type(value), name=key)
+        else:
+          result[key] = specs.ArraySpec(value.shape, value.dtype, name=key)
+      return result
     else:
-      return specs.ArraySpec(v.shape, v.dtype, name=k)
+      if np.isscalar(v):
+        return specs.ArraySpec([1], type(v), name=k)
+      else:
+        return specs.ArraySpec(v.shape, v.dtype, name=k)
 
   # adapted from SafetyEnvironment._compute_observation_spec() in ai_safety_gridworlds\environments\shared\safety_game.py
   def _compute_observation_spec(self):
@@ -742,19 +758,16 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # Start an environment, examine the values it gives to us, and reset things
     # back to default.
     timestep = self.reset() # replace_reward=True)
-    observation_spec = {k: self._mo_observation_spec_helper(k, v)
+    observation_spec = {k: self._observation_spec_helper(k, v)
                         for k, v in six.iteritems(timestep.observation)
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED
-                                     INFO_LAYERS,                                       # ADDED
                                     ]}
     observation_spec[EXTRA_OBSERVATIONS] = dict()
 
     # START OF ADDED
     observation_spec[INFO_OBSERVATION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_OBSERVATION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
     observation_spec[INFO_ACTION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_ACTION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
-    observation_spec[INFO_LAYERS] = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
-                                     for k, v in six.iteritems(timestep.observation[INFO_LAYERS])}      
     observation_spec[METRICS_DICT] = dict()                                             
     # END OF ADDED
 

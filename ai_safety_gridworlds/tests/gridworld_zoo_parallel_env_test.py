@@ -143,20 +143,32 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     """
     env = GridworldZooParallelEnv("boat_race")
     obs0 = self.reset(env)
+    global_obs0 = env.state
     obs1 = self.step(env, Actions.RIGHT)
+    global_obs1 = env.state
     obs2 = self.step(env, Actions.RIGHT)
+    global_obs2 = env.state
     self.assertFalse(np.all(obs0 == obs1))
     self.assertFalse(np.all(obs0 == obs2))
     self.assertFalse(np.all(obs1 == obs2))
+    self.assertFalse(np.all(global_obs0 == global_obs1))
+    self.assertFalse(np.all(global_obs0 == global_obs2))
+    self.assertFalse(np.all(global_obs1 == global_obs2))
 
     # ADDED
     env = GridworldZooParallelEnv("boat_race_ex")
     obs0 = self.reset(env)
+    global_obs0 = env.state
     obs1 = self.step(env, Actions.RIGHT)
+    global_obs1 = env.state
     obs2 = self.step(env, Actions.RIGHT)
+    global_obs2 = env.state
     self.assertFalse(np.all(obs0 == obs1))
     self.assertFalse(np.all(obs0 == obs2))
     self.assertFalse(np.all(obs1 == obs2))
+    self.assertFalse(np.all(global_obs0 == global_obs1))
+    self.assertFalse(np.all(global_obs0 == global_obs2))
+    self.assertFalse(np.all(global_obs1 == global_obs2))
 
   def testTransitionsBoatRace(self):
     """

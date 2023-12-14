@@ -21,13 +21,13 @@ import numpy as np
 try:
   import gymnasium as gym
   from gymnasium import error
-  from gymnasium.spaces import MultiDiscrete
+  from gymnasium.spaces import MultiDiscrete, Discrete
   from gymnasium.utils import seeding
   gym_v26 = True
 except:
   import gym
   from gym import error
-  from gym.spaces import Discrete
+  from gym.spaces import MultiDiscrete, Discrete
   from gym.utils import seeding
   gym_v26 = False
 
@@ -150,6 +150,8 @@ class GridworldZooParallelEnv(ParallelEnv):
                 zip(self.possible_agents, [agent.character for agent in agents])
             )
         else:
+            self._ascii_observation_format = False    # override observation format   # TODO: log warning if self._ascii_observation_format was True
+
             #if len(observable_attribute_categories) > 0:
             #    raise ValueError("observable_attribute_categories")
             num_agents = 1
@@ -206,7 +208,12 @@ class GridworldZooParallelEnv(ParallelEnv):
         State returns a global view of the environment appropriate for
         centralized training decentralized execution methods like QMIX
         """
-        return self._state
+        state = self._state
+
+        if not self._use_transitions: # in case of self._use_transitions == True the deep copy is made already during step/reset
+            state = copy.deepcopy(state)
+
+        return state
 
     # TODO: implement global info property as well
 
@@ -230,7 +237,7 @@ class GridworldZooParallelEnv(ParallelEnv):
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
                 self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
 
-        if hasattr(self._env, "agent_perspectives"): 
+        if hasattr(self._env, "agent_perspectives_with_layers"): 
             # TODO: for step() method, calculate observations and coordinates only for current agent 
 
             agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions)
@@ -272,12 +279,12 @@ class GridworldZooParallelEnv(ParallelEnv):
                 for agent in self.possible_agents:
                     infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube   # shared global observation must be returned via agent keys
 
-            if hasattr(self._env, "agent_perspectives"):
+            if hasattr(self._env, "agent_perspectives_with_layers"):
                 for agent in self.possible_agents:
-                    infos[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent].board
+                    infos[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent]["ascii" if self._ascii_observation_format else "board"]
 
                     if self._layers_in_observation:
-                        infos[agent][INFO_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent].layers
+                        infos[agent][INFO_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent]["layers"]
 
                     if self._object_coordinates_in_observation:
                         infos[agent][INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[agent]
@@ -307,7 +314,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
 
         for k, v in obs.items():
-            if k not in ("board", "RGB", "layers"):
+            if k not in ("RGB", "layers"):
                 for agent in self.possible_agents:
                     infos[agent][k] = v   # shared global observation must be returned via agent keys
 
@@ -323,11 +330,11 @@ class GridworldZooParallelEnv(ParallelEnv):
         
         #timestep = self._env.observe_from_location(agents_coordinates, agents_observation_directions)       # CHANGED: added *args, **kwargs      
 
-        #board = copy.deepcopy(timestep.observation["board"])   # TODO: option to return observation as character array
+        #board = timestep.observation["ascii" if self._ascii_observation_format else "board"]
 
         #obs = timestep.observation
         obs = self._last_observation
-        # board = obs["board"]
+        # board = obs["ascii" if self._ascii_observation_format else "board"]
         agents_coordinates2 = { self.agent_name_mapping[agent_name]: coordinate for agent_name, coordinate in agents_coordinates.items() }
         agents_observation_directions2 = { self.agent_name_mapping[agent_name]: direction for agent_name, direction in agents_observation_directions.items() }
 
@@ -378,7 +385,12 @@ class GridworldZooParallelEnv(ParallelEnv):
         infos = self._compute_infos(obs)
 
 
-        reward = { agent: 0.0 for agent in self.agent_name_mapping.values() } if timestep.reward is None else timestep.reward
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward[agent_chr] 
+                        for agent_name, agent_chr in self.agent_name_mapping.items() }
+        else:
+            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward 
+                        for agent_name in self.possible_agents }
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
@@ -399,7 +411,7 @@ class GridworldZooParallelEnv(ParallelEnv):
             for agent in self.possible_agents:
                 infos[agent].update({
                           INFO_HIDDEN_REWARD: hidden_reward[agent] if hidden_reward is not None else None,
-                          INFO_OBSERVED_REWARD: reward[self.agent_name_mapping[agent]],
+                          INFO_OBSERVED_REWARD: rewards[agent],
                           INFO_DISCOUNT: timestep.discount, # [agent],    # TODO: agent-based discount
                       })
 
@@ -407,15 +419,16 @@ class GridworldZooParallelEnv(ParallelEnv):
             for agent in self.possible_agents:
                 infos[agent].update({
                     INFO_HIDDEN_REWARD: hidden_reward,
-                    INFO_OBSERVED_REWARD: reward,
+                    INFO_OBSERVED_REWARD: rewards[agent],
                     INFO_DISCOUNT: timestep.discount,                
                 })
 
 
-        board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
+        board = obs["ascii" if self._ascii_observation_format else "board"]
 
         # TODO: apply transitions to agent observations as well
         if self._use_transitions:
+            board = copy.deepcopy(board)
             state = np.stack([self._last_board, board], axis=0)
             self._last_board = board
         else:
@@ -428,11 +441,11 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._state = state
 
 
-        if hasattr(self._env, "agent_perspectives"):
+        if hasattr(self._env, "agent_perspectives_with_layers"):
 
             for agent in self.possible_agents:
 
-                board = self._last_agent_observations[agent].board
+                board = self._last_agent_observations[agent]["ascii" if self._ascii_observation_format else "board"]
 
                 # TODO: apply transitions to agent observations as well
                 if self._use_transitions:
@@ -451,8 +464,10 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         else:
 
+            if not self._use_transitions: # in case of self._use_transitions == True the deep copy is made already above during calculation of state
+                state = copy.deepcopy(state)
             for agent in self.possible_agents:
-                self._agent_states[agent] = self._state
+                self._agent_states[agent] = state
 
         #/ if hasattr(self._env, "agent_perspectives"):
             
@@ -470,10 +485,11 @@ class GridworldZooParallelEnv(ParallelEnv):
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminateds = dones
-            truncateds = {agent: False for agent in self.possible_agents}    # TODO        
-            return (self._agent_states, reward, terminateds, truncateds, infos)
+            truncateds = {agent: False for agent in self.possible_agents}    # TODO   
+            # NB! shallow copy self._agent_states dict since the dict values will change in next iteration, but main dict object will remain same
+            return (dict(self._agent_states), rewards, terminateds, truncateds, infos)
         else:
-            return (self._agent_states, reward, dones, infos)
+            return (dict(self._agent_states), rewards, dones, infos)
 
     def reset(self, seed=None, *args, **kwargs):                     # CHANGED: added seed, *args, **kwargs
 
@@ -485,15 +501,16 @@ class GridworldZooParallelEnv(ParallelEnv):
         if self._viewer is not None:
             self._viewer.reset_time()
 
-        board = copy.deepcopy(timestep.observation["board"])   # TODO: option to return observation as character array
-
         obs = timestep.observation
         self._process_observation(obs)
         infos = self._compute_infos(obs)
 
 
+        board = obs["ascii" if self._ascii_observation_format else "board"]
+
         # TODO: apply transitions to agent observations as well
         if self._use_transitions:
+            board = copy.deepcopy(board)
             state = np.stack([np.zeros_like(board), board], axis=0)
             self._last_board = board
         else:
@@ -506,11 +523,11 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._state = state
 
 
-        if hasattr(self._env, "agent_perspectives"):
+        if hasattr(self._env, "agent_perspectives_with_layers"):
 
             for agent in self.possible_agents:
 
-                board = self._last_agent_observations[agent].board
+                board = self._last_agent_observations[agent]["ascii" if self._ascii_observation_format else "board"]
 
                 # TODO: apply transitions to agent observations as well
                 if self._use_transitions:
@@ -529,15 +546,18 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         else:
 
+            if not self._use_transitions: # in case of self._use_transitions == True the deep copy is made already above during calculation of state
+                state = copy.deepcopy(state)
             for agent in self.possible_agents:
-                self._agent_states[agent] = self._state
+                self._agent_states[agent] = state
 
         #/ if hasattr(self._env, "agent_perspectives"):
 
 
         self._dones = {agent_name: False for agent_name in self.possible_agents} 
 
-        obs = self._agent_states  
+        # NB! shallow copy self._agent_states dict since the dict values will change in next iteration, but main dict object will remain same
+        obs = dict(self._agent_states)
         return obs, infos
 
     def get_reward_unit_space(self):                    # ADDED
@@ -602,7 +622,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
 class GridworldsActionSpace(MultiDiscrete):  # gym.Space
 
-    def __init__(self, env, agent):
+    def __init__(self, env, agent):   # TODO: agent-specific action space
         self._env = env
         self._agent = agent
         action_spec = env._env.action_spec()
@@ -639,6 +659,8 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
                 # shape=shape, dtype=action_spec.dtype
                 nvec=self.n, dtype=action_spec.dtype
             )
+
+        self._shape = shape   # needs to be set after super().__init__() has been called
 
         # self._np_random = self._env._np_random
 
@@ -681,18 +703,20 @@ class GridworldsObservationSpace(gym.Space):
         self.use_transitions = use_transitions
         self.flatten_observations = flatten_observations
 
+        dict_key = "ascii" if self._env._ascii_observation_format else "board"
+
         if flatten_observations:
             if self.use_transitions:
-                shape = (2, np.prod(self.observation_spec_dict["board"].shape))
+                shape = (2, np.prod(self.observation_spec_dict[dict_key].shape))
             else:
-                shape = (np.prod(self.observation_spec_dict["board"].shape), )
+                shape = (np.prod(self.observation_spec_dict[dict_key].shape), )
         else:
             if self.use_transitions:
-                shape = (2, *self.observation_spec_dict["board"].shape)
+                shape = (2, *self.observation_spec_dict[dict_key].shape)
             else:
-                shape = (1, *self.observation_spec_dict["board"].shape)
+                shape = (1, *self.observation_spec_dict[dict_key].shape)
 
-        dtype = self.observation_spec_dict["board"].dtype
+        dtype = self.observation_spec_dict[dict_key].dtype
         super(GridworldsObservationSpace, self).__init__(shape=shape, dtype=dtype)
 
     def sample(self):

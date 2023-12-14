@@ -366,7 +366,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     # log file header creation moved to reset() method
 
 
-  def agent_perspectives_with_layers(self, observation, include_layers=True, ascii=True, observe_from_agent_coordinates=None, observe_from_agent_directions=None): # TODO: configuration option to disable layers if not needed
+  def agent_perspectives_with_layers(self, observation, include_layers=True, board=True, ascii=True, observe_from_agent_coordinates=None, observe_from_agent_directions=None): # TODO: configuration option to disable layers if not needed
 
     for_agents = [self.environment_data[AGENT_SPRITE][key] for key in observe_from_agent_coordinates.keys()] if observe_from_agent_coordinates is not None else None
 
@@ -406,27 +406,59 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         #if ascii:
         #  agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
 
-        agent_observation = rendering.Observation(board=None, layers=agent_layers_observation)
+        # agent_observation = rendering.Observation(board=None, layers=agent_layers_observation)
+        agent_observation = { "layers": agent_layers_observation }
+        if board:
+          agent_observation["board"] = None
+        if ascii:
+          agent_observation["ascii"] = None
         result[agent_chr] = agent_observation
 
       #/ for agent_chr, agent_observation in observation.items():
     else:   #/ if observe_from_agent_coordinates is not None:
-      agent_perspectives = self.agent_perspectives(observation["ascii_codes" if ascii else "board"], for_agents=for_agents, ascii=ascii) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on    # NB! No observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions arguments here since they are supposed to be Null in this if-else branch
 
-      for agent_chr, agent_board_observation in agent_perspectives.items():
+      if board:
+        agent_board_perspectives = self.agent_perspectives(observation["board"], for_agents=for_agents, ascii=False)
+      if ascii:
+        agent_ascii_codes_perspectives = self.agent_perspectives(observation["ascii_codes"], for_agents=for_agents, ascii=True)
+
+      for agent in (for_agents if for_agents else get_players(self._environment_data)):
 
         agent_layers_observation = {}
         if include_layers:
           for layer_key in all_agents_layers_observations.keys():
-            agent_layers_observation[layer_key] = all_agents_layers_observations[layer_key][agent_chr]
+            agent_layers_observation[layer_key] = all_agents_layers_observations[layer_key][agent.character]
+        agent_observation = { "layers": agent_layers_observation }
 
+        if board:
+          agent_observation["board"] = agent_board_perspectives[agent.character]
         if ascii:
-          agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
+          agent_observation["ascii"] = board_to_ascii_vectorize(agent_ascii_codes_perspectives[agent.character])
 
-        agent_observation = rendering.Observation(board=agent_board_observation, layers=agent_layers_observation)
-        result[agent_chr] = agent_observation
+        result[agent.character] = agent_observation
 
-      #/ for agent_chr, agent_observation in observation.items():
+      #/ for agent in (for_agents if for_agents else get_players(self._environment_data)):
+
+
+      #agent_perspectives = self.agent_perspectives(observation["ascii_codes" if ascii else "board"], for_agents=for_agents, ascii=ascii) # NB! for computing agent perspectives, we need numeric data format, so we use ascii_codes if ascii mode is on    # NB! No observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions arguments here since they are supposed to be Null in this if-else branch
+
+      #for agent_chr, agent_board_observation in agent_perspectives.items():
+
+      #  agent_layers_observation = {}
+      #  if include_layers:
+      #    for layer_key in all_agents_layers_observations.keys():
+      #      agent_layers_observation[layer_key] = all_agents_layers_observations[layer_key][agent_chr]
+
+      #  if ascii:
+      #    agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
+
+      #  # agent_observation = rendering.Observation(board=agent_board_observation, layers=agent_layers_observation)
+      #  agent_observation = { "board": agent_board_observation, "layers": agent_layers_observation }
+      #  result[agent_chr] = agent_observation
+
+      ##/ for agent_chr, agent_observation in observation.items():
+
+
     #/ if observe_from_agent_coordinates is not None:
 
     return result
@@ -442,10 +474,10 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
       # NB! here we always use layers, in order to obtain current agent's coordinates. We need layers since the agent may be overlapped in the board view. 
       if not occlusion_in_layers:
-        layers = agent_observation.layers
+        layers = agent_observation["layers"]
         agent_coordinates = np.argwhere(layers[agent_chr]) if agent_chr in layers else None
       else:
-        layers = observation.layers
+        layers = observation["layers"]
         if agent_chr in layers:
           agent_layer = layers[agent_chr]
           # if the observe_from_agent_coordinates is set then the agent_layer already contains the agent at the overriden location
@@ -540,7 +572,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
           layer = np.zeros_like(next(iter(layers.values())))
         layers_list.append(layer)
 
-      return np.array(layers_list)
+      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
 
     else:  # return coordinates of only the topmost objects visible on the board
 
@@ -556,7 +588,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         layer = (board == layer_key)
         layers_list.append(layer)
 
-      return np.array(layers_list)
+      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
@@ -888,15 +920,15 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
   #  return super(SafetyEnvironmentMoMa, self)._compute_observation_spec()
 
 
-  def _ma_observation_spec_helper(self, k, v):
+  def _observation_spec_helper(self, k, v):
 
     if isinstance(v, dict):
       result = {}
-      for agent_key, agent_value in v.items():
-        if np.isscalar(agent_value):
-          result[agent_key] = specs.ArraySpec([1], type(agent_value), name=agent_key)
+      for key, value in v.items():
+        if np.isscalar(value):
+          result[key] = specs.ArraySpec([1], type(value), name=key)
         else:
-          result[agent_key] = specs.ArraySpec(agent_value.shape, agent_value.dtype, name=agent_key)
+          result[key] = specs.ArraySpec(value.shape, value.dtype, name=key)
       return result
     else:
       if np.isscalar(v):
@@ -917,9 +949,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       timestep = self.reset() # replace_reward=True
       observation2 = timestep.observation
     else:
-      observation2 = { "board": observation.board, "layers": observation.layers }
+      observation2 = observation
 
-    observation_spec = {k: self._ma_observation_spec_helper(k, v)
+    observation_spec = {k: self._observation_spec_helper(k, v)
                         for k, v in six.iteritems(observation2)                # CHANGED
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED

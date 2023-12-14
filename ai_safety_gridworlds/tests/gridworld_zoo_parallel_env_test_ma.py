@@ -127,18 +127,20 @@ class SafetyGridworldsTestCase(unittest.TestCase):
   def step(self, env, action):
     if isinstance(env, safety_game_moma.SafetyEnvironmentMoMa):
       agents_actions = {
-        agent: { "step": action } for agent in env.possible_agents
+        # NB! send actions to env.agents, not env.possible_agents since the latter contains terminated agents
+        agent: { "step": action } for agent in env.agents
       }  
     else:
       agents_actions = {
-        agent: action for agent in env.possible_agents
+        # NB! send actions to env.agents, not env.possible_agents since the latter contains terminated agents
+        agent: action for agent in env.agents
       } 
 
     if gym_v26:
       obs, _, _, _, _ = env.step(agents_actions)
     else:
       obs, _, _, _ = env.step(agents_actions)
-    return obs[0]
+    return obs
 
   def testStateObjectCopy(self):
     """
@@ -150,20 +152,32 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     """
     env = GridworldZooParallelEnv("island_navigation_ex_ma")
     obs0 = self.reset(env)
+    global_obs0 = env.state
     obs1 = self.step(env, Actions.UP)
+    global_obs1 = env.state
     obs2 = self.step(env, Actions.RIGHT)
-    self.assertFalse(np.all(obs0 == obs1))
-    self.assertFalse(np.all(obs0 == obs2))
-    self.assertFalse(np.all(obs1 == obs2))
+    global_obs2 = env.state
+    self.assertFalse(any(np.all(obs0[key] == obs1[key]) for key in obs0.keys()))
+    self.assertFalse(any(np.all(obs0[key] == obs2[key]) for key in obs0.keys()))
+    self.assertFalse(any(np.all(obs1[key] == obs2[key]) for key in obs0.keys()))
+    self.assertFalse(np.all(global_obs0 == global_obs1))
+    self.assertFalse(np.all(global_obs0 == global_obs2))
+    self.assertFalse(np.all(global_obs1 == global_obs2))
 
     # ADDED
     env = GridworldZooParallelEnv("firemaker_ex_ma")
     obs0 = self.reset(env)
+    global_obs0 = env.state
     obs1 = self.step(env, Actions.RIGHT)
+    global_obs1 = env.state
     obs2 = self.step(env, Actions.RIGHT)
-    self.assertFalse(np.all(obs0 == obs1))
-    self.assertFalse(np.all(obs0 == obs2))
-    self.assertFalse(np.all(obs1 == obs2))
+    global_obs2 = env.state
+    self.assertFalse(any(np.all(obs0[key] == obs1[key]) for key in obs0.keys()))
+    self.assertFalse(any(np.all(obs0[key] == obs2[key]) for key in obs0.keys()))
+    self.assertFalse(any(np.all(obs1[key] == obs2[key]) for key in obs0.keys()))
+    self.assertFalse(np.all(global_obs0 == global_obs1))
+    self.assertFalse(np.all(global_obs0 == global_obs2))
+    self.assertFalse(np.all(global_obs1 == global_obs2))
 
 
   def testTransitions(self):
@@ -177,7 +191,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     # while not done:
     while env.agents:
       # this is where you would insert your policy
-      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      # NB! send actions to env.agents, not env.possible_agents since the latter contains terminated agents
+      actions = {agent: env.action_space(agent).sample() for agent in env.agents}   
       observations, rewards, terminations, truncations, infos = env.step(actions)
       done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
@@ -189,7 +204,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     # while not done:
     while env.agents:
       # this is where you would insert your policy
-      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      # NB! send actions to env.agents, not env.possible_agents since the latter contains terminated agents
+      actions = {agent: env.action_space(agent).sample() for agent in env.agents}
       observations, rewards, terminations, truncations, infos = env.step(actions)
       done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
@@ -203,7 +219,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     # while not done:
     while env.agents:
       # this is where you would insert your policy
-      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      # NB! send actions to env.agents, not env.possible_agents since the latter contains terminated agents
+      actions = {agent: env.action_space(agent).sample() for agent in env.agents}
       observations, rewards, terminations, truncations, infos = env.step(actions)
       done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
@@ -215,7 +232,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     # while not done:
     while env.agents:
       # this is where you would insert your policy
-      actions = {agent: env.action_space(agent).sample() for agent in env.possible_agents}
+      # NB! send actions to env.agents, not env.possible_agents since the latter contains terminated agents
+      actions = {agent: env.action_space(agent).sample() for agent in env.agents}
       observations, rewards, terminations, truncations, infos = env.step(actions)
       done = all( terminations[agent] or truncations[agent] for agent in env.possible_agents )
 
@@ -258,7 +276,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
                 qqq = True    # for debugging
 
               agents_actions = {
-                agent: action for agent in env.possible_agents
+                # NB! send actions to env.agents, not env.possible_agents since the latter contains terminated agents
+                agent: action for agent in env.agents
               }  
 
               if gym_v26:

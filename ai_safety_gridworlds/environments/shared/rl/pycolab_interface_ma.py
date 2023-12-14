@@ -144,10 +144,11 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     # first step, then closing the episode and resetting internal variables
     # to a default value.
     self._agent_observation_specs = {}
-    self._observation_spec, observation = self._compute_observation_spec()
+    self._observation_spec, observation = self._compute_observation_spec()  # TODO: use ascii observation spec, if the wrapper is configured to use it in actual observations
 
+    # TODO: move this code to safety_game_moma.py ?
     if hasattr(self, "agent_perspectives"):
-      agent_observations = self.agent_perspectives_with_layers(observation, include_layers=True, ascii=False, observe_from_agent_coordinates=None, observe_from_agent_directions=None)  # NB! In observation spec, ascii = False always, both for global observation and for agent observations
+      agent_observations = self.agent_perspectives_with_layers(observation, include_layers=True, board=True, ascii=True, observe_from_agent_coordinates=None, observe_from_agent_directions=None)  # NB! In observation spec, ascii = False always, both for global observation and for agent observations   # TODO: use ascii observation spec, if the wrapper is configured to use it in actual observations
       for agent_char, agent in self._environment_data[AGENT_SPRITE].items():        
         self._agent_observation_specs[agent_char], _ = self._compute_observation_spec(agent_observations[agent_char])
 
@@ -377,7 +378,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
       timestep = self.reset()
       observation2 = timestep.observation
     else:
-      observation2 = { "board": observation.board }   # ADDED
+      observation2 = observation   # ADDED
 
     observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
                         for k, v in six.iteritems(observation2)}   # CHANGED

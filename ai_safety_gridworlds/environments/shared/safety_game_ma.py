@@ -251,7 +251,7 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
       timestep = self.reset() # replace_reward=True
       observation2 = timestep.observation
     else:
-      observation2 = { "board": observation.board }   # ADDED
+      observation2 = observation   # ADDED
 
     observation_spec = {k: specs.ArraySpec(v.shape, v.dtype, name=k)
                         for k, v in six.iteritems(observation2)   # CHANGED

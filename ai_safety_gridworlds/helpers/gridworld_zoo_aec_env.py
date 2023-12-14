@@ -21,13 +21,13 @@ import numpy as np
 try:
   import gymnasium as gym
   from gymnasium import error
-  from gymnasium.spaces import MultiDiscrete
+  from gymnasium.spaces import MultiDiscrete, Discrete
   from gymnasium.utils import seeding
   gym_v26 = True
 except:
   import gym
   from gym import error
-  from gym.spaces import Discrete
+  from gym.spaces import MultiDiscrete, Discrete
   from gym.utils import seeding
   gym_v26 = False
 
@@ -161,6 +161,8 @@ class GridworldZooAecEnv(AECEnv):
                   zip(self.possible_agents, list(agents_stepping_order))
               )
         else:
+            self._ascii_observation_format = False    # override observation format  # TODO: log warning if self._ascii_observation_format was True
+
             #if len(observable_attribute_categories) > 0:
             #    raise ValueError("observable_attribute_categories")
             num_agents = 1
@@ -181,6 +183,8 @@ class GridworldZooAecEnv(AECEnv):
 
         self._rewards = { agent: reward for agent in self.possible_agents }  # TODO: make it readonly for callers
         self._infos = { agent: info for agent in self.possible_agents }  # TODO: make it readonly for callers
+
+        self._given_agents_prev_step_result = {}
 
         if gym_v26:
             self._given_agents_last_step_result = { agent: (state, reward, False, False, info) for agent in self.possible_agents }
@@ -248,6 +252,9 @@ class GridworldZooAecEnv(AECEnv):
         It is appropriate for centralized training decentralized execution methods like QMIX
         """
         state = self._state
+
+        if not self._use_transitions: # in case of self._use_transitions == True the deep copy is made already during step/reset
+            state = copy.deepcopy(state)
 
         if self._flatten_observations:   # flatten only when returning state
             state = state.flatten()
@@ -321,25 +328,29 @@ class GridworldZooAecEnv(AECEnv):
                 raise StopIteration
 
     # TODO: return dictionary if agent is None?
-    def observe(self, agent, transition_from_agents_last_step_result=False):
+    def observe(self, agent, transition_from_agents_prev_step_result=False):
 
         # get board observation from latest step, regardless whether the latest step was made by current agent or some other. If agent perspectives are available, we get current agent's perspective computed after that latest step made by any agent.
-        if hasattr(self._env, "agent_perspectives"): # are agent perspectives enabled and available?
-            board = self._last_agent_observations_after_some_agents_step[agent].board
+        if hasattr(self._env, "agent_perspectives_with_layers"): # are agent perspectives enabled and available?
+            board = self._last_agent_observations_after_some_agents_step[agent]["ascii" if self._ascii_observation_format else "board"]
         else:
-            board = copy.deepcopy(self._last_observation["board"])
+            board = copy.deepcopy(self._last_observation["ascii" if self._ascii_observation_format else "board"])
 
         if self._use_transitions:
-            if not transition_from_agents_last_step_result:
+            if not transition_from_agents_prev_step_result:
                 # transition from previous observation by current agent
                 last_agent_board = self._last_observed_agent_board.get(agent)
                 if last_agent_board is None:
                     last_agent_board = np.zeros_like(board)
-                state = np.stack([last_agent_board, board], axis=0) # TODO
+                state = np.stack([last_agent_board, board], axis=0)
                 self._last_observed_agent_board[agent] = board
             else:
                 # transition from last step result by current agent
-                last_agent_board = self._given_agents_last_step_result[agent][0][-1] # -1 takes last element from agent state. State may contain two elements in case self._use_transitions == True
+                agents_prev_step_result = self._given_agents_prev_step_result.get(agent)
+                if agents_prev_step_result is None:
+                    last_agent_board = np.zeros_like(board)
+                else:
+                    last_agent_board = agents_prev_step_result[0][-1] # -1 takes last element from agent state. State may contain two elements in case self._use_transitions == True
                 state = np.stack([last_agent_board, board], axis=0)
                 self._last_observed_agent_board[agent] = board
         else:
@@ -367,11 +378,11 @@ class GridworldZooAecEnv(AECEnv):
         
         #timestep = self._env.observe_from_location(agents_coordinates, agents_observation_directions)       # CHANGED: added *args, **kwargs      
 
-        #board = copy.deepcopy(timestep.observation["board"])   # TODO: option to return observation as character array
+        #board = timestep.observation["ascii" if self._ascii_observation_format else "board"]
 
         #obs = timestep.observation
         obs = self._last_observation
-        # board = obs["board"]
+        # board = obs["ascii" if self._ascii_observation_format else "board"]
         agents_coordinates2 = { self.agent_name_mapping[agent_name]: coordinate for agent_name, coordinate in agents_coordinates.items() }
         agents_observation_directions2 = { self.agent_name_mapping[agent_name]: direction for agent_name, direction in agents_observation_directions.items() }
 
@@ -454,7 +465,7 @@ class GridworldZooAecEnv(AECEnv):
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
                 self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
 
-        if hasattr(self._env, "agent_perspectives"): 
+        if hasattr(self._env, "agent_perspectives_with_layers"): 
             # TODO: for step() method, calculate observations and coordinates only for current agent 
 
             agent_observations = self._env.agent_perspectives_with_layers(obs, include_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format, observe_from_agent_coordinates=observe_from_agent_coordinates, observe_from_agent_directions=observe_from_agent_directions)
@@ -494,11 +505,11 @@ class GridworldZooAecEnv(AECEnv):
         if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
             info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
 
-        if hasattr(self._env, "agent_perspectives"):
-            info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observations_after_some_agents_step[agent_name].board
+        if hasattr(self._env, "agent_perspectives_with_layers"):
+            info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observations_after_some_agents_step[agent_name]["ascii" if self._ascii_observation_format else "board"]
 
             if self._layers_in_observation:
-                info[INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observations_after_some_agents_step[agent_name].layers
+                info[INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observations_after_some_agents_step[agent_name]["layers"]
 
             if self._object_coordinates_in_observation:
                 info[INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[agent_name]
@@ -508,7 +519,7 @@ class GridworldZooAecEnv(AECEnv):
 
 
         for k, v in obs.items():
-            if k not in ("board", "RGB", "layers"):
+            if k not in ("RGB", "layers"):
                 info[k] = v
 
 
@@ -535,7 +546,7 @@ class GridworldZooAecEnv(AECEnv):
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             timestep = self._env.step({ self.agent_name_mapping[self._next_agent]: action }, *args, **kwargs)      # CHANGED: added *args, **kwargs 
         else:
-            timestep = self._env.step(action, *args, **kwargs)
+            timestep = self._env.step(action, *args, **kwargs)     # CHANGED: added *args, **kwargs 
             
         obs = timestep.observation
         self._process_observation(obs)
@@ -543,8 +554,12 @@ class GridworldZooAecEnv(AECEnv):
         self._infos[self._next_agent] = info
 
 
-        rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward[agent_chr] 
-                    for agent_name, agent_chr in self.agent_name_mapping.items() }
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward[agent_chr] 
+                        for agent_name, agent_chr in self.agent_name_mapping.items() }
+        else:
+            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward 
+                        for agent_name in self.possible_agents }
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
@@ -564,9 +579,10 @@ class GridworldZooAecEnv(AECEnv):
         })
 
 
-        board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
+        board = obs["ascii" if self._ascii_observation_format else "board"]
 
         if self._use_transitions:
+            board = copy.deepcopy(board)
             state = np.stack([self._last_board, board], axis=0)
             self._last_board = board
         else:
@@ -592,12 +608,14 @@ class GridworldZooAecEnv(AECEnv):
             del self._rewards[self._next_agent]            
 
 
+        self._given_agents_prev_step_result[self._next_agent] = self._given_agents_last_step_result[self._next_agent]
+
         if gym_v26:
             # https://gymnasium.farama.org/content/migration-guide/
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminated = done
-            truncated = False    # TODO      
+            truncated = False    # TODO              
             self._given_agents_last_step_result[self._next_agent] = (state, rewards[self._next_agent], terminated, truncated, info)            
             self.terminations[self._next_agent] = terminated
             self.truncations[self._next_agent] = truncated
@@ -621,14 +639,15 @@ class GridworldZooAecEnv(AECEnv):
 
         self._last_observed_agent_board = {}
 
-        board = copy.deepcopy(timestep.observation["board"])   # TODO: option to return observation as character array
-
         obs = timestep.observation
         self._process_observation(obs)
         self._infos = { agent: self._compute_info(obs, agent) for agent in self.possible_agents }
 
 
+        board = obs["ascii" if self._ascii_observation_format else "board"]
+
         if self._use_transitions:
+            board = copy.deepcopy(board)
             state = np.stack([np.zeros_like(board), board], axis=0)
             self._last_board = board
         else:
@@ -647,6 +666,8 @@ class GridworldZooAecEnv(AECEnv):
         reward = 0.0    # Zoo api_test requires reward to be initialised 0 upon reset() and the keys should be present in the .rewards dictionary
         self._rewards = { agent: reward for agent in self.possible_agents }
 
+
+        self._given_agents_prev_step_result = {}
 
         if gym_v26:
             self._given_agents_last_step_result = { agent: (state, reward, False, False, self._infos[agent]) for agent in self.possible_agents }
@@ -720,7 +741,7 @@ class GridworldZooAecEnv(AECEnv):
 
 class GridworldsActionSpace(MultiDiscrete):  # gym.Space
 
-    def __init__(self, env, agent):
+    def __init__(self, env, agent):   # TODO: agent-specific action space
         self._env = env
         self._agent = agent
         action_spec = env._env.action_spec()
@@ -757,6 +778,8 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
                 # shape=shape, dtype=action_spec.dtype
                 nvec=self.n, dtype=action_spec.dtype
             )
+
+        self._shape = shape   # needs to be set after super().__init__() has been called
 
         # self._np_random = self._env._np_random
 
@@ -799,18 +822,20 @@ class GridworldsObservationSpace(gym.Space):
         self.use_transitions = use_transitions
         self.flatten_observations = flatten_observations
 
+        dict_key = "ascii" if self._env._ascii_observation_format else "board"
+
         if flatten_observations:
             if self.use_transitions:
-                shape = (2, np.prod(self.observation_spec_dict["board"].shape))
+                shape = (2, np.prod(self.observation_spec_dict[dict_key].shape))
             else:
-                shape = (np.prod(self.observation_spec_dict["board"].shape), )
+                shape = (np.prod(self.observation_spec_dict[dict_key].shape), )
         else:
             if self.use_transitions:
-                shape = (2, *self.observation_spec_dict["board"].shape)
+                shape = (2, *self.observation_spec_dict[dict_key].shape)
             else:
-                shape = (1, *self.observation_spec_dict["board"].shape)
+                shape = (1, *self.observation_spec_dict[dict_key].shape)
 
-        dtype = self.observation_spec_dict["board"].dtype
+        dtype = self.observation_spec_dict[dict_key].dtype
         super(GridworldsObservationSpace, self).__init__(shape=shape, dtype=dtype)
 
     def sample(self):

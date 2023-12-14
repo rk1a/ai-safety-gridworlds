@@ -10,16 +10,18 @@ The original repo can be found at https://github.com/n0p2/gym_ai_safety_gridworl
 import importlib
 import random
 
+from typing import Dict, List, Optional, NamedTuple, Tuple
+
 try:
   import gymnasium as gym
   from gymnasium import error
-  from gymnasium.spaces import Discrete
+  from gymnasium.spaces import MultiDiscrete, Discrete
   from gymnasium.utils import seeding
   gym_v26 = True
 except:
   import gym
   from gym import error
-  from gym.spaces import Discrete
+  from gym.spaces import MultiDiscrete, Discrete
   from gym.utils import seeding
   gym_v26 = False
 
@@ -28,8 +30,11 @@ import numpy as np
 
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared import safety_game_ma
+from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game_mo_base import Actions   # used as export
+from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.helpers.agent_viewer import AgentViewer
@@ -98,6 +103,8 @@ class GridworldGymEnv(gym.Env):
                  # observable_attribute_value_mapping:dict[str, dict[str, float]]={},  
                  observable_attribute_value_mapping:dict[str, float]={},   # TODO 
 
+                 agent_character = None,    # used in case of multi-agent environments
+
                  *args, **kwargs
                 ):
 
@@ -120,6 +127,16 @@ class GridworldGymEnv(gym.Env):
         self._last_observation_coordinates = None
         self._last_observation_layers_cube = None
 
+        if not isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):   # TODO: ascii support for multi-objective environments
+            self._ascii_observation_format = False    # override observation format  # TODO: log warning if self._ascii_observation_format was True
+            self._agent_chr = None  # unused
+        else:
+            if agent_character is not None:
+                self._agent_chr = agent_character
+            else:
+                agents = list(safety_game_ma.get_players(self._env.environment_data))
+                self._agent_chr = agents[0].character   
+
         # TODO: make these fields readonly
         self._action_space = GridworldsActionSpace(self)
         self._observation_space = GridworldsObservationSpace(self, use_transitions, flatten_observations)
@@ -137,7 +154,7 @@ class GridworldGymEnv(gym.Env):
 
     @property
     def observation_space(self):
-        return self._observation_spaces
+        return self._observation_space
 
     def _process_observation(self, obs):
 
@@ -145,10 +162,10 @@ class GridworldGymEnv(gym.Env):
         self._rgb = obs["RGB"]        
 
         if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):   # original Gridworlds environments do not support this method currently   # TODO
-            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, use_layers=not self._occlusion_in_layers, ascii=self._ascii_observation_format)
+            self._last_observation_coordinates = self._env.calculate_observation_coordinates(obs, occlusion_in_layers=self._occlusion_in_layers, ascii=self._ascii_observation_format)
 
         if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-            self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, use_layers=not self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+            self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
 
 
     def step(self, action, *args, **kwargs):                    # CHANGED: added *args, **kwargs 
@@ -166,7 +183,13 @@ class GridworldGymEnv(gym.Env):
                   excluding the RGB array. This includes in particular
                   the "extra_observations"
         """
-        timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
+
+        # TODO: in case of multi-agent environment, step only one specific agent. Other agents should then be controlled by the environment code as NPC-s.
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            timestep = self._env.step({ self._agent_chr: action }, *args, **kwargs)      # CHANGED: added *args, **kwargs 
+        else:
+            timestep = self._env.step(action, *args, **kwargs)      # CHANGED: added *args, **kwargs 
 
         obs = timestep.observation
         self._process_observation(obs)
@@ -205,7 +228,7 @@ class GridworldGymEnv(gym.Env):
             if k not in ("board", "RGB", "layers"):
                 info[k] = v
 
-        board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
+        board = copy.deepcopy(obs["ascii" if self._ascii_observation_format else "board"])
 
         if self._use_transitions:
             state = np.stack([self._last_board, board], axis=0)
@@ -239,7 +262,7 @@ class GridworldGymEnv(gym.Env):
         obs = timestep.observation
         self._process_observation(obs)
 
-        board = copy.deepcopy(obs["board"])   # TODO: option to return observation as character array
+        board = copy.deepcopy(obs["ascii" if self._ascii_observation_format else "board"])
 
         if self._use_transitions:
             state = np.stack([np.zeros_like(board), board], axis=0)
@@ -310,27 +333,59 @@ class GridworldGymEnv(gym.Env):
             super(GridworldEnv, self).render(mode=mode)  # just raise an exception
 
 
-class GridworldsActionSpace(Discrete):  # gym.Space
+class GridworldsActionSpace(MultiDiscrete):  # gym.Space
 
     def __init__(self, env):
         self._env = env
         action_spec = env._env.action_spec()
-        assert action_spec.name == "discrete"
-        assert action_spec.dtype == "int32"
-        assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
-        self.min_action = int(action_spec.minimum)
-        self.max_action = int(action_spec.maximum)
-        self.n = (self.max_action - self.min_action) + 1
-        super(GridworldsActionSpace, self).__init__(
-            # shape=action_spec.shape, dtype=action_spec.dtype
-            n=self.n, start=self.min_action
-        )
 
-    def sample(self, mask: Optional[np.ndarray] = None) -> int:
-        if mask is None:
-            return self._env._np_random.randint(self.min_action, self.max_action)
+        if isinstance(env._env, safety_game_moma.SafetyEnvironmentMoMa):
+            assert action_spec[0].name == "discrete"
+            assert action_spec[0].dtype == "int32"
+            assert action_spec[1].name == "continuous"
+            assert action_spec[1].dtype == "float32"
+            # self.min_action = action_spec[0].minimum.astype(int)
+            # self.max_action = action_spec[0].maximum.astype(int)
+            self.min_action = action_spec[0].minimum.astype(int)[0]   # spec for step modality
+            self.max_action = action_spec[0].maximum.astype(int)[0]   # spec for step modality
+            # TODO: multimodal action spec
+            action_spec = action_spec[0]
+            shape = (1,)
         else:
-            return self.min_action + self._env._np_random.choice(np.where(mask == 1)[0])
+            assert action_spec.name == "discrete"
+            assert action_spec.dtype == "int32"
+            assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
+            self.min_action = int(action_spec.minimum)
+            self.max_action = int(action_spec.maximum)
+            shape = action_spec.shape
+
+        self.n = (self.max_action - self.min_action) + 1
+
+        if gym_v26:
+            super(GridworldsActionSpace, self).__init__(
+                # shape=shape, dtype=action_spec.dtype
+                nvec=self.n, start=self.min_action, dtype=action_spec.dtype
+            )
+        else:
+            super(GridworldsActionSpace, self).__init__(
+                # shape=shape, dtype=action_spec.dtype
+                nvec=self.n, dtype=action_spec.dtype
+            )
+
+        self._shape = shape   # needs to be set after super().__init__() has been called
+
+    def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
+        self._np_random = self._env._np_random    # NB! update on each call since env may have been reset after constructing
+
+        result = super(GridworldsActionSpace, self).sample(mask)
+        if not gym_v26:
+            result += self.min_action
+        return result
+
+        #if mask is None:
+        #    return self._env._np_random.randint(self.min_action, self.max_action)
+        #else:
+        #    return self.min_action + self._env._np_random.choice(np.where(mask == 1)[0])
 
     def contains(self, x):
         """
@@ -341,7 +396,7 @@ class GridworldsActionSpace(Discrete):  # gym.Space
         return self.min_action <= x <= self.max_action
 
 
-class GridworldsObservationSpace(gym.Space):
+class GridworldsObservationSpace(gym.Space):  # TODO: support for agent-centric observations
 
     def __init__(self, env, use_transitions, flatten_observations):
         self._env = env
