@@ -24,7 +24,7 @@ from __future__ import print_function
 from collections import OrderedDict
 
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
-from ai_safety_gridworlds.environments.shared.rl import environment
+from ai_safety_gridworlds.environments.shared.rl import environment_ma
 from ai_safety_gridworlds.environments.shared import safety_game
 # from ai_safety_gridworlds.environments.shared import safety_game_ma  # cannot import due to circular dependency
 
@@ -157,11 +157,11 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     """Start a new episode."""
     # Build a new game and retrieve its first set of state/reward/discount.
     self._current_game = self._game_factory()
-    self._state = { agent: environment.StepType.FIRST for agent in self.environment_data[AGENT_SPRITE].keys() }
+    self._state = { agent: environment_ma.StepType.FIRST for agent in self.environment_data[AGENT_SPRITE].keys() }
     # Collect environment returns from starting the game and update state.
     observations, reward, discount = self._current_game.its_showtime()
     self._update_for_game_step(observations, reward, discount)
-    return environment.TimeStep(
+    return environment_ma.TimeStep(
       step_type=self._state,
       reward=None,
       discount=None,
@@ -205,8 +205,10 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
 
       # Clear episode internals and start a new episode, if episode ended or if
       # the game was not already underway.
-      if self._state[agent].last():   # CHANGED
-        if all( self._state[agent2].last()    # ADDED
+      if ( self._state[agent].dead()     # ADDED
+          or self._state[agent].last()):   # CHANGED
+        if all( self._state[agent].dead()     # ADDED
+                or self._state[agent2].last()    # ADDED
                 for agent2 in self.environment_data[AGENT_SPRITE].keys() ):   # drop episode only when all agents are terminated    # ADDED
           self._drop_last_episode()
         else:     # ignore any commands on the agent that is terminated    # ADDED
@@ -223,13 +225,17 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     #/ for agent, actions in agents_actions.items():
 
     # Check the current status of the game.
-    for agent in agents_actions.keys():
+    # for agent in agents_actions.keys():
+    for agent in self._state.keys():    # NB! use self._state not agents_actions because we need to update StepType.LAST to StepType.DEAD even if the agent was not among agents_actions.keys() 
       if self._game_over.get(agent):
-        self._state[agent] = environment.StepType.LAST
+        if self._state[agent] == environment_ma.StepType.MID or self._state[agent] == environment_ma.StepType.FIRST:
+          self._state[agent] = environment_ma.StepType.LAST
+        else:
+          self._state[agent] = environment_ma.StepType.DEAD
       else:
-        self._state[agent] = environment.StepType.MID
+        self._state[agent] = environment_ma.StepType.MID
 
-    return environment.TimeStep(
+    return environment_ma.TimeStep(
       step_type=self._state,
       reward=self._last_reward,
       discount=self._last_discount,

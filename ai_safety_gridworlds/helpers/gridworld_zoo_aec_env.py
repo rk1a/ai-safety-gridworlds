@@ -161,7 +161,7 @@ class GridworldZooAecEnv(AECEnv):
               self.possible_agents = [f"agent_{agent.character}" for agent in agents]  # TODO: make it readonly
               self.agent_name_mapping = dict(
                   zip(self.possible_agents, [agent.character for agent in agents])
-              )
+              )              
             else:
               self.possible_agents = [f"agent_{character}" for character in agents_stepping_order]  # TODO: make it readonly
               self.agent_name_mapping = dict(
@@ -177,28 +177,31 @@ class GridworldZooAecEnv(AECEnv):
             self.agent_name_mapping = dict(   # TODO: read agent char from environment
                 zip(self.possible_agents, [str(r) for r in range(0, num_agents)])
             )
+              
+        self.agent_name_reverse_mapping = {agent_chr: agent_name for agent_name, agent_chr in self.agent_name_mapping.items()}
 
         self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
 
+        self._agents = list(self.possible_agents)
         self._next_agent = self.possible_agents[0]
         self._next_agent_index = 0
         self._all_agents_done = False
 
         state = None    # TODO?
-        reward = None
         info = None
 
-        self._rewards = { agent: reward for agent in self.possible_agents }  # TODO: make it readonly for callers
+        self._rewards = { agent: None for agent in self.possible_agents }  # TODO: make it readonly for callers
+        self._cumulative_rewards = { agent: 0.0 for agent in self.possible_agents }  
         self._infos = { agent: info for agent in self.possible_agents }  # TODO: make it readonly for callers
 
         self._given_agents_prev_step_result = {}
 
         if gym_v26:
-            self._given_agents_last_step_result = { agent: (state, reward, False, False, info) for agent in self.possible_agents }
+            self._given_agents_last_step_result = { agent: (state, 0.0, False, False, info) for agent in self.possible_agents }
             self.terminations = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
             self.truncations = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
         else:
-            self._given_agents_last_step_result = { agent: (state, reward, False, info) for agent in self.possible_agents }
+            self._given_agents_last_step_result = { agent: (state, 0.0, False, info) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
 
         self._np_random = np.random
@@ -232,17 +235,11 @@ class GridworldZooAecEnv(AECEnv):
 
     @property
     def agents(self):
-        if gym_v26:
-            return [agent for agent in self.possible_agents if not self.terminations[agent] and not self.truncations[agent]]
-        else:
-            return [agent for agent in self.possible_agents if not self._dones[agent]]
+        return self._agents
 
     @property
     def num_agents(self):
-        if gym_v26:
-            return sum(1 for agent in self.possible_agents if not self.terminations[agent] and not self.truncations[agent])
-        else:
-            return sum(1 for agent in self.possible_agents if not self._dones[agent])
+        return len(self._agents)
 
     @property
     def max_num_agents(self):
@@ -294,13 +291,8 @@ class GridworldZooAecEnv(AECEnv):
         while continue_search_for_non_done_agent:
 
             self._next_agent_index = (self._next_agent_index + 1) % len(self.possible_agents) # loop over agents repeatedly     # https://pettingzoo.farama.org/content/basic_usage/#interacting-with-environments  
-            agent = self.possible_agents[self._next_agent_index]                
-
-            if gym_v26:
-                done = self.terminations[agent] or self.truncations[agent]
-            else:
-                done = self.dones[agent]
-
+            agent = self.possible_agents[self._next_agent_index]  
+            done = agent not in self.agents
             continue_search_for_non_done_agent = done
 
             search_loops_count += 1
@@ -436,9 +428,20 @@ class GridworldZooAecEnv(AECEnv):
 
         if gym_v26:
             (_, reward, terminated, truncated, info) = self._given_agents_last_step_result[agent]
+            if observe:
+                # NB! last should return cumulative rewards after any agents step, not just after selected agents step.  See https://github.com/Farama-Foundation/PettingZoo/blob/master/pettingzoo/utils/env.py and https://pettingzoo.farama.org/_modules/pettingzoo/utils/env/
+                # Similarly, terminations and truncations should be returned with up to date information after any agent's step.
+                reward = self._cumulative_rewards[agent]
+                terminated = self.terminations[agent]
+                truncated = self.truncations[agent]
             return (state, reward, terminated, truncated, info)
         else:
             (_, reward, done, info) = self._given_agents_last_step_result[agent]
+            if observe:
+                # NB! last should return cumulative rewards after any agents step, not just after selected agents step.  See https://github.com/Farama-Foundation/PettingZoo/blob/master/pettingzoo/utils/env.py and https://pettingzoo.farama.org/_modules/pettingzoo/utils/env/
+                # Similarly, terminations and truncations should be returned with up to date information after any agent's step.
+                reward = self._cumulative_rewards[agent]
+                done = self.terminations[agent] or self.truncations[agent]
             return (state, reward, done, info)
 
     def last(self, observe = True):
@@ -550,6 +553,31 @@ class GridworldZooAecEnv(AECEnv):
                   excluding the RGB array. This includes in particular
                   the "extra_observations"
         """
+
+        # a dead agent must call .step(None) once more after becoming dead. Only after that call will this dead agent be removed from various dictionaries and from .agent_iter loop.
+        if self.terminations[self._next_agent] or self.truncations[self._next_agent]:
+
+            if action is not None:
+                raise ValueError("When an agent is dead, the only valid action is None")
+
+            # Dead agents should stay in the agent_iter for one more loop, but should get None as action.
+            # Dead agents need to be removed from agents list only upon next step function on this dead agent.
+            del self.terminations[self._next_agent]  
+            del self.truncations[self._next_agent]  
+            # del self._rewards[self._next_agent]  
+            del self._cumulative_rewards[self._next_agent]  
+            del self._infos[self._next_agent]
+            del self._last_hidden_reward[self._next_agent] 
+            del self._given_agents_prev_step_result[self._next_agent] 
+            self._agents.remove(self._next_agent)
+
+            reward = 0.0    # no agent collects reward from a "dead step" and rewards from previous step need to be cleared
+            self._rewards = { agent: reward for agent in self._agents }
+
+            self._move_to_next_agent()
+            return
+
+
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             timestep = self._env.step({ self.agent_name_mapping[self._next_agent]: action }, *args, **kwargs)      # CHANGED: added *args, **kwargs 
         else:
@@ -562,11 +590,15 @@ class GridworldZooAecEnv(AECEnv):
 
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward[agent_chr] 
-                        for agent_name, agent_chr in self.agent_name_mapping.items() }
+            rewards = { self.agent_name_reverse_mapping[agent_chr]: 0.0 
+                        if timestep.reward is None 
+                        else reward 
+                        for agent_chr, reward in timestep.reward.items() }
         else:
-            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward 
-                        for agent_name in self.possible_agents }
+            rewards = { agent_name: 0.0 
+                        if timestep.reward is None 
+                        else timestep.reward 
+                        for agent_name in self.agents }
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
@@ -609,30 +641,36 @@ class GridworldZooAecEnv(AECEnv):
             done = timestep.step_type.last()
 
 
-        # self._rewards[self._next_agent] = reward
+        self._cumulative_rewards[self._next_agent] = 0.0   # this needs to be so according to Zoo unit test. See https://github.com/Farama-Foundation/PettingZoo/blob/master/pettingzoo/test/api_test.py
+        for agent, reward in rewards.items():
+            self._cumulative_rewards[agent] += reward
+
         self._rewards.update(rewards)   # NB! clone the updates so that if the agent is deleted from self._rewards, then it is still preserved in rewards for the code below for storing for use in .last() method
-        if done:    # terminated agents are not allowed in .rewards
-            del self._rewards[self._next_agent]            
+        for agent in self.agents:
+            # the agent should be visible in .rewards after it dies (until its "dead step"), but during next agent's step it should get zero reward
+            if self.terminations[agent] or self.truncations[agent]:
+                self._rewards[agent] = 0.0
 
 
         self._given_agents_prev_step_result[self._next_agent] = self._given_agents_last_step_result[self._next_agent]
 
+        # NB! self._given_agents_last_step_result should contain cumulative rewards. Step rewards are made available via .rewards. See https://github.com/Farama-Foundation/PettingZoo/blob/master/pettingzoo/utils/env.py and https://pettingzoo.farama.org/_modules/pettingzoo/utils/env/
         if gym_v26:
             # https://gymnasium.farama.org/content/migration-guide/
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminated = done
             truncated = False    # TODO              
-            self._given_agents_last_step_result[self._next_agent] = (state, rewards[self._next_agent], terminated, truncated, info)            
+            self._given_agents_last_step_result[self._next_agent] = (state, self._cumulative_rewards[self._next_agent], terminated, truncated, info)            
             self.terminations[self._next_agent] = terminated
             self.truncations[self._next_agent] = truncated
         else:
-            self._given_agents_last_step_result[self._next_agent] = (state, rewards[self._next_agent], done, info)
+            self._given_agents_last_step_result[self._next_agent] = (state, self._cumulative_rewards[self._next_agent], done, info)
             self.dones[self._next_agent] = done
 
-        self._move_to_next_agent()    # https://pettingzoo.farama.org/content/basic_usage/#interacting-with-environments  
+        self._move_to_next_agent()    # https://pettingzoo.farama.org/content/basic_usage/#interacting-with-environments 
+        return
 
-        # return self.last_step
 
     def reset(self, seed=None, *args, **kwargs):                     # CHANGED: added seed, *args, **kwargs
 
@@ -670,12 +708,14 @@ class GridworldZooAecEnv(AECEnv):
         self._state = state
 
                     
+        self._agents = list(self.possible_agents)
         self._next_agent = self.possible_agents[0]
         self._next_agent_index = 0
         self._all_agents_done = False
 
         reward = 0.0    # Zoo api_test requires reward to be initialised 0 upon reset() and the keys should be present in the .rewards dictionary
         self._rewards = { agent: reward for agent in self.possible_agents }
+        self._cumulative_rewards = { agent: reward for agent in self.possible_agents }
 
 
         self._given_agents_prev_step_result = {}
@@ -688,7 +728,6 @@ class GridworldZooAecEnv(AECEnv):
             self._given_agents_last_step_result = { agent: (state, reward, False, self._infos[agent]) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }
 
-        # return state
 
     def get_reward_unit_space(self):                    # ADDED
         return self._env.get_reward_unit_space()

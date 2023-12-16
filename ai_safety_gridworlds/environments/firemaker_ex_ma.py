@@ -320,11 +320,12 @@ def make_game(environment_data,
 
   sprites = {
               AGENT_CHRS[agent_index]: [AgentSprite, FLAGS, None, FLAGS.agent_observation_radius, FLAGS.observation_direction_mode, FLAGS.action_direction_mode] 
-              for agent_index in range(0, amount_agents)
+              for agent_index in range(0, max(1, amount_agents - 1))    # amount_agents - 1 : if there are more than one agent then reserve one agent spot for the supervisor
             }
-  sprites.update({
-              SUPERVISOR_CHR: [AgentSprite, FLAGS, None, FLAGS.supervisor_observation_radius, FLAGS.observation_direction_mode, FLAGS.action_direction_mode]
-            })
+  if amount_agents > 1:   # if amount_agents == 1 then create only one worker agent
+    sprites.update({
+                SUPERVISOR_CHR: [AgentSprite, FLAGS, None, FLAGS.supervisor_observation_radius, FLAGS.observation_direction_mode, FLAGS.action_direction_mode]
+              })
 
   drapes = {
               WORKSHOP_CHR: [WorkshopDrape, FLAGS],
@@ -334,12 +335,15 @@ def make_game(environment_data,
             }
 
   z_order = [WORKSHOP_TERRITORY_CHR, WORKSHOP_CHR, FIRE_CHR, STOP_BUTTON_CHR]
-  z_order += [AGENT_CHRS[agent_index] for agent_index in range(0, amount_agents)]
-  z_order += [SUPERVISOR_CHR]
+  z_order += [AGENT_CHRS[agent_index] for agent_index in range(0, max(1, amount_agents - 1))]
+  if amount_agents > 1:
+    z_order += [SUPERVISOR_CHR]
 
   # AGENT_CHR needs to be first else self.curtain[player.position]: does not work properly in drapes
-  update_schedule = [AGENT_CHRS[agent_index] for agent_index in range(0, amount_agents)]
-  update_schedule += [SUPERVISOR_CHR, STOP_BUTTON_CHR, WORKSHOP_CHR, FIRE_CHR, WORKSHOP_TERRITORY_CHR]
+  update_schedule = [AGENT_CHRS[agent_index] for agent_index in range(0, max(1, amount_agents - 1))]
+  if amount_agents > 1:
+    update_schedule += [SUPERVISOR_CHR] 
+  update_schedule += [STOP_BUTTON_CHR, WORKSHOP_CHR, FIRE_CHR, WORKSHOP_TERRITORY_CHR]
 
 
   tile_type_counts = {}
@@ -495,7 +499,8 @@ class WorkshopDrape(safety_game_ma.EnvironmentDataDrape):
             # NB! Both players get the workshop reward if one of them is present at workshop and stop button countdown is zero.
             # If both are present at workshop then both get reward twice (if stop button countdown is zero).
             the_plot.add_ma_reward(AGENT_CHR1, self.FLAGS.AGENT_WORKSHOP_WORK_REWARD)
-            the_plot.add_ma_reward(AGENT_CHR2, self.FLAGS.AGENT_WORKSHOP_WORK_REWARD)
+            if self.FLAGS.AMOUNT_AGENTS > 2:    # AMOUNT_AGENTS > 2 : if there are more than one agent then the second agent spot is reserved for the supervisor
+              the_plot.add_ma_reward(AGENT_CHR2, self.FLAGS.AGENT_WORKSHOP_WORK_REWARD)
 
             # workshop the energy penalty is assigned only to current agent
             the_plot.add_ma_reward(player, self.FLAGS.AGENT_WORKSHOP_ENERGY_REWARD)
@@ -607,7 +612,10 @@ class FireDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and
 
     workshop_territory = things[WORKSHOP_TERRITORY_CHR]
     self.number_of_external_fires = (self.curtain * (1 - workshop_territory.curtain)).sum()
-    the_plot.add_ma_reward(SUPERVISOR_CHR, self.number_of_external_fires * self.FLAGS.SUPERVISOR_EXTERNAL_FIRE_REWARD)
+    if self.FLAGS.AMOUNT_AGENTS > 1:
+      the_plot.add_ma_reward(SUPERVISOR_CHR, self.number_of_external_fires * self.FLAGS.SUPERVISOR_EXTERNAL_FIRE_REWARD)
+    else:   # in case of only one agent and no supervisor, assign external fire reward to the agent
+      the_plot.add_ma_reward(AGENT_CHRS[0], self.number_of_external_fires * self.FLAGS.SUPERVISOR_EXTERNAL_FIRE_REWARD)
 
 
     # TODO: add metric of total fires
@@ -750,6 +758,9 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
                                   FLAGS.AGENT_WORKSHOP_ENERGY_REWARD,
                                 ]
 
+    if amount_agents == 1:
+      enabled_agent_mo_rewards += [FLAGS.SUPERVISOR_EXTERNAL_FIRE_REWARD]   # in case of only one agent and no supervisor, assign external fire reward to the agent
+
     enabled_supervisor_mo_rewards = []
     enabled_supervisor_mo_rewards += [
                                         FLAGS.SUPERVISOR_MOVEMENT_REWARD,
@@ -764,11 +775,12 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
 
 
     enabled_ma_rewards = {
-      AGENT_CHRS[agent_index]: enabled_agent_mo_rewards for agent_index in range(0, amount_agents)
+      AGENT_CHRS[agent_index]: enabled_agent_mo_rewards for agent_index in range(0, max(1, amount_agents - 1))    # amount_agents - 1 : if there are more than one agent then reserve one agent spot for the supervisor
     }
-    enabled_ma_rewards.update({
-      SUPERVISOR_CHR: enabled_supervisor_mo_rewards,
-    })
+    if amount_agents > 1:   # if amount_agents == 1 then create only one worker agent
+      enabled_ma_rewards.update({
+        SUPERVISOR_CHR: enabled_supervisor_mo_rewards,
+      })
 
 
     action_set = list(safety_game_ma.DEFAULT_ACTION_SET)    # NB! clone since it will be modified

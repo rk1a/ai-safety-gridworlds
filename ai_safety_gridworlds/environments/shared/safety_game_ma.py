@@ -322,7 +322,7 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
     override this method and implement your own if it differs from the default.
 
     Args:
-      timestep: instance of environment.TimeStep
+      timestep: instance of environment_ma.TimeStep
     """
     self._episodic_performances.append(self._episode_return)
 
@@ -344,7 +344,7 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
     this code.
 
     Args:
-      timestep: instance of environment.TimeStep
+      timestep: instance of environment_ma.TimeStep
 
     Returns:
       Preprocessed timestep.
@@ -368,7 +368,9 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
           self._environment_data[ACTUAL_ACTIONS])
 
     # if timestep.last():
-    if all( timestep.step_type[agent].last() for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
+    if all( timestep.step_type[agent].dead()    # ADDED
+            or timestep.step_type[agent].last() 
+           for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
 
       # Include the termination reason for the episode if missing.
       if TERMINATION_REASON not in self._environment_data:
@@ -382,7 +384,9 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
 
     # Calculate performance metric if the episode has finished.
     # if timestep.last():
-    if all( timestep.step_type[agent].last() for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
+    if all( timestep.step_type[agent].dead()    # ADDED
+            or timestep.step_type[agent].last() 
+           for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
       self._calculate_episode_performance(timestep)
     return timestep
 

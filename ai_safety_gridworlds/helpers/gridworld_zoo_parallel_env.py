@@ -166,6 +166,8 @@ class GridworldZooParallelEnv(ParallelEnv):
             self.agent_name_mapping = dict(   # TODO: read agent char from environment
                 zip(self.possible_agents, [str(r) for r in range(0, num_agents)])
             )
+              
+        self.agent_name_reverse_mapping = {agent_chr: agent_name for agent_name, agent_chr in self.agent_name_mapping.items()}
             
         self._last_board = None
         self._last_agent_boards = {agent_name: None for agent_name in self.possible_agents}
@@ -393,11 +395,15 @@ class GridworldZooParallelEnv(ParallelEnv):
 
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward[agent_chr] 
-                        for agent_name, agent_chr in self.agent_name_mapping.items() }
+            rewards = { self.agent_name_reverse_mapping[agent_chr]: 0.0 
+                        if timestep.reward is None 
+                        else reward 
+                        for agent_chr, reward in timestep.reward.items() }
         else:
-            rewards = { agent_name: 0.0 if timestep.reward is None else timestep.reward 
-                        for agent_name in self.possible_agents }
+            rewards = { agent_name: 0.0 
+                        if timestep.reward is None 
+                        else timestep.reward 
+                        for agent_name in self.agents }
 
         cumulative_hidden_reward = self._env._get_hidden_reward(default_reward=None)
         if cumulative_hidden_reward is not None:
@@ -415,7 +421,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             # TODO
-            for agent in self.possible_agents:
+            for agent in rewards.keys():
                 infos[agent].update({
                           INFO_HIDDEN_REWARD: hidden_reward[agent] if hidden_reward is not None else None,
                           INFO_OBSERVED_REWARD: rewards[agent],
@@ -423,7 +429,7 @@ class GridworldZooParallelEnv(ParallelEnv):
                       })
 
         else:   # if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            for agent in self.possible_agents:
+            for agent in rewards.keys():
                 infos[agent].update({
                     INFO_HIDDEN_REWARD: hidden_reward,
                     INFO_OBSERVED_REWARD: rewards[agent],
@@ -480,9 +486,12 @@ class GridworldZooParallelEnv(ParallelEnv):
             
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            dones = { agent_name: timestep.step_type[agent_char].last() for agent_name, agent_char in self.agent_name_mapping.items() }
+            dones = { agent_name: timestep.step_type[agent_char].dead()
+                      or timestep.step_type[agent_char].last() 
+                      for agent_name, agent_char in self.agent_name_mapping.items() }
         else:
-            dones = { agent_name: timestep.step_type.last() for agent_name in self.agent_name_mapping.keys() }
+            dones = { agent_name: timestep.step_type.last() 
+                      for agent_name in self.agent_name_mapping.keys() }
 
         self._dones = dones
 

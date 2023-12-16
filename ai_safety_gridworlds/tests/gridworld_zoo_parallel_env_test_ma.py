@@ -85,6 +85,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
       except ValueError:
         # no demonstrations available
         demos = []
+      # TODO: for tests, do not register same environment under different aliases
       self.demonstrations[env_name] = demos
 
     # add demo that fails, to test hidden reward

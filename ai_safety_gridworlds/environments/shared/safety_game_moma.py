@@ -34,7 +34,7 @@ from absl import flags
 
 # Dependency imports
 from ai_safety_gridworlds.environments.shared.rl import array_spec as specs
-from ai_safety_gridworlds.environments.shared.rl import environment
+from ai_safety_gridworlds.environments.shared.rl import environment_ma
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_LAYERS
 from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
@@ -626,8 +626,8 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
 
     # self._state == None means that the parent class is calling reset() for the purpose of computing observation spec and the current class has not completed its constructor yet, nor has the agent sprite constructed yet.
-    # self._state == environment.StepType.MID or self._state == environment.StepType.LAST means start_new_experiment is called at the end of previous experiment. Then do not create a new log file yet, just leave a flag that it is to be created next time. Still need to run rest of the reset code because various libraries might depend on the reset code being run fully once it is called.
-    # if self._state == environment.StepType.FIRST:   
+    # self._state == environment_ma.StepType.MID or self._state == environment_ma.StepType.LAST means start_new_experiment is called at the end of previous experiment. Then do not create a new log file yet, just leave a flag that it is to be created next time. Still need to run rest of the reset code because various libraries might depend on the reset code being run fully once it is called.
+    # if self._state == environment_ma.StepType.FIRST:   
     if self._state is not None and self._state != {} and all( self._state[agent].first() for agent in self._environment_data[AGENT_SPRITE].keys() ): # TODO: verify this logic
 
       # if prev_trial_no == -1:  # save all episodes and all trials to same file
@@ -735,7 +735,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         np.random.seed(int(seed) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
 
     else:
-      # if self._state is not None and self._state != environment.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
+      # if self._state is not None and self._state != environment_ma.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
       if self._state is not None and self._state != {} and any( not self._state[agent].first() for agent in self._environment_data[AGENT_SPRITE].keys() ): # TODO: verify this logic
 
         episode_no = getattr(self.__class__, "episode_no")
@@ -749,11 +749,11 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
     self._current_game._the_plot = PlotMa()    # ADDED: incoming ma_reward argument to add_reward() has to be treated as immutable else rewards across timesteps will be accumulated in per timestep accumulator
 
-    self._state = { agent: environment.StepType.FIRST for agent in self.environment_data[AGENT_SPRITE].keys() }
+    self._state = { agent: environment_ma.StepType.FIRST for agent in self.environment_data[AGENT_SPRITE].keys() }
     # Collect environment returns from starting the game and update state.
     observations, reward, discount = self._current_game.its_showtime()
     self._update_for_game_step(observations, reward, discount)
-    timestep = environment.TimeStep(
+    timestep = environment_ma.TimeStep(
         step_type=self._state,
         reward=None,
         discount=None,
@@ -1048,7 +1048,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     this code.
 
     Args:
-      timestep: instance of environment.TimeStep
+      timestep: instance of environment_ma.TimeStep
 
     Returns:
       Preprocessed timestep.
@@ -1056,7 +1056,8 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
     # Reset the cumulative episode reward.
     # if timestep.first():
-    if all( timestep.step_type[agent].first() for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
+    if all( timestep.step_type[agent].first() 
+            for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
       self._episode_return = ma_reward({})    # CHANGE: for multi-agent rewards
       self._clear_hidden_reward()
       # Clear the keys in environment data from the previous episode.
@@ -1073,7 +1074,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
           self._environment_data[ACTUAL_ACTIONS])
 
     # if timestep.last():
-    if all( timestep.step_type[agent].last() for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
+    if all( timestep.step_type[agent].dead()    # ADDED
+            or timestep.step_type[agent].last()
+           for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
 
       # Include the termination reason for the episode if missing.
       if TERMINATION_REASON not in self._environment_data:
@@ -1091,7 +1094,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
     # Calculate performance metric if the episode has finished.
     # if timestep.last():
-    if all( timestep.step_type[agent].last() for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
+    if all( timestep.step_type[agent].dead()        # ADDED
+            or timestep.step_type[agent].last() 
+           for agent in self.environment_data[AGENT_SPRITE].keys() ):  # TODO: refactor into separate method    # CHANGED
       self._calculate_episode_performance(timestep)
 
 
@@ -1145,6 +1150,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     reward = {}
     for agent_key, agent_reward_dims in reward_dims.items():
 
+      if timestep.step_type[agent_key].dead():        # ADDED
+        continue
+
       agent_scalar_reward = sum(agent_reward_dims)
       scalar_reward[agent_key] = agent_scalar_reward
 
@@ -1175,6 +1183,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     cumulative_mo_variance = {}
     average_mo_variance = {}
     for agent_key, agent_reward_dims in reward_dims.items():
+
+      if timestep.step_type[agent_key].dead():        # ADDED
+        continue
 
       agent_cumulative_reward_dims = cumulative_reward_dims[agent_key]
       agent_average_reward_dims = average_reward_dims[agent_key]
