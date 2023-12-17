@@ -38,6 +38,7 @@ INFO_OBSERVATION_DIRECTION = "observation_direction"
 INFO_ACTION_DIRECTION = "action_direction"
 INFO_LAYERS = "layers"
 TERMINATION_REASON = 'termination_reason'
+NP_RANDOM = 'np_random'   # ADDED
 
 
 class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.SafetyEnvironment as base class to avoid type check exceptions in safety_ui   # TODO: override only methods that need to be overridden
@@ -174,7 +175,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     # randomize the order the agent actions are carried out in order to resolve any tile collisions and resource availability collisions randomly
     if self._randomize_agent_actions_order and len(agents_actions) > 1:
       agents_actions = list(agents_actions.items())
-      np.random.shuffle(agents_actions)    # TODO: ensure that this can be controlled by seed
+      self.environment_data[NP_RANDOM].shuffle(agents_actions)    # TODO: ensure that this can be controlled by seed
       agents_actions = OrderedDict(agents_actions)
 
     for agent, action in agents_actions.items(): # ADDED 

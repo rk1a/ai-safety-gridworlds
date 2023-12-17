@@ -34,7 +34,7 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
-from ai_safety_gridworlds.environments.shared.safety_game_ma import Actions   # used as export
+from ai_safety_gridworlds.environments.shared.safety_game_ma import NP_RANDOM, Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 from ai_safety_gridworlds.environments.shared import safety_game_mo
 from ai_safety_gridworlds.environments.shared import safety_game_ma
@@ -116,6 +116,9 @@ class GridworldZooAecEnv(AECEnv):
                  
                  agents_stepping_order=None,  # stepping order is specified as a list of map characters
 
+                 np_random=None,
+                 seed=None,
+
                  *args, **kwargs
                 ):
 
@@ -124,7 +127,7 @@ class GridworldZooAecEnv(AECEnv):
         self._viewer = None
 
         try:
-            self._env = factory.get_environment_obj(env_name, *args, **kwargs)
+            self._env = factory.get_environment_obj(env_name, *args, np_random=np_random, seed=seed, **kwargs)
         except TypeError:   # .__init__() got an unexpected keyword argument 'scalarise'  # happens in tests when non-multiobjective environment is selected
             self._env = factory.get_environment_obj(env_name)
             # TODO: log warning
@@ -204,7 +207,13 @@ class GridworldZooAecEnv(AECEnv):
             self._given_agents_last_step_result = { agent: (state, 0.0, False, info) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
 
-        self._np_random = np.random
+        if np_random is not None:
+            self._np_random = np_random
+        else:
+            self._np_random = self._env.environment_data.get(NP_RANDOM)
+            if self._np_random is None:
+                self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+
         self._action_spaces = {  # TODO: make it readonly
             agent: GridworldsActionSpace(self, agent) for agent in self.possible_agents
         }  
@@ -749,10 +758,9 @@ class GridworldZooAecEnv(AECEnv):
     #    return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
-        # self._np_random, seed = seeding.np_random(seed)
-        # return [seed]
+        # TODO: seed global random generator only if the env is not multi-agent and not multi-objective
         np.random.seed(seed)
-        self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+        self._np_random.seed(seed)
 
     def render(self, mode="human"):
         """ Implements the gym render modes "rgb_array", "ansi" and "human".

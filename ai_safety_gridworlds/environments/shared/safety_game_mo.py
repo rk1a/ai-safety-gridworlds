@@ -65,6 +65,9 @@ AVERAGE_MO_VARIANCE = 'average_mo_variance'
 TILE_TYPES = 'tile_types'
 AGENT_SPRITE = 'agent_sprite'
 Z_ORDER = 'z_order'
+ASCII_ART = 'ascii_art'   # ADDED
+NP_RANDOM = 'np_random'   # ADDED
+SEED = 'seed'   # ADDED
 
 
 # timestamp, environment_name, episode_no, iteration_no, environment_flags, reward_unit_sizes, rewards, cumulative_rewards, metrics
@@ -166,6 +169,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
                trial_no=1,
                episode_no=None,
                disable_env_checker=None,  # The presence of that parameter just means the gym.make() method did not capture it. It happens when gym version < 24.
+               np_random=None, 
                seed=None,   # By default equals to trial_no.
                **kwargs):
     """Initialize a Python v2 environment for a pycolab game factory.
@@ -260,6 +264,15 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
       environment_data = {}
     self._environment_data = environment_data
 
+    if np_random is None:
+      if seed is not None:
+        np.random.seed(seed)
+        np_random = np.random.RandomState(seed)
+      else:
+        np_random = np.random.RandomState()   # NB! use a separate random state object even if seed is not available
+    self._environment_data[NP_RANDOM] = np_random
+    self._environment_data[SEED] = seed
+
     self._environment_data[METRICS_DICT] = dict()
     self._environment_data[METRICS_MATRIX] = np.empty([0, 2], object)
     self._environment_data[CUMULATIVE_REWARD] = np.array(mo_reward({}).tolist(self.enabled_mo_rewards))
@@ -326,10 +339,21 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     if prev_trial_no != trial_no: # if new trial is started then reset the episode_no counter
       setattr(self.__class__, "episode_no", 1)  # use static attribute so that the value survives re-construction of the environment
       # use a different random number sequence for each trial
-      # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same
-      if seed is None:
-        seed = trial_no
-      np.random.seed(int(seed) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
+      # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same regardless of steps taken during previous trial
+      new_seed = seed
+      if new_seed is None:
+        # seed = trial_no
+        original_seed = self._environment_data[SEED]
+        if original_seed is not None:
+          seeds = [original_seed, trial_no, 17122023]    # 17122023 is used to make the pairing more unique as compared to other potential pairings happening in user code for example
+          seeds_bytes = b''.join([x.to_bytes(4, byteorder='big') for x in seeds])
+          new_seed = zlib.crc32(seeds_bytes)
+        else:
+          new_seed = trial_no
+      else:
+        new_seed = int(new_seed) & 0xFFFFFFFF  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
+      np.random.seed(new_seed)
+      self._environment_data[NP_RANDOM].seed(new_seed)
     
     if episode_no is not None:
       setattr(self.__class__, "episode_no", episode_no)  # use static attribute so that the value survives re-construction of the environment
@@ -560,11 +584,22 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
 
         setattr(self.__class__, "episode_no", 1)
         # use a different random number sequence for each trial
-        # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same
+        # at the same time use deterministic seed numbers so that if the trials are re-run then the results are same regardless of steps taken during previous trial
         # TODO: seed random number generator for each trial AND episode?
-        if seed is None:
-          seed = trial_no
-        np.random.seed(int(seed) & 0xFFFFFFFF)  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
+        new_seed = seed
+        if new_seed is None:
+          # seed = trial_no
+          original_seed = self._environment_data[SEED]
+          if original_seed is not None:
+            seeds = [original_seed, trial_no, 17122023]    # 17122023 is used to make the pairing more unique as compared to other potential pairings happening in user code for example
+            seeds_bytes = b''.join([x.to_bytes(4, byteorder='big') for x in seeds])
+            new_seed = zlib.crc32(seeds_bytes)
+          else:
+            new_seed = trial_no
+        else:
+          new_seed = int(new_seed) & 0xFFFFFFFF  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
+        np.random.seed(new_seed)
+        self._environment_data[NP_RANDOM].seed(new_seed)
 
     else:
       if self._state is not None and self._state != environment.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
@@ -793,7 +828,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # CHANGE: mo_reward is not directly convertible to np.array or float
     reward_dims = self._calculate_overall_performance().tolist(self.enabled_mo_rewards)
     if self.scalarise:
-      return float(sum(reward_dims))
+      return np.float64(sum(reward_dims))
     else:
       return np.array([float(x) for x in reward_dims])
 
@@ -824,7 +859,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # CHANGE: mo_reward is not directly convertible to np.array or float
     reward_dims = self._episodic_performances[-1].tolist(self.enabled_mo_rewards)
     if self.scalarise:
-      return float(sum(reward_dims))
+      return np.float64(sum(reward_dims))
     else:
       return np.array([float(x) for x in reward_dims])
 
@@ -892,12 +927,12 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     scalar_average_reward = sum(average_reward_dims)
 
     if self.scalarise:
-      cumulative_reward = float(scalar_cumulative_reward)
+      cumulative_reward = np.float64(scalar_cumulative_reward)
     else:
       cumulative_reward = np.array([float(x) for x in cumulative_reward_dims])
 
     if self.scalarise:
-      average_reward = float(scalar_average_reward)
+      average_reward = np.float64(scalar_average_reward)
     else:
       average_reward = np.array([float(x) for x in average_reward_dims])
 
@@ -916,7 +951,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     if not do_not_replace_reward and timestep.reward is not None:   # timestep.reward is None after reset
 
       if self.scalarise:
-        reward = float(scalar_reward)
+        reward = np.float64(scalar_reward)    # Zoo API requires np.float64 reward
       else:
         reward = np.array([float(x) for x in reward_dims])
 

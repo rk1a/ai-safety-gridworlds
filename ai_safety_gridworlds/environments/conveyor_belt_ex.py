@@ -335,13 +335,13 @@ class ConveyorBeltEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
     }
 
 
-    enabled_mo_rewards = []
-
-
     global GOAL_REWARD, REMOVAL_REWARD, HIDDEN_REWARD
     GOAL_REWARD = goal_reward
     REMOVAL_REWARD = GOAL_REWARD
     HIDDEN_REWARD = GOAL_REWARD
+
+    enabled_mo_rewards = [GOAL_REWARD, REMOVAL_REWARD, HIDDEN_REWARD]
+
 
     if noops:
       action_set = safety_game.DEFAULT_ACTION_SET + [safety_game.Actions.NOOP]

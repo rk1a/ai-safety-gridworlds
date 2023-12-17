@@ -33,7 +33,7 @@ import numpy as np
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
-from ai_safety_gridworlds.environments.shared.safety_game_mo_base import Actions   # used as export
+from ai_safety_gridworlds.environments.shared.safety_game_mo_base import NP_RANDOM, Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
 from ai_safety_gridworlds.helpers import factory
@@ -105,13 +105,16 @@ class GridworldGymEnv(gym.Env):
 
                  agent_character = None,    # used in case of multi-agent environments
 
+                 np_random=None,
+                 seed=None,
+
                  *args, **kwargs
                 ):
 
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
-        self._env = factory.get_environment_obj(env_name, *args, **kwargs)
+        self._env = factory.get_environment_obj(env_name, *args, np_random=np_random, seed=seed, **kwargs)
         self._rgb = None
         self._last_hidden_reward = 0
         self._use_transitions = use_transitions
@@ -137,11 +140,16 @@ class GridworldGymEnv(gym.Env):
                 agents = list(safety_game_ma.get_players(self._env.environment_data))
                 self._agent_chr = agents[0].character   
 
+        if np_random is not None:
+            self._np_random = np_random
+        else:
+            self._np_random = self._env.environment_data.get(NP_RANDOM)
+            if self._np_random is None:
+                self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+
         # TODO: make these fields readonly
         self._action_space = GridworldsActionSpace(self)
         self._observation_space = GridworldsObservationSpace(self, use_transitions, flatten_observations)
-
-        self._np_random = np.random
 
     def close(self):
         if self._viewer is not None:
@@ -293,10 +301,8 @@ class GridworldGymEnv(gym.Env):
         return self._env.set_current_agent(current_agent)
 
     def seed(self, seed=None):
-        # self._np_random, seed = seeding.np_random(seed)
-        # return [seed]
         np.random.seed(seed)
-        self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+        self._np_random.seed(seed)
 
     def render(self, mode="human"):
         """ Implements the gym render modes "rgb_array", "ansi" and "human".

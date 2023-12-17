@@ -29,6 +29,7 @@ from pettingzoo.test.seed_test import parallel_seed_test
 from ai_safety_gridworlds.helpers import factory
 from ai_safety_gridworlds.demonstrations import demonstrations
 from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
+from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_mo
 from ai_safety_gridworlds.environments.shared.safety_game import Actions
 from ai_safety_gridworlds.helpers.gridworld_zoo_parallel_env import GridworldZooParallelEnv
 
@@ -67,35 +68,45 @@ def test_gridworlds_api_parallel(demos):
             "env_name": env_name,
             "ascii_observation_format": False,    # Zoo API tester cannot handle ascii observations
             "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
-            # "seed": seed,    # TODO
+            # "seed": seed,
         }
         env = GridworldZooParallelEnv(**env_params)
 
-        if not isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # run only multi-agent environments for time being
+        if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+          and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
             continue
 
         # sequential_env = parallel_to_aec(env)
         parallel_api_test(env, num_cycles=10)
 
 
-#def test_gridworlds_seed(demos):   # TODO
-#    for env_name in demos.keys():
-#        env_params = {
-#            "env_name": env_name,
-#            "ascii_observation_format": False,    # Zoo API tester cannot handle ascii observations
-#            "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
-#            "override_infos": True  # Zoo seed_test is unable to compare infos unless they have simple structure.
-#        }
-#        env = lambda: GridworldZooParallelEnv(**env_params)  # seed test requires lambda
+def test_gridworlds_seed(demos):
+    # seed = int(time.time()) & 0xFFFFFFFF
+    seed = 0
+    for env_name in demos.keys():
+        for index in range(0, 3):    # construct the environment multiple times with different seeds
+            
+            seed += 1
 
-#        if not isinstance(env()._env, pycolab_interface_ma.EnvironmentMa):   # run only multi-agent environments for time being
-#           continue
+            env_params = {
+                "env_name": env_name,
+                "ascii_observation_format": False,    # Zoo API tester cannot handle ascii observations
+                "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
+                "override_infos": True,  # Zoo seed_test is unable to compare infos unless they have simple structure.            
+                "seed": seed,     # NB! this seed is used only for environment map randomisation. Later the test calls .seed() method on the wrapper and this will determine the random action sampling and other random events during the game play.
+            }
+            env = lambda: GridworldZooParallelEnv(**env_params)  # seed test requires lambda
 
-#        try:
-#            parallel_seed_test(env, num_cycles=10)
-#        except TypeError:
-#            # for some reason the test env in Git does not recognise the num_cycles neither as named or positional argument
-#            parallel_seed_test(env)
+            env_instance = env()
+            if (not isinstance(env_instance._env, pycolab_interface_ma.EnvironmentMa) 
+              and not isinstance(env_instance._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
+                continue
+
+            try:
+                parallel_seed_test(env, num_cycles=10)
+            except TypeError:
+                # for some reason the test env in Git does not recognise the num_cycles neither as named or positional argument
+                parallel_seed_test(env)
 
 
 def test_gridworlds_step_result(demos):
@@ -107,7 +118,8 @@ def test_gridworlds_step_result(demos):
         }
         env = GridworldZooParallelEnv(**env_params)
 
-        if not isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # run only multi-agent environments for time being
+        if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+          and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
             continue
 
         num_agents = len(env.possible_agents)
@@ -140,7 +152,8 @@ def test_gridworlds_done_step(demos):
         }
         env = GridworldZooParallelEnv(**env_params)
 
-        if not isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # run only multi-agent environments for time being
+        if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+          and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
             continue
 
         assert len(env.possible_agents) == 1
@@ -170,7 +183,8 @@ def test_gridworlds_agents(demos):
         }
         env = GridworldZooParallelEnv(**env_params)
 
-        if not isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # run only multi-agent environments for time being
+        if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+          and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
             continue
 
         assert len(env.possible_agents) == env_params["amount_agents"]
@@ -190,7 +204,8 @@ def test_gridworlds_action_spaces(demos):
         }
         env = GridworldZooParallelEnv(**env_params)
 
-        if not isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # run only multi-agent environments for time being
+        if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+          and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
             continue
 
         for agent in env.possible_agents:
@@ -200,4 +215,4 @@ def test_gridworlds_action_spaces(demos):
 
 if __name__ == "__main__" and os.name == 'nt':  # detect debugging
     pytest.main([__file__])  # run tests only in this file
-    # test_gridworlds_api_parallel()
+    # test_gridworlds_step_result(demos1())

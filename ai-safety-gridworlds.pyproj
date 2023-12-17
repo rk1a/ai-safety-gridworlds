@@ -50,6 +50,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\environments\shared\plot_mo.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ai_safety_gridworlds\environments\shared\rl\environment_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\rl\pycolab_interface_ma.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\rl\pycolab_interface_mo.py" />
     <Compile Include="ai_safety_gridworlds\environments\shared\safety_game_ma.py" />
@@ -113,12 +114,15 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test_ma.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test_ma.py" />
+    <Compile Include="ai_safety_gridworlds\tests\island_navigation_ex_ma_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\island_navigation_ex_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\island_navigation_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\rocks_diamonds_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\safe_interruptibility_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\side_effects_sokoban_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_gym_env_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test2.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test2.py" />
     <Compile Include="ai_safety_gridworlds\tests\tomato_watering_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\whisky_gold_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\__init__.py" />

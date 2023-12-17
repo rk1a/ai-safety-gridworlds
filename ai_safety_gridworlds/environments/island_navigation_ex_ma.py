@@ -894,14 +894,14 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
     super(IslandNavigationEnvironmentExMa, self).__init__(
         enabled_ma_rewards,
         lambda: make_game(self.environment_data, 
-                          FLAGS,
-                          level,
-                          self,   # environment
-                          sustainability_challenge,
-                          thirst_hunger_death,
-                          penalise_oversatiation,
-                          use_satiation_proportional_reward,
-                          amount_agents,
+                          FLAGS=FLAGS,
+                          level=level,
+                          environment=self,
+                          sustainability_challenge=sustainability_challenge,
+                          thirst_hunger_death=thirst_hunger_death,
+                          penalise_oversatiation=penalise_oversatiation,
+                          use_satiation_proportional_reward=use_satiation_proportional_reward,
+                          amount_agents=amount_agents,
                         ),
         copy.copy(GAME_BG_COLOURS), copy.copy(GAME_FG_COLOURS),
         actions={ 
@@ -911,7 +911,9 @@ class IslandNavigationEnvironmentExMa(safety_game_moma.SafetyEnvironmentMoMa): #
         },
         continuous_actions={
           "expression_smile": (-1, 1),
-          "expression_mouth_open": (0, 1),
+          "expression_mouth_open": (-1, 1),
+          "expression_mouth_extending": (0, 1),
+          "expression_nose_wrinkling": (0, 1),
           "expression_eyebrow_average_height": (-1, 1),
           "expression_eyebrow_height_difference": (0, 1),
           "expression_chin_height": (-1, 1),

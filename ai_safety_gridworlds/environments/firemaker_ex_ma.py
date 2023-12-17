@@ -42,7 +42,7 @@ from ast import literal_eval
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
-from ai_safety_gridworlds.environments.shared.safety_game_moma import METRICS_MATRIX, METRICS_LABELS, METRICS_ROW_INDEXES
+from ai_safety_gridworlds.environments.shared.safety_game_moma import NP_RANDOM, METRICS_MATRIX, METRICS_LABELS, METRICS_ROW_INDEXES
 from ai_safety_gridworlds.environments.shared.safety_game_moma import LOG_TIMESTAMP, LOG_ENVIRONMENT, LOG_TRIAL, LOG_EPISODE, LOG_ITERATION, LOG_ARGUMENTS, LOG_REWARD_UNITS, LOG_REWARD, LOG_SCALAR_REWARD, LOG_CUMULATIVE_REWARD, LOG_AVERAGE_REWARD, LOG_SCALAR_CUMULATIVE_REWARD, LOG_SCALAR_AVERAGE_REWARD, LOG_GINI_INDEX, LOG_CUMULATIVE_GINI_INDEX, LOG_MO_VARIANCE, LOG_CUMULATIVE_MO_VARIANCE, LOG_AVERAGE_MO_VARIANCE, LOG_METRICS, LOG_QVALUES_PER_TILETYPE
 
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
@@ -601,13 +601,13 @@ class FireDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and
     (to_row_indices, to_col_indices) = np.where(cumulative_probabilities > 0)
     for to_row, to_col in zip(to_row_indices, to_col_indices):
       spread_probability = cumulative_probabilities[to_row, to_col]
-      self.curtain[to_row, to_col] = np.random.rand() < spread_probability
+      self.curtain[to_row, to_col] = self.environment_data[NP_RANDOM].rand() < spread_probability
     
 
     # self-extinguish some fires, but only after spreading is computed. Also, do not self-extinguish fires that were only just activated above
     for row, col in zip(from_row_indices, from_col_indices):
       if self.curtain[row, col]:  # verify that there is a fire going at this cell, in other words, this is not a workshop or stop button location
-        self.curtain[row, col] = np.random.rand() < self.FLAGS.FIRE_CONTINUATION_PROBABILITY 
+        self.curtain[row, col] = self.environment_data[NP_RANDOM].rand() < self.FLAGS.FIRE_CONTINUATION_PROBABILITY 
 
 
     workshop_territory = things[WORKSHOP_TERRITORY_CHR]
@@ -796,10 +796,10 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
     super(FiremakerExMa, self).__init__(
         enabled_ma_rewards,
         lambda: make_game(self.environment_data, 
-                          FLAGS,
-                          level,
-                          self,   # environment
-                          amount_agents,
+                          FLAGS=FLAGS,
+                          level=level,
+                          environment=self,
+                          amount_agents=amount_agents,
                         ),
         copy.copy(GAME_BG_COLOURS), copy.copy(GAME_FG_COLOURS),
         actions={ 
@@ -809,7 +809,9 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
         },
         continuous_actions={
           "expression_smile": (-1, 1),
-          "expression_mouth_open": (0, 1),
+          "expression_mouth_open": (-1, 1),
+          "expression_mouth_extending": (0, 1),
+          "expression_nose_wrinkling": (0, 1),
           "expression_eyebrow_average_height": (-1, 1),
           "expression_eyebrow_height_difference": (0, 1),
           "expression_chin_height": (-1, 1),

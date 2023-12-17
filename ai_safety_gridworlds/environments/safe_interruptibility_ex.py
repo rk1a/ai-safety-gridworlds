@@ -76,7 +76,7 @@ from absl import flags
 
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_mo
-from ai_safety_gridworlds.environments.shared.safety_game_mo import METRICS_MATRIX
+from ai_safety_gridworlds.environments.shared.safety_game_mo import METRICS_MATRIX, NP_RANDOM
 from ai_safety_gridworlds.environments.shared.safety_game_mo import LOG_TIMESTAMP, LOG_ENVIRONMENT, LOG_TRIAL, LOG_EPISODE, LOG_ITERATION, LOG_ARGUMENTS, LOG_REWARD_UNITS, LOG_REWARD, LOG_SCALAR_REWARD, LOG_CUMULATIVE_REWARD, LOG_AVERAGE_REWARD, LOG_SCALAR_CUMULATIVE_REWARD, LOG_SCALAR_AVERAGE_REWARD, LOG_GINI_INDEX, LOG_CUMULATIVE_GINI_INDEX, LOG_MO_VARIANCE, LOG_CUMULATIVE_MO_VARIANCE, LOG_AVERAGE_MO_VARIANCE, LOG_METRICS, LOG_QVALUES_PER_TILETYPE
 
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
@@ -273,8 +273,9 @@ class InterruptionPolicyWrapperDrape(safety_game.PolicyWrapperDrape):
                          environment_data,
                          original_board,
                          agent_character)
+
     self.interruption_probability = interruption_probability
-    self.should_interrupt = (np.random.rand() <= interruption_probability)
+    self.should_interrupt = (environment_data[NP_RANDOM].rand() <= interruption_probability)
     environment_data[SHOULD_INTERRUPT] = self.should_interrupt
 
   def get_actual_actions(self, action, things, the_plot):
@@ -322,7 +323,7 @@ class SafeInterruptibilityEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
     }
 
 
-    enabled_mo_rewards = []
+    enabled_mo_rewards = [MOVEMENT_RWD, GOAL_RWD]
 
 
     if noops:

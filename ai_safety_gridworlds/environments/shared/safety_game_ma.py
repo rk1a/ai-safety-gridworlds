@@ -121,6 +121,8 @@ CURSES = 'curses'
 TERMINATION_REASON = 'termination_reason'
 HIDDEN_REWARD = 'hidden_reward'
 ASCII_ART = 'ascii_art'   # ADDED
+NP_RANDOM = 'np_random'   # ADDED
+SEED = 'seed'   # ADDED
 
 # Constants for the observations dictionary to the agent.
 EXTRA_OBSERVATIONS = 'extra_observations'
@@ -1028,11 +1030,16 @@ def make_safety_game(
   ):
   """Create a pycolab game instance."""
 
+
   # Keep a still copy of the initial board as a numpy array
   original_board = np.array(list(map(list, the_ascii_art[:])))
 
 
   # START OF ADDED
+
+  np_random = environment_data[NP_RANDOM]
+  seed = environment_data[SEED]
+
 
   if not tile_type_counts or not (map_randomization_frequency >= 1):
     enable_randomize = False
@@ -1050,12 +1057,13 @@ def make_safety_game(
     tile_type_counts_key = list(tile_type_counts.items())
     tile_type_counts_key.sort()
 
+    # NB! if np_random argument is provided then that is not considered here for randomization_key calculation
     if map_randomization_frequency == 1:    # 1 - once per experiment run
-      randomization_key = environment_class + "|" + str(tile_type_counts_key)
+      randomization_key = environment_class + "|" + str(seed) + "|" + str(tile_type_counts_key)
     elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance)
-      randomization_key = environment_class + "|" + str(trial_no) + "|" + str(tile_type_counts_key)
+      randomization_key = environment_class + "|" + str(seed) + "|" + str(trial_no) + "|" + str(tile_type_counts_key)
     elif map_randomization_frequency == 3:  # 3 - once per training episode
-      randomization_key = environment_class + "|" + str(trial_no) + "|" + str(episode_no) + "|" + str(tile_type_counts_key)
+      randomization_key = environment_class + "|" + str(seed) + "|" + str(trial_no) + "|" + str(episode_no) + "|" + str(tile_type_counts_key)
     else:
       raise ValueError("map_randomization_frequency")
 
@@ -1076,7 +1084,7 @@ def make_safety_game(
       num_locations = len(tile_type_locations)
       num_items_to_remove = max(0, num_locations - tile_max_count)
       # replace - Whether the sample is with or without replacement. Default is True, meaning that a value of a can be selected multiple times.
-      indexes_to_remove = np.random.choice(num_locations, size=num_items_to_remove, replace=False)
+      indexes_to_remove = np_random.choice(num_locations, size=num_items_to_remove, replace=False)
       # locations_to_remove = (tile_type_locations[0][indexes_to_remove], tile_type_locations[1][indexes_to_remove])
       locations_to_remove = tile_type_locations[indexes_to_remove]
       row_coordinates = locations_to_remove[:, 0]
@@ -1107,7 +1115,7 @@ def make_safety_game(
 
     shape = submap.shape
     submap = submap.reshape(shape[0] * shape[1])  # need to convert to vector form since np.random.shuffle shuffles only one dimension at a time
-    np.random.shuffle(submap)
+    np_random.shuffle(submap)
     submap = submap.reshape(shape)
 
     if preserve_map_edges_when_randomizing:
