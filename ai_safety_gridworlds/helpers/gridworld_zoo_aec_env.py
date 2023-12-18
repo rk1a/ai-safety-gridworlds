@@ -183,14 +183,14 @@ class GridworldZooAecEnv(AECEnv):
               
         self.agent_name_reverse_mapping = {agent_chr: agent_name for agent_name, agent_chr in self.agent_name_mapping.items()}
 
-        self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
+        self._last_hidden_reward = { agent: 0.0 for agent in self.possible_agents }
 
         self._agents = list(self.possible_agents)
         self._next_agent = self.possible_agents[0]
         self._next_agent_index = 0
         self._all_agents_done = False
 
-        state = None    # TODO?
+        state = None
         info = None
 
         self._rewards = { agent: None for agent in self.possible_agents }  # TODO: make it readonly for callers
@@ -210,6 +210,8 @@ class GridworldZooAecEnv(AECEnv):
         if np_random is not None:
             self._np_random = np_random
         else:
+            if seed is not None:
+                np.random.seed(seed)
             self._np_random = self._env.environment_data.get(NP_RANDOM)
             if self._np_random is None:
                 self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
@@ -739,6 +741,7 @@ class GridworldZooAecEnv(AECEnv):
 
 
     def get_reward_unit_space(self):                    # ADDED
+        # TODO: use agent-specific reward unit space?
         return self._env.get_reward_unit_space()
 
     def get_trial_no(self):                             # ADDED
@@ -759,6 +762,7 @@ class GridworldZooAecEnv(AECEnv):
 
     def seed(self, seed=None):
         # TODO: seed global random generator only if the env is not multi-agent and not multi-objective
+        # TODO: update environment's environment_data["seed"] entry as well?
         np.random.seed(seed)
         self._np_random.seed(seed)
 

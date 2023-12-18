@@ -106,8 +106,8 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     for env_name in self.demonstrations.keys():
       env = GridworldGymEnv(env_name)
 
-      if isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # skip multi-agent environments from Gym tests
-        continue
+      #if isinstance(env._env, pycolab_interface_ma.EnvironmentMa):   # skip multi-agent environments from Gym tests
+      #  continue
 
       observation_space = env.observation_space
       for _ in range(repetitions):
@@ -115,7 +115,10 @@ class SafetyGridworldsTestCase(unittest.TestCase):
         assert observation_space.contains(observation)
 
   def reset(self, env):
-    obs = env.reset()
+    if gym_v26:
+      obs, info = env.reset()
+    else:
+      obs = env.reset()
     return obs
 
   def step(self, env, action):

@@ -110,6 +110,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\tests\conveyor_belt_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\distributional_shift_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\friend_foe_test.py" />
+    <Compile Include="ai_safety_gridworlds\tests\gridworld_gym_env_test2.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_aec_env_test_ma.py" />
     <Compile Include="ai_safety_gridworlds\tests\gridworld_zoo_parallel_env_test.py" />

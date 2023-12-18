@@ -8,3 +8,8 @@ __pycache__/
 *.log
 /logs
 .DS_Store
+
+# locally editable requirements
+/pettingzoo
+/gymnasium
+/gym

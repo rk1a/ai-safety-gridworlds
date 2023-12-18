@@ -272,9 +272,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     if np_random is None:
       if seed is not None:
         np.random.seed(seed)
-        np_random = np.random.RandomState(seed)
-      else:
-        np_random = np.random.RandomState()   # NB! use a separate random state object even if seed is not available
+      np_random = np.random.RandomState(seed) # NB! use a separate random state object even if seed is None
     self._environment_data[NP_RANDOM] = np_random
     self._environment_data[SEED] = seed
 

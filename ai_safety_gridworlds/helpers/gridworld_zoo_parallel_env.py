@@ -178,11 +178,13 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._agent_states = {agent_name: None for agent_name in self.possible_agents} 
         self._dones = {agent_name: False for agent_name in self.possible_agents} 
 
-        self._last_hidden_reward = { agent: 0 for agent in self.possible_agents }
+        self._last_hidden_reward = { agent: 0.0 for agent in self.possible_agents }
 
         if np_random is not None:
             self._np_random = np_random
         else:
+            if seed is not None:
+                np.random.seed(seed)
             self._np_random = self._env.environment_data.get(NP_RANDOM)
             if self._np_random is None:
                 self._np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
@@ -590,6 +592,7 @@ class GridworldZooParallelEnv(ParallelEnv):
         return obs, infos
 
     def get_reward_unit_space(self):                    # ADDED
+        # TODO: use agent-specific reward unit space?
         return self._env.get_reward_unit_space()
 
     def get_trial_no(self):                             # ADDED
@@ -610,6 +613,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
     def seed(self, seed=None):
         # TODO: seed global random generator only if the env is not multi-agent and not multi-objective
+        # TODO: update environment's environment_data["seed"] entry as well?
         np.random.seed(seed)
         self._np_random.seed(seed)
 
