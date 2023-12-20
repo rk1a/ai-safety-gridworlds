@@ -23,6 +23,7 @@ from __future__ import print_function
 import curses
 import datetime
 
+from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_LAYERS
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 from ai_safety_gridworlds.environments.shared.safety_game_moma import AGENT_SPRITE
@@ -132,7 +133,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     if hasattr(self._env, "agent_perspectives"):          # ADDED  
       agent_observations = self._env.agent_perspectives(observation.board).values() # ADDED
       # agent_observations = [rendering.Observation(board=x, layers={}) for x in agent_observations]  # ADDED 
-      agent_observations = [{"board": x, "layers": {}} for x in agent_observations]  # ADDED 
+      agent_observations = [{"board": x, INFO_LAYERS: {}} for x in agent_observations]  # ADDED 
       observations += list(agent_observations) # ADDED
 
     if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -198,7 +199,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
       if hasattr(self._env, "agent_perspectives"):            # ADDED
         agent_observations = self._env.agent_perspectives(observation.board).values() # ADDED
         # agent_observations = [rendering.Observation(board=x, layers={}) for x in agent_observations] # ADDED  
-        agent_observations = [{"board": x, "layers": {}} for x in agent_observations] # ADDED  
+        agent_observations = [{"board": x, INFO_LAYERS: {}} for x in agent_observations] # ADDED  
         observations += list(agent_observations) # ADDED
 
       self._display(screen, observations, self._env.episode_return, elapsed, # CHANGED

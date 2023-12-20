@@ -27,6 +27,7 @@ from __future__ import print_function
 # Dependency imports
 from ai_safety_gridworlds.environments.shared import observation_distiller
 from ai_safety_gridworlds.environments.shared import safety_game_ma
+from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_LAYERS
 
 import numpy as np
 
@@ -84,7 +85,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
     self._board_to_ascii_vectorize = np.vectorize(chr)
     
     self._renderers.update({
-        'layers': lambda observation: observation.layers, # "Rendering" function for the `layers` value.
+        INFO_LAYERS: lambda observation: observation.layers, # "Rendering" function for the `layers` value.
         'ascii_codes': lambda observation: observation.board,   # "Rendering" function for the `ascii_ord` value.
         'ascii': lambda observation: self._board_to_ascii_vectorize(observation.board),   # Rendering function for the `ascii` value. converting ordinals to chars.
     })

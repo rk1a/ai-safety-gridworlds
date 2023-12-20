@@ -429,7 +429,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         #  agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
 
         # agent_observation = rendering.Observation(board=None, layers=agent_layers_observation)
-        agent_observation = { "layers": agent_layers_observation }
+        agent_observation = { INFO_LAYERS: agent_layers_observation }
         if board:
           agent_observation["board"] = None
         if ascii:
@@ -450,7 +450,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         if include_layers:
           for layer_key in all_agents_layers_observations.keys():
             agent_layers_observation[layer_key] = all_agents_layers_observations[layer_key][agent.character]
-        agent_observation = { "layers": agent_layers_observation }
+        agent_observation = { INFO_LAYERS: agent_layers_observation }
 
         if board:
           agent_observation["board"] = agent_board_perspectives[agent.character]
@@ -475,7 +475,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       #    agent_board_observation = board_to_ascii_vectorize(agent_board_observation)   # NB! for computing agent perspectives, we needed numeric data format, so now we convert ascii_codes to ascii
 
       #  # agent_observation = rendering.Observation(board=agent_board_observation, layers=agent_layers_observation)
-      #  agent_observation = { "board": agent_board_observation, "layers": agent_layers_observation }
+      #  agent_observation = { "board": agent_board_observation, INFO_LAYERS: agent_layers_observation }
       #  result[agent_chr] = agent_observation
 
       ##/ for agent_chr, agent_observation in observation.items():
@@ -496,10 +496,10 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
       # NB! here we always use layers, in order to obtain current agent's coordinates. We need layers since the agent may be overlapped in the board view. 
       if not occlusion_in_layers:
-        layers = agent_observation["layers"]
+        layers = agent_observation[INFO_LAYERS]
         agent_coordinates = np.argwhere(layers[agent_chr]) if agent_chr in layers else None
       else:
-        layers = observation["layers"]
+        layers = observation[INFO_LAYERS]
         if agent_chr in layers:
           agent_layer = layers[agent_chr]
           # if the observe_from_agent_coordinates is set then the agent_layer already contains the agent at the overriden location
