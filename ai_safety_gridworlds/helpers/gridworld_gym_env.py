@@ -35,7 +35,7 @@ except:
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game_mo_base import NP_RANDOM, Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
-from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
+from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_LAYERS
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
 from ai_safety_gridworlds.environments.shared import safety_game_mo
@@ -379,8 +379,8 @@ class GridworldGymEnv(gym.Env):
         if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
             info[INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates
 
-        if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
-            info[INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]
+        if self._layers_in_observation and INFO_LAYERS in obs: # only multi-objective or multi-agent environments have layers in observation available
+            info[INFO_OBSERVATION_LAYERS_DICT] = obs[INFO_LAYERS]
 
         if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
             info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
@@ -389,7 +389,7 @@ class GridworldGymEnv(gym.Env):
             info[INFO_AGENT_OBSERVATIONS] = self._last_agent_observation["ascii" if self._ascii_observation_format else "board"]
 
             if self._layers_in_observation:
-                info[INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observation["layers"]
+                info[INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observation[INFO_LAYERS]
 
             if self._object_coordinates_in_observation:
                 info[INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observation_coordinates
@@ -399,7 +399,7 @@ class GridworldGymEnv(gym.Env):
 
 
         for k, v in obs.items():
-            if k not in ("RGB", "layers"):
+            if k not in ("RGB", INFO_LAYERS):
                 info[k] = v
 
 

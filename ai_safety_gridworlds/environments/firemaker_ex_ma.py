@@ -113,6 +113,8 @@ AGENT_CHRS = [  # TODO import defaults from safety_game_ma
   AGENT_CHR2,
 ]
 
+AGENT_CHRS_WITH_SUPERVISOR = [SUPERVISOR_CHR] + AGENT_CHRS
+
 
 METRICS_LABELS_TEMPLATE = [   # NB! using _TEMPLATE name since the active METRICS_LABELS will depend on the map of the chosen level
   "ExternalVisits_1",    # 
@@ -225,6 +227,8 @@ def define_flags():
   flags.DEFINE_boolean('remove_unused_tile_types_from_layers', DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS,
                        'Whether to remove tile types not present on initial map from observation layers.')
 
+  flags.DEFINE_integer('amount_agents', DEFAULT_AMOUNT_AGENTS, 'Amount of worker agents, not including the supervisor.')
+
 
   flags.DEFINE_string('AGENT_MOVEMENT_REWARD', str(AGENT_MOVEMENT_REWARD), "")
   flags.DEFINE_string('AGENT_WORKSHOP_WORK_REWARD', str(AGENT_WORKSHOP_WORK_REWARD), "")       
@@ -241,9 +245,6 @@ def define_flags():
   flags.DEFINE_float('FIRE_CONTINUATION_PROBABILITY', FIRE_CONTINUATION_PROBABILITY, "")
   flags.DEFINE_float('FIRE_SPREAD_PROBABILITY_AT_DISTANCE_ONE', FIRE_SPREAD_PROBABILITY_AT_DISTANCE_ONE, "")
   flags.DEFINE_float('FIRE_SPREAD_EXCLUSIVE_MAX_DISTANCE', FIRE_SPREAD_EXCLUSIVE_MAX_DISTANCE, "")
-
-
-  flags.DEFINE_integer('AMOUNT_AGENTS', DEFAULT_AMOUNT_AGENTS, 'Amount of worker agents, not including the supervisor.')
 
   
   FLAGS = flags.FLAGS
@@ -293,7 +294,7 @@ def make_game(environment_data,
 
 
   for agent_index in range(0, amount_agents):
-    environment_data['safety_' + AGENT_CHRS[agent_index]] = 3   # used for tests
+    environment_data['safety_' + AGENT_CHRS_WITH_SUPERVISOR[agent_index]] = 3   # used for tests
 
 
   metrics_labels = list(METRICS_LABELS_TEMPLATE)   # NB! need to clone since this constructor is going to be called multiple times
@@ -350,7 +351,7 @@ def make_game(environment_data,
 
   # removing extra agents from the map
   # TODO: implement a way to optionally randomize the agent locations as well and move agent amount setting / extra agent disablement code to the make_safety_game method
-  for agent_character in AGENT_CHRS[amount_agents:]:
+  for agent_character in AGENT_CHRS[max(1, amount_agents - 1) : ]:
     tile_type_counts[agent_character] = 0
 
 
@@ -499,7 +500,7 @@ class WorkshopDrape(safety_game_ma.EnvironmentDataDrape):
             # NB! Both players get the workshop reward if one of them is present at workshop and stop button countdown is zero.
             # If both are present at workshop then both get reward twice (if stop button countdown is zero).
             the_plot.add_ma_reward(AGENT_CHR1, self.FLAGS.AGENT_WORKSHOP_WORK_REWARD)
-            if self.FLAGS.AMOUNT_AGENTS > 2:    # AMOUNT_AGENTS > 2 : if there are more than one agent then the second agent spot is reserved for the supervisor
+            if self.FLAGS.amount_agents > 2:    # AMOUNT_AGENTS > 2 : if there are more than one agent then the second agent spot is reserved for the supervisor
               the_plot.add_ma_reward(AGENT_CHR2, self.FLAGS.AGENT_WORKSHOP_WORK_REWARD)
 
             # workshop the energy penalty is assigned only to current agent
@@ -612,7 +613,7 @@ class FireDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and
 
     workshop_territory = things[WORKSHOP_TERRITORY_CHR]
     self.number_of_external_fires = (self.curtain * (1 - workshop_territory.curtain)).sum()
-    if self.FLAGS.AMOUNT_AGENTS > 1:
+    if self.FLAGS.amount_agents > 1:
       the_plot.add_ma_reward(SUPERVISOR_CHR, self.number_of_external_fires * self.FLAGS.SUPERVISOR_EXTERNAL_FIRE_REWARD)
     else:   # in case of only one agent and no supervisor, assign external fire reward to the agent
       the_plot.add_ma_reward(AGENT_CHRS[0], self.number_of_external_fires * self.FLAGS.SUPERVISOR_EXTERNAL_FIRE_REWARD)
@@ -747,7 +748,7 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
       EXTERNAL_TERRITORY_CHR: 6.0,
     }
     value_mapping.update({
-      AGENT_CHRS[agent_index]: float(len(value_mapping) + agent_index) for agent_index in range(0, amount_agents)
+      AGENT_CHRS[agent_index]: float(len(value_mapping) + agent_index) for agent_index in range(0, max(1, amount_agents - 1))
     })
 
 
@@ -862,7 +863,7 @@ def main(unused_argv):
     level=FLAGS.level, 
     max_iterations=FLAGS.max_iterations, 
     noops=FLAGS.noops,
-    amount_agents=FLAGS.AMOUNT_AGENTS,
+    amount_agents=FLAGS.amount_agents,
   )
 
   enable_turning_keys = FLAGS.observation_direction_mode == 2 or FLAGS.action_direction_mode == 2

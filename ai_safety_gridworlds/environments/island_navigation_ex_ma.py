@@ -305,6 +305,8 @@ def define_flags():
   flags.DEFINE_boolean('remove_unused_tile_types_from_layers', DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS,
                        'Whether to remove tile types not present on initial map from observation layers.')
 
+  flags.DEFINE_integer('amount_agents', DEFAULT_AMOUNT_AGENTS, 'Amount of agents.')
+
 
   flags.DEFINE_string('MOVEMENT_REWARD', str(MOVEMENT_REWARD), "")
   flags.DEFINE_string('FINAL_REWARD', str(FINAL_REWARD), "")
@@ -346,9 +348,6 @@ def define_flags():
   flags.DEFINE_float('FOOD_REGROWTH_EXPONENT', FOOD_REGROWTH_EXPONENT, "")
   flags.DEFINE_float('FOOD_GROWTH_LIMIT', FOOD_GROWTH_LIMIT, "")
   flags.DEFINE_float('FOOD_AVAILABILITY_INITIAL', FOOD_AVAILABILITY_INITIAL, "")
-
-
-  flags.DEFINE_integer('AMOUNT_AGENTS', DEFAULT_AMOUNT_AGENTS, 'Amount of agents.')
 
   
   FLAGS = flags.FLAGS
@@ -980,7 +979,7 @@ def main(unused_argv):
     thirst_hunger_death=FLAGS.thirst_hunger_death,
     penalise_oversatiation=FLAGS.penalise_oversatiation,
     use_satiation_proportional_reward=FLAGS.use_satiation_proportional_reward,
-    amount_agents=FLAGS.AMOUNT_AGENTS,
+    amount_agents=FLAGS.amount_agents,
   )
 
   enable_turning_keys = FLAGS.observation_direction_mode == 2 or FLAGS.action_direction_mode == 2

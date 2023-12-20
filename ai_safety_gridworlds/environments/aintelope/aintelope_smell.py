@@ -242,6 +242,8 @@ def define_flags():
   flags.DEFINE_boolean('remove_unused_tile_types_from_layers', DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS,
                        'Whether to remove tile types not present on initial map from observation layers.')
 
+  flags.DEFINE_integer('amount_agents', DEFAULT_AMOUNT_AGENTS, 'Amount of agents.')
+
 
   flags.DEFINE_string('MOVEMENT_REWARD', str(MOVEMENT_REWARD), "")
   flags.DEFINE_string('FINAL_REWARD', str(FINAL_REWARD), "")
@@ -285,9 +287,9 @@ def define_flags():
   flags.DEFINE_float('FOOD_AVAILABILITY_INITIAL', FOOD_AVAILABILITY_INITIAL, "")
 
 
-  flags.DEFINE_integer('AMOUNT_FOOD_PATCHES', DEFAULT_AMOUNT_FOOD_PATCHES, 'Amount of food patches.')
-  flags.DEFINE_integer('AMOUNT_DRINK_HOLES', DEFAULT_AMOUNT_DRINK_HOLES, 'Amount of drink holes.')
-  flags.DEFINE_integer('AMOUNT_AGENTS', DEFAULT_AMOUNT_AGENTS, 'Amount of agents.')
+  # NB! the casing of flags needs to be same as arguments of the environments constructor, in case the same arguments are declared for the constructor
+  flags.DEFINE_integer('amount_food_patches', DEFAULT_AMOUNT_FOOD_PATCHES, 'Amount of food patches.')
+  flags.DEFINE_integer('amount_drink_holes', DEFAULT_AMOUNT_DRINK_HOLES, 'Amount of drink holes.')
 
   
   FLAGS = flags.FLAGS
@@ -930,9 +932,9 @@ def main(unused_argv):
     thirst_hunger_death=FLAGS.thirst_hunger_death,
     penalise_oversatiation=FLAGS.penalise_oversatiation,
     use_satiation_proportional_reward=FLAGS.use_satiation_proportional_reward,
-    amount_food_patches=FLAGS.AMOUNT_FOOD_PATCHES,
-    amount_drink_holes=FLAGS.AMOUNT_DRINK_HOLES,
-    amount_agents=FLAGS.AMOUNT_AGENTS,
+    amount_food_patches=FLAGS.amount_food_patches,
+    amount_drink_holes=FLAGS.amount_drink_holes,
+    amount_agents=FLAGS.amount_agents,
   )
 
   enable_turning_keys = FLAGS.observation_direction_mode == 2 or FLAGS.action_direction_mode == 2

@@ -35,7 +35,7 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game_ma import NP_RANDOM, Actions   # used as export
-from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION
+from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_LAYERS
 from ai_safety_gridworlds.environments.shared import safety_game_mo
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
@@ -291,9 +291,9 @@ class GridworldZooParallelEnv(ParallelEnv):
                 for agent in self.possible_agents:
                     infos[agent][INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates   # shared global observation must be returned via agent keys
 
-            if self._layers_in_observation and "layers" in obs: # only multi-objective or multi-agent environments have layers in observation available
+            if self._layers_in_observation and INFO_LAYERS in obs: # only multi-objective or multi-agent environments have layers in observation available
                 for agent in self.possible_agents:
-                    infos[agent][INFO_OBSERVATION_LAYERS_DICT] = obs["layers"]   # shared global observation must be returned via agent keys
+                    infos[agent][INFO_OBSERVATION_LAYERS_DICT] = obs[INFO_LAYERS]   # shared global observation must be returned via agent keys
 
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
                 for agent in self.possible_agents:
@@ -304,7 +304,7 @@ class GridworldZooParallelEnv(ParallelEnv):
                     infos[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent]["ascii" if self._ascii_observation_format else "board"]
 
                     if self._layers_in_observation:
-                        infos[agent][INFO_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent]["layers"]
+                        infos[agent][INFO_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent][INFO_LAYERS]
 
                     if self._object_coordinates_in_observation:
                         infos[agent][INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[agent]
@@ -334,7 +334,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
 
         for k, v in obs.items():
-            if k not in ("RGB", "layers"):
+            if k not in ("RGB", INFO_LAYERS):
                 for agent in self.possible_agents:
                     infos[agent][k] = v   # shared global observation must be returned via agent keys
 
@@ -490,6 +490,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
             if not self._use_transitions: # in case of self._use_transitions == True the deep copy is made already above during calculation of state
                 state = copy.deepcopy(state)
+
             for agent in self.possible_agents:
                 self._agent_states[agent] = state
 
@@ -579,6 +580,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
             if not self._use_transitions: # in case of self._use_transitions == True the deep copy is made already above during calculation of state
                 state = copy.deepcopy(state)
+
             for agent in self.possible_agents:
                 self._agent_states[agent] = state
 
@@ -774,17 +776,19 @@ class GridworldsObservationSpace(gym.Space):
                             observation[key][subkey] = subkey_spec.generate_value()
                 else:
                     observation[key] = spec.generate_value()
-        result = observation["board"][np.newaxis, :]    # TODO: add object coordinates and agent perspectives?
+        # TODO: support for "ascii" observation sampling
+        result = observation["ascii" if self._env._ascii_observation_format else "board"][np.newaxis, :]    # TODO: add object coordinates and agent perspectives?
         if self.flatten_observations:
             result = result.flatten()
         return result
 
     def contains(self, x):
-        if "board" in self.observation_spec_dict.keys():
+        dict_key = "ascii" if self._env._ascii_observation_format else "board"
+        if dict_key in self.observation_spec_dict.keys():
             try:
-                self.observation_spec_dict["board"].validate(x[0, ...])
+                self.observation_spec_dict[dict_key].validate(x[0, ...])
                 if self.use_transitions:
-                    self.observation_spec_dict["board"].validate(x[1, ...])
+                    self.observation_spec_dict[dict_key].validate(x[1, ...])
                 return True
             except ValueError:
                 return False

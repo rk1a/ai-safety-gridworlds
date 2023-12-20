@@ -162,7 +162,7 @@ class SafetyGridworldsTestCase(unittest.TestCase):
     self.assertFalse(np.all(global_obs1 == global_obs2))
 
     # ADDED
-    env = GridworldZooAecEnv("firemaker_ex_ma")
+    env = GridworldZooAecEnv("firemaker_ex_ma", amount_agents=3)  # NB! use three agents so that there are two worker agents. Else the supervisor agent is activated at the second step and the observation shape of supervisor agent would be incomparable to the worker agent of first step
     self.reset(env)
     obs0, _, _, _ = self.last(env)
     global_obs0 = env.state

@@ -66,7 +66,7 @@ def test_gridworlds_api_parallel(demos):
         # print(seed)
         env_params = {
             "env_name": env_name,
-            "ascii_observation_format": False,    # Zoo API tester cannot handle ascii observations
+            # "ascii_observation_format": False,    # Zoo API parallel_api_test CAN handle ascii observations (while sequential api_test cannot)
             "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
             # "seed": seed,
         }
@@ -90,7 +90,7 @@ def test_gridworlds_seed(demos):
 
             env_params = {
                 "env_name": env_name,
-                "ascii_observation_format": False,    # Zoo API tester cannot handle ascii observations
+                "ascii_observation_format": False,    # Zoo API parallel_seed_test cannot handle ascii observations
                 "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
                 "override_infos": True,  # Zoo seed_test is unable to compare infos unless they have simple structure.            
                 "seed": seed,     # NB! this seed is used only for environment map randomisation. Later the test calls .seed() method on the wrapper and this will determine the random action sampling and other random events during the game play.
