@@ -116,6 +116,8 @@ class GridworldZooParallelEnv(ParallelEnv):
 
                  np_random=None,
                  seed=None,
+                 test_death=False,
+                 test_death_probability=0.33,
 
                  *args, **kwargs
                 ):
@@ -123,6 +125,8 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
+        self._test_death = test_death
+        self._test_death_probability = test_death_probability
 
         try:
             self._env = factory.get_environment_obj(env_name, *args, np_random=np_random, seed=seed, **kwargs)
@@ -177,6 +181,7 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._state = None
         self._agent_states = {agent_name: None for agent_name in self.possible_agents} 
         self._dones = {agent_name: False for agent_name in self.possible_agents} 
+        self._test_deads = {agent_name: False for agent_name in self.possible_agents} 
 
         self._last_hidden_reward = { agent: 0.0 for agent in self.possible_agents }
 
@@ -284,23 +289,23 @@ class GridworldZooParallelEnv(ParallelEnv):
                           INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION, {}).get(self.agent_name_mapping[agent]),
                           INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION, {}).get(self.agent_name_mapping[agent]),
                       }
-                      for agent in self.possible_agents
+                      for agent in self.agents
                    }
 
             if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     infos[agent][INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates   # shared global observation must be returned via agent keys
 
             if self._layers_in_observation and INFO_LAYERS in obs: # only multi-objective or multi-agent environments have layers in observation available
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     infos[agent][INFO_OBSERVATION_LAYERS_DICT] = obs[INFO_LAYERS]   # shared global observation must be returned via agent keys
 
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube   # shared global observation must be returned via agent keys
 
             if hasattr(self._env, "agent_perspectives_with_layers"):
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     infos[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent]["ascii" if self._ascii_observation_format else "board"]
 
                     if self._layers_in_observation:
@@ -319,15 +324,15 @@ class GridworldZooParallelEnv(ParallelEnv):
                     INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION),
                     INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION),
                 }
-                for agent in self.possible_agents
+                for agent in self.agents
             }
 
             if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     infos[agent][INFO_OBSERVATION_COORDINATES] = self._last_observation_coordinates   # shared global observation must be returned via agent keys
 
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube   # shared global observation must be returned via agent keys
 
         #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -335,7 +340,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         for k, v in obs.items():
             if k not in ("RGB", INFO_LAYERS):
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     infos[agent][k] = v   # shared global observation must be returned via agent keys
 
 
@@ -420,7 +425,7 @@ class GridworldZooParallelEnv(ParallelEnv):
         if cumulative_hidden_reward is not None:
             if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
                 hidden_reward = {}
-                for agent in self.possible_agents:
+                for agent in self.agents:
                     hidden_reward[agent] = cumulative_hidden_reward[self.agent_name_mapping[agent]] - self._last_hidden_reward[agent]
                     self._last_hidden_reward[agent] = cumulative_hidden_reward[self.agent_name_mapping[agent]]
             else:
@@ -432,7 +437,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             # TODO
-            for agent in rewards.keys():
+            for agent in self.agents:
                 infos[agent].update({
                           INFO_HIDDEN_REWARD: hidden_reward[agent] if hidden_reward is not None else None,
                           INFO_OBSERVED_REWARD: rewards[agent],
@@ -440,7 +445,7 @@ class GridworldZooParallelEnv(ParallelEnv):
                       })
 
         else:   # if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            for agent in rewards.keys():
+            for agent in self.agents:
                 infos[agent].update({
                     INFO_HIDDEN_REWARD: hidden_reward,
                     INFO_OBSERVED_REWARD: rewards[agent],
@@ -467,7 +472,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         if hasattr(self._env, "agent_perspectives_with_layers"):
 
-            for agent in self.possible_agents:
+            for agent in self.agents:
 
                 board = self._last_agent_observations[agent]["ascii" if self._ascii_observation_format else "board"]
 
@@ -505,7 +510,27 @@ class GridworldZooParallelEnv(ParallelEnv):
             dones = { agent_name: timestep.step_type.last() 
                       for agent_name in self.agent_name_mapping.keys() }
 
-        self._dones = dones
+        if self._test_death:
+            for agent in self.possible_agents:
+                if self._test_deads[agent]:
+                    del rewards[agent]
+                    if dones[agent]:    # the agent has become actually dead, not just virtually
+                        self._test_deads[agent] = False                    
+                elif not dones[agent] and self._np_random.random() < self._test_death_probability:
+                    dones[agent] = True
+                    self._test_deads[agent] = True  # TODO: trigger a true death inside gridworlds
+        
+        for agent, agent_done in self._dones.items():
+            if agent_done:
+                del dones[agent]
+
+        # remove agents that were already done during previous step
+        for agent in list(self._agent_states.keys()): # NB! clone since the _agent_states will be modified during the loop
+            if self._dones[agent]:
+                del self._agent_states[agent]
+                assert agent not in rewards
+
+        self._dones.update(dones)
 
 
         if gym_v26:
@@ -513,7 +538,7 @@ class GridworldZooParallelEnv(ParallelEnv):
             # For users wishing to update, in most cases, replacing done with terminated and truncated=False in step() should address most issues. 
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminateds = dones
-            truncateds = {agent: False for agent in self.possible_agents}    # TODO   
+            truncateds = {agent: False for agent in dones.keys()}    # TODO   
             # NB! shallow copy self._agent_states dict since the dict values will change in next iteration, but main dict object will remain same
             return (dict(self._agent_states), rewards, terminateds, truncateds, infos)
         else:
@@ -532,6 +557,11 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         if self._viewer is not None:
             self._viewer.reset_time()
+
+
+        self._dones = {agent_name: False for agent_name in self.possible_agents} 
+        self._test_deads = {agent_name: False for agent_name in self.possible_agents}
+
 
         obs = timestep.observation
         self._process_observation(obs)
@@ -586,8 +616,6 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         #/ if hasattr(self._env, "agent_perspectives"):
 
-
-        self._dones = {agent_name: False for agent_name in self.possible_agents} 
 
         # NB! shallow copy self._agent_states dict since the dict values will change in next iteration, but main dict object will remain same
         obs = dict(self._agent_states)

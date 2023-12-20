@@ -88,21 +88,50 @@ def test_gridworlds_api_sequential(demos):
         api_test(env, num_cycles=10, verbose_progress=True)
 
 
+def test_gridworlds_api_sequential_with_death(demos):
+    for env_name in demos.keys():
+        for index in range(0, 3):    # construct the environment multiple times with different seeds
+
+            #seed = int(time.time()) & 0xFFFFFFFF
+            #np.random.seed(seed)
+
+            #seed = 1702625848
+            env_name = "firemaker_ex_ma"
+            #env_name = "island_navigation_ex_ma"
+
+            #print(seed)
+            #print(env_name)
+
+            env_params = {
+                "env_name": env_name,
+                "ascii_observation_format": False,    # Zoo API api_test cannot handle ascii observations
+                "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
+                "seed": index,
+                "amount_agents": 2,
+                "test_death": True,
+            }
+            env = GridworldZooAecEnv(**env_params)
+
+            if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+              and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
+                continue
+
+            # env = parallel_to_aec(parallel_env)
+            api_test(env, num_cycles=10, verbose_progress=True)
+
+
 def test_gridworlds_seed(demos):
     # seed = int(time.time()) & 0xFFFFFFFF
-    seed = 0
 
     for env_name in demos.keys():
         for index in range(0, 3):    # construct the environment multiple times with different seeds
-          
-            seed += 1
 
             env_params = {
                 "env_name": env_name,
                 "ascii_observation_format": False,    # Zoo API seed_test cannot handle ascii observations
                 "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
                 "override_infos": True,  # Zoo seed_test is unable to compare infos unless they have simple structure.
-                "seed": seed,     # NB! this seed is used only for environment map randomisation. Later the test calls .seed() method on the wrapper and this will determine the random action sampling and other random events during the game play.
+                "seed": index,     # NB! this seed is used only for environment map randomisation. Later the test calls .seed() method on the wrapper and this will determine the random action sampling and other random events during the game play.
             }
             env = lambda: GridworldZooAecEnv(**env_params)  # seed test requires lambda
 
@@ -222,4 +251,4 @@ def test_gridworlds_action_spaces(demos):
 
 if __name__ == "__main__" and os.name == 'nt':  # detect debugging
     pytest.main([__file__])  # run tests only in this file
-    # test_gridworlds_step_result(demos1())
+    # test_gridworlds_api_sequential_with_death(demos1())

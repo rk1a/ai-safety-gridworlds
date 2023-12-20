@@ -118,6 +118,8 @@ class GridworldZooAecEnv(AECEnv):
 
                  np_random=None,
                  seed=None,
+                 test_death=False,
+                 test_death_probability=0.33,
 
                  *args, **kwargs
                 ):
@@ -125,6 +127,8 @@ class GridworldZooAecEnv(AECEnv):
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
+        self._test_death = test_death
+        self._test_death_probability = test_death_probability
 
         try:
             self._env = factory.get_environment_obj(env_name, *args, np_random=np_random, seed=seed, **kwargs)
@@ -205,6 +209,8 @@ class GridworldZooAecEnv(AECEnv):
         else:
             self._given_agents_last_step_result = { agent: (state, 0.0, False, info) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }  # TODO: make it readonly for callers
+
+        self._test_deads = {agent_name: False for agent_name in self.possible_agents}
 
         if np_random is not None:
             self._np_random = np_random
@@ -587,7 +593,7 @@ class GridworldZooAecEnv(AECEnv):
             del self._given_agents_prev_step_result[self._next_agent] 
             self._agents.remove(self._next_agent)
 
-            reward = 0.0    # no agent collects reward from a "dead step" and rewards from previous step need to be cleared
+            reward = 0.0    # other agents do not collect reward from current agent's "dead step" and rewards from previous step need to be cleared
             self._rewards = { agent: reward for agent in self._agents }
 
             self._move_to_next_agent()
@@ -599,6 +605,7 @@ class GridworldZooAecEnv(AECEnv):
         else:
             timestep = self._env.step(action, *args, **kwargs)     # CHANGED: added *args, **kwargs 
             
+
         obs = timestep.observation
         self._process_observation(obs)
         info = self._compute_info(obs, self._next_agent)
@@ -680,6 +687,17 @@ class GridworldZooAecEnv(AECEnv):
         #/ if hasattr(self._env, "agent_perspectives"):
 
 
+        if self._test_death:
+            for agent in self.possible_agents:
+                if self._test_deads[agent]:
+                    del rewards[agent]
+
+
+        self._cumulative_rewards[self._next_agent] = 0.0   # this needs to be so according to Zoo unit test. See https://github.com/Farama-Foundation/PettingZoo/blob/master/pettingzoo/test/api_test.py
+        for agent, agent_reward in rewards.items():
+            self._cumulative_rewards[agent] += agent_reward
+
+
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             # done = { self._next_agent: timestep.step_type[self.agent_name_mapping[self._next_agent]].last() }
             done = timestep.step_type[self.agent_name_mapping[self._next_agent]].last()
@@ -687,10 +705,12 @@ class GridworldZooAecEnv(AECEnv):
             # done = { agent: timestep.step_type.last() for agent in self.agent_name_mapping.values() }
             done = timestep.step_type.last()
 
+        if (self._test_death 
+            and not done 
+            and self._np_random.random() < self._test_death_probability):
+            done = True
+            self._test_deads[self._next_agent] = True  # TODO: trigger a true death inside gridworlds
 
-        self._cumulative_rewards[self._next_agent] = 0.0   # this needs to be so according to Zoo unit test. See https://github.com/Farama-Foundation/PettingZoo/blob/master/pettingzoo/test/api_test.py
-        for agent, reward in rewards.items():
-            self._cumulative_rewards[agent] += reward
 
         self._rewards.update(rewards)   # NB! clone the updates so that if the agent is deleted from self._rewards, then it is still preserved in rewards for the code below for storing for use in .last() method
         for agent in self.agents:
@@ -806,6 +826,8 @@ class GridworldZooAecEnv(AECEnv):
         else:
             self._given_agents_last_step_result = { agent: (agent_states[agent], reward, False, self._infos[agent]) for agent in self.possible_agents }
             self.dones = { agent: False for agent in self.possible_agents }
+
+        self._test_deads = {agent_name: False for agent_name in self.possible_agents}
 
 
     def get_reward_unit_space(self):                    # ADDED
