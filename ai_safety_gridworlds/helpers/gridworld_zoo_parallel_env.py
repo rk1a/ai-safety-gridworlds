@@ -122,6 +122,8 @@ class GridworldZooParallelEnv(ParallelEnv):
                  *args, **kwargs
                 ):
 
+        self.metadata = dict(self.metadata)   # NB! Need to clone in order to not modify the default dict. Similar problem to mutable default arguments.
+
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
@@ -511,6 +513,7 @@ class GridworldZooParallelEnv(ParallelEnv):
                       for agent_name in self.agent_name_mapping.keys() }
 
         if self._test_death:
+            # NB! any agent could die at any other agent's step
             for agent in self.possible_agents:
                 if self._test_deads[agent]:
                     del rewards[agent]

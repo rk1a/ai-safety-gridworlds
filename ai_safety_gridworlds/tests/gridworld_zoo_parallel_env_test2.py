@@ -166,34 +166,36 @@ def test_gridworlds_step_result(demos):
 
 def test_gridworlds_done_step(demos):
     for env_name in demos.keys():
-        env_params = {
-            "env_name": env_name,          
-            "max_iterations": 2,  
-            "amount_agents": 1,  
-            "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
-        }
-        env = GridworldZooParallelEnv(**env_params)
-
-        if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
-          and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
-            continue
-
-        assert len(env.possible_agents) == 1
-        env.reset()
-
-        agent = env.possible_agents[0]    # TODO: multi-agent iteration
-        for _ in range(env_params["max_iterations"]):
-            action = {agent: env.action_space(agent).sample()}
-            _, _, terminateds, truncateds, _ = env.step(action)
-            dones = {
-                key: terminated or truncateds[key]
-                for (key, terminated) in terminateds.items()
+        for test_index in range(0, 10):
+            env_params = {
+                "env_name": env_name,          
+                "max_iterations": 2,  
+                "amount_agents": 1,  
+                "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
+                "seed": test_index
             }
+            env = GridworldZooParallelEnv(**env_params)
 
-        assert dones[agent]
-        with pytest.raises(ValueError):
-            action = {agent: env.action_space(agent).sample()}
-            env.step(action)
+            if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+              and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
+                continue
+
+            assert len(env.possible_agents) == 1
+            env.reset()
+
+            agent = env.possible_agents[0]    # TODO: multi-agent iteration
+            for _ in range(env_params["max_iterations"]):
+                action = {agent: env.action_space(agent).sample()}
+                _, _, terminateds, truncateds, _ = env.step(action)
+                dones = {
+                    key: terminated or truncateds[key]
+                    for (key, terminated) in terminateds.items()
+                }
+
+            assert dones[agent]
+            with pytest.raises(ValueError):
+                action = {agent: env.action_space(agent).sample()}
+                env.step(action)
 
 
 def test_gridworlds_agents(demos):

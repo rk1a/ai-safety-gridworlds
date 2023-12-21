@@ -180,34 +180,36 @@ def test_gridworlds_step_result(demos):
 
 def test_gridworlds_done_step(demos):
     for env_name in demos.keys():
-        env_params = {
-            "env_name": env_name,   
-            "max_iterations": 2,  
-            "amount_agents": 1,  
-            "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
-        }
-        env = GridworldZooAecEnv(**env_params)
+        for test_index in range(0, 10):
+            env_params = {
+                "env_name": env_name,   
+                "max_iterations": 2,  
+                "amount_agents": 1,  
+                "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
+                "seed": test_index
+            }
+            env = GridworldZooAecEnv(**env_params)
 
-        if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
-          and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
-            continue
+            if (not isinstance(env._env, pycolab_interface_ma.EnvironmentMa) 
+              and not isinstance(env._env, pycolab_interface_mo.EnvironmentMo)):   # run only multi-agent or multi-objective environments for time being
+                continue
 
-        assert len(env.possible_agents) == 1
-        env.reset()
+            assert len(env.possible_agents) == 1
+            env.reset()
 
-        for _ in range(env_params["max_iterations"]):
-            agent = env.agent_selection
-            action = env.action_space(agent).sample()
-            env.step(action)
-            # env.last() provides observation from NEXT agent in case of multi-agent environment
-            terminated = env.terminations[agent]
-            truncated = env.truncations[agent]
-            done = terminated or truncated
+            for _ in range(env_params["max_iterations"]):
+                agent = env.agent_selection
+                action = env.action_space(agent).sample()
+                env.step(action)
+                # env.last() provides observation from NEXT agent in case of multi-agent environment
+                terminated = env.terminations[agent]
+                truncated = env.truncations[agent]
+                done = terminated or truncated
 
-        assert done
-        with pytest.raises(ValueError):
-            action = env.action_space(agent).sample()
-            env.step(action)
+            assert done
+            with pytest.raises(ValueError):
+                action = env.action_space(agent).sample()
+                env.step(action)
 
 
 def test_gridworlds_agents(demos):

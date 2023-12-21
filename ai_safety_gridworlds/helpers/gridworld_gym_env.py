@@ -120,6 +120,8 @@ class GridworldGymEnv(gym.Env):
                  *args, **kwargs
                 ):
 
+        self.metadata = dict(self.metadata)   # NB! Need to clone in order to not modify the default dict. Similar problem to mutable default arguments.
+
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None

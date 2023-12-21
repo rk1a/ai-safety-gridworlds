@@ -124,6 +124,8 @@ class GridworldZooAecEnv(AECEnv):
                  *args, **kwargs
                 ):
 
+        self.metadata = dict(self.metadata)   # NB! Need to clone in order to not modify the default dict. Similar problem to mutable default arguments.
+
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
         self._viewer = None
@@ -579,7 +581,8 @@ class GridworldZooAecEnv(AECEnv):
         # a dead agent must call .step(None) once more after becoming dead. Only after that call will this dead agent be removed from various dictionaries and from .agent_iter loop.
         if self.terminations[self._next_agent] or self.truncations[self._next_agent]:
 
-            if action is not None:
+            action_step = action["step"] if isinstance(action, dict) else action
+            if action_step is not None:
                 raise ValueError("When an agent is dead, the only valid action is None")
 
             # Dead agents should stay in the agent_iter for one more loop, but should get None as action.
