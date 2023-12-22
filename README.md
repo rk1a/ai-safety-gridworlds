@@ -73,3 +73,8 @@ One more elaborate environment is described separately here: https://github.com/
 # Papers
 
 * A published research paper based on experiments using this repository: Smith, B.J., Klassert, R. & Pihlakas, R. "Using soft maximin for risk averse multi-objective decision-making". Autonomous Agents and Multi-Agent Systems 37, Article 11 (2023). https://link.springer.com/article/10.1007/s10458-022-09586-2
+
+
+## Acknowledgements
+I would like to thank Ben Smith, Robert Klassert, Joel Pyykkö, AI Safety Camp V, AIntelope, EA Funds, Emergent Ventures / Mercatus Center at George Mason University, and Foresight Institute.
+
