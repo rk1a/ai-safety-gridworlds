@@ -1128,33 +1128,32 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
 
 
   # TODO: refactor to agent class
-  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None, observe_from_agent_directions=None, ascii=True):  # TODO: refactor into agents
+  # TODO
+  #def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None, observe_from_agent_directions=None, ascii=True):  # TODO: refactor into agents
 
-    # outside_game_chr = WALL_CHR  # TODO: config flag
-    outside_game_chr = self._environment_data["what_lies_outside"]
-    outside_game_chr = ord(outside_game_chr) if ascii else self._value_mapping[outside_game_chr]
+  #  # outside_game_chr = WALL_CHR  # TODO: config flag
+  #  outside_game_chr = self._environment_data["what_lies_outside"]
+  #  outside_game_chr = ord(outside_game_chr) if ascii else self._value_mapping[outside_game_chr]
 
-    if observe_from_agent_coordinates is None:
-      observe_from_agent_coordinates = {}
-    if observe_from_agent_directions is None:
-      observe_from_agent_directions = {}
+  #  if observe_from_agent_coordinates is None:
+  #    observe_from_agent_coordinates = {}
+  #  if observe_from_agent_directions is None:
+  #    observe_from_agent_directions = {}
 
-    return { 
-      agent.character: get_agent_perspective(   # TODO
-        agent, 
-        observation, 
-        outside_game_chr, 
-        for_layer=for_layer, 
-        observe_from_coordinate=observe_from_agent_coordinates.get(agent.character),
-        observe_from_agent_direction=observe_from_agent_directions.get(agent.character),
-      )
-      for agent 
-      in (
-        for_agents 
-        if for_agents 
-        else safety_game_ma.get_players(self._environment_data)
-      ) 
-    }
+
+  #  agent = self._environment_data[AGENT_SPRITE]
+  #  assert for_agents is None or (len(list(for_agents)) == 1 and list(for_agents)[0] == agent)
+
+  #  return { 
+  #    agent.character: get_agent_perspective(   # TODO
+  #      agent, 
+  #      observation, 
+  #      outside_game_chr, 
+  #      for_layer=for_layer, 
+  #      observe_from_coordinate=observe_from_agent_coordinates.get(agent.character),
+  #      observe_from_agent_direction=observe_from_agent_directions.get(agent.character),
+  #    )
+  #  }
 
 
 
