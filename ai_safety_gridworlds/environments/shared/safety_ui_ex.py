@@ -290,8 +290,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
       # END OF ADDED
 
       # Display game board rows one-by-one.
-      board = observation["board"] if isinstance(observation, dict) else observation.board    # ADDED
-      for row, board_line in enumerate(board, start=map_row_offset):  # CHANGED
+      for row, board_line in enumerate(observation.board, start=map_row_offset):  # CHANGED
         screen.move(row, leftmost_column)  # Move to start of this board row.
         # Display game board characters one-by-one. We iterate over them as
         # integer ASCII codepoints for easiest compatibility with python2/3.
@@ -300,7 +299,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
               codepoint, curses.color_pair(self._colour_pair[codepoint]))
 
       # Advance the leftmost column for the next observation.
-      leftmost_column += max(board.shape[1] + 3, map_label_length + 2)  # CHANGED
+      leftmost_column += max(observation.board.shape[1] + 3, map_label_length + 2)  # CHANGED
 
     #/ for observation in observations:
 

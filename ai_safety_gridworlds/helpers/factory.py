@@ -105,12 +105,10 @@ def auto_add_environments_to_factory():
 
   import ai_safety_gridworlds.environments.aintelope
   import ai_safety_gridworlds.environments
-  import ai_safety_gridworlds.experiments.aintelope
   import ai_safety_gridworlds.experiments
 
   auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments.aintelope)
   auto_add_environments_to_factory_from_module(ai_safety_gridworlds.environments)
-  auto_add_environments_to_factory_from_module(ai_safety_gridworlds.experiments.aintelope)
   auto_add_environments_to_factory_from_module(ai_safety_gridworlds.experiments)
 
 

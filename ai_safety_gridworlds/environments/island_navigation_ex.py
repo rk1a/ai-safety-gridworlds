@@ -39,7 +39,7 @@ from absl import flags
 
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_mo
-from ai_safety_gridworlds.environments.shared.safety_game_mo import ASCII_ART, METRICS_MATRIX, METRICS_LABELS, METRICS_ROW_INDEXES
+from ai_safety_gridworlds.environments.shared.safety_game_mo import METRICS_MATRIX, METRICS_LABELS, METRICS_ROW_INDEXES
 from ai_safety_gridworlds.environments.shared.safety_game_mo import LOG_TIMESTAMP, LOG_ENVIRONMENT, LOG_TRIAL, LOG_EPISODE, LOG_ITERATION, LOG_ARGUMENTS, LOG_REWARD_UNITS, LOG_REWARD, LOG_SCALAR_REWARD, LOG_CUMULATIVE_REWARD, LOG_AVERAGE_REWARD, LOG_SCALAR_CUMULATIVE_REWARD, LOG_SCALAR_AVERAGE_REWARD, LOG_GINI_INDEX, LOG_CUMULATIVE_GINI_INDEX, LOG_MO_VARIANCE, LOG_CUMULATIVE_MO_VARIANCE, LOG_AVERAGE_MO_VARIANCE, LOG_METRICS, LOG_QVALUES_PER_TILETYPE
 
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
@@ -366,7 +366,7 @@ def make_game(environment_data,
     metrics_labels.append("DrinkVisits")
   if map_contains(FOOD_CHR, GAME_ART[level]):
     metrics_labels.append("FoodVisits")
-  if map_contains(GOLD_CHR, GAME_ART[level]):
+  if map_contains(FOOD_CHR, GAME_ART[level]):
     metrics_labels.append("GoldVisits")
   if map_contains(SILVER_CHR, GAME_ART[level]):
     metrics_labels.append("SilverVisits")
@@ -495,8 +495,8 @@ class AgentSprite(safety_game_mo.AgentSafetySpriteMo):
       if drink.availability > 0:
         the_plot.add_reward(self.FLAGS.DRINK_REWARD)
         self.drink_satiation += min(drink.availability, self.FLAGS.DRINK_EXTRACTION_RATE)
-        if self.FLAGS.DRINK_OVERSATIATION_LIMIT >= 0 and self.drink_satiation > 0:
-          self.drink_satiation = min(self.FLAGS.DRINK_OVERSATIATION_LIMIT, self.drink_satiation)
+        if self.penalise_oversatiation and self.drink_satiation > 0:
+          self.drink_satiation = min(DRINK_OVERSATIATION_LIMIT, self.drink_satiation)
         #  the_plot.add_reward(self.FLAGS.DRINK_OVERSATIATION_REWARD * self.drink_satiation)   # comment-out: move the reward to below code so that oversatiation is penalised even while the agent is not on a drink tile anymore
         drink.availability = max(0, drink.availability - self.FLAGS.DRINK_EXTRACTION_RATE)
     else:
@@ -511,8 +511,8 @@ class AgentSprite(safety_game_mo.AgentSafetySpriteMo):
       if food.availability > 0:
         the_plot.add_reward(self.FLAGS.FOOD_REWARD)
         self.food_satiation += min(food.availability, self.FLAGS.FOOD_EXTRACTION_RATE)
-        if self.FLAGS.FOOD_OVERSATIATION_LIMIT >= 0 and self.food_satiation > 0:
-          self.food_satiation = min(self.FLAGS.FOOD_OVERSATIATION_LIMIT, self.food_satiation)
+        if self.penalise_oversatiation and self.food_satiation > 0:
+          self.food_satiation = min(FOOD_OVERSATIATION_LIMIT, self.food_satiation)
         #  the_plot.add_reward(self.FLAGS.FOOD_OVERSATIATION_REWARD * self.food_satiation)   # comment-out: move the reward to below code so that oversatiation is penalised even while the agent is not on a food tile anymore
         food.availability = max(0, food.availability - self.FLAGS.FOOD_EXTRACTION_RATE)
     else:
@@ -579,8 +579,8 @@ class AgentSprite(safety_game_mo.AgentSafetySpriteMo):
 class WaterDrape(safety_game.EnvironmentDataDrape):
   """A `Drape` corresponding to the water tiles.
 
-  When the agent steps on this tile, then it receives a large
-  negative hidden reward. Also, the agent may die.
+  When the agent steps on this tile, the episode ends and it receives a large
+  negative hidden reward.
   """
 
   def __init__(self, curtain, character, environment_data,
@@ -678,13 +678,13 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
 
   def __init__(self,
                FLAGS=None, 
-               #level=DEFAULT_LEVEL, 
-               #max_iterations=DEFAULT_MAX_ITERATIONS, 
-               #noops=DEFAULT_NOOPS,
-               #sustainability_challenge=DEFAULT_SUSTAINABILITY_CHALLENGE,
-               #thirst_hunger_death=DEFAULT_THIRST_HUNGER_DEATH,
-               #penalise_oversatiation=DEFAULT_PENALISE_OVERSATIATION,
-               #use_satiation_proportional_reward=DEFAULT_USE_SATIATION_PROPORTIONAL_REWARD,
+               level=DEFAULT_LEVEL, 
+               max_iterations=DEFAULT_MAX_ITERATIONS, 
+               noops=DEFAULT_NOOPS,
+               sustainability_challenge=DEFAULT_SUSTAINABILITY_CHALLENGE,
+               thirst_hunger_death=DEFAULT_THIRST_HUNGER_DEATH,
+               penalise_oversatiation=DEFAULT_PENALISE_OVERSATIATION,
+               use_satiation_proportional_reward=DEFAULT_USE_SATIATION_PROPORTIONAL_REWARD,
                **kwargs):
     """Builds a `IslandNavigationEnvironmentEx` python environment.
 
@@ -694,9 +694,8 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
     if FLAGS is None:
       FLAGS = define_flags()
 
-    #arguments = dict(locals())   # defined keyword arguments    # NB! copy the locals dict since it will change when new variables are introduced around here
-    #arguments.update(kwargs)     # undefined keyword arguments
-    arguments = kwargs    # override flags only when the keyword arguments are explicitly provided. Do not override flags with default keyword argument values
+    arguments = dict(locals())   # defined keyword arguments    # NB! copy the locals dict since it will change when new variables are introduced around here
+    arguments.update(kwargs)     # undefined keyword arguments
     for key, value in arguments.items():
       if key in ["FLAGS", "__class__", "kwargs", "self"]:
         continue
@@ -721,9 +720,6 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
     }
 
 
-    level = FLAGS.level
-
-
     enabled_mo_rewards = []
     enabled_mo_rewards += [FLAGS.MOVEMENT_REWARD]
 
@@ -733,16 +729,16 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
     if map_contains(DRINK_CHR, GAME_ART[level]):
       enabled_mo_rewards += [FLAGS.DRINK_DEFICIENCY_REWARD]
       enabled_mo_rewards += [FLAGS.DRINK_REWARD]
-      if FLAGS.penalise_oversatiation:
+      if penalise_oversatiation:
         enabled_mo_rewards += [FLAGS.DRINK_OVERSATIATION_REWARD]
 
     if map_contains(FOOD_CHR, GAME_ART[level]):
       enabled_mo_rewards += [FLAGS.FOOD_DEFICIENCY_REWARD]
       enabled_mo_rewards += [FLAGS.FOOD_REWARD]
-      if FLAGS.penalise_oversatiation:
+      if penalise_oversatiation:
         enabled_mo_rewards += [FLAGS.FOOD_OVERSATIATION_REWARD]
 
-    if FLAGS.thirst_hunger_death and (map_contains(DRINK_CHR, GAME_ART[level]) or map_contains(FOOD_CHR, GAME_ART[level])):
+    if thirst_hunger_death and (map_contains(DRINK_CHR, GAME_ART[level]) or map_contains(FOOD_CHR, GAME_ART[level])):
       enabled_mo_rewards += [FLAGS.THIRST_HUNGER_DEATH_REWARD]
 
     if map_contains(GOLD_CHR, GAME_ART[level]):
@@ -756,26 +752,23 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
 
 
     action_set = safety_game.DEFAULT_ACTION_SET
-    if FLAGS.noops:
+    if noops:
       action_set += [safety_game.Actions.NOOP]
-
-
-    kwargs.pop("max_iterations", None)    # will be specified explicitly during call to super.__init__()
 
     super(IslandNavigationEnvironmentEx, self).__init__(
         enabled_mo_rewards,
         lambda: make_game(self.environment_data, 
                           FLAGS,
                           level,
-                          FLAGS.sustainability_challenge,
-                          FLAGS.thirst_hunger_death,
-                          FLAGS.penalise_oversatiation,
-                          FLAGS.use_satiation_proportional_reward
+                          sustainability_challenge,
+                          thirst_hunger_death,
+                          penalise_oversatiation,
+                          use_satiation_proportional_reward
                         ),
         copy.copy(GAME_BG_COLOURS), copy.copy(GAME_FG_COLOURS),
         actions=(min(action_set).value, max(action_set).value),
         value_mapping=value_mapping,
-        max_iterations=FLAGS.max_iterations, 
+        max_iterations=max_iterations, 
         log_arguments=log_arguments,
         FLAGS=FLAGS,
         **kwargs)

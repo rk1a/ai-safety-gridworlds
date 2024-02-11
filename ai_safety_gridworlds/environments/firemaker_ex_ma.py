@@ -42,7 +42,7 @@ from ast import literal_eval
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
-from ai_safety_gridworlds.environments.shared.safety_game_moma import ASCII_ART, NP_RANDOM, METRICS_MATRIX, METRICS_LABELS, METRICS_ROW_INDEXES
+from ai_safety_gridworlds.environments.shared.safety_game_moma import NP_RANDOM, METRICS_MATRIX, METRICS_LABELS, METRICS_ROW_INDEXES
 from ai_safety_gridworlds.environments.shared.safety_game_moma import LOG_TIMESTAMP, LOG_ENVIRONMENT, LOG_TRIAL, LOG_EPISODE, LOG_ITERATION, LOG_ARGUMENTS, LOG_REWARD_UNITS, LOG_REWARD, LOG_SCALAR_REWARD, LOG_CUMULATIVE_REWARD, LOG_AVERAGE_REWARD, LOG_SCALAR_CUMULATIVE_REWARD, LOG_SCALAR_AVERAGE_REWARD, LOG_GINI_INDEX, LOG_CUMULATIVE_GINI_INDEX, LOG_MO_VARIANCE, LOG_CUMULATIVE_MO_VARIANCE, LOG_AVERAGE_MO_VARIANCE, LOG_METRICS, LOG_QVALUES_PER_TILETYPE
 
 from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
@@ -711,11 +711,11 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
 
   def __init__(self,
                FLAGS=None, 
-               #level=DEFAULT_LEVEL, 
-               #max_iterations=DEFAULT_MAX_ITERATIONS, 
-               #noops=DEFAULT_NOOPS,
-               #randomize_agent_actions_order=DEFAULT_RANDOMIZE_AGENT_ACTIONS_ORDER,
-               #amount_agents=DEFAULT_AMOUNT_AGENTS,
+               level=DEFAULT_LEVEL, 
+               max_iterations=DEFAULT_MAX_ITERATIONS, 
+               noops=DEFAULT_NOOPS,
+               randomize_agent_actions_order=DEFAULT_RANDOMIZE_AGENT_ACTIONS_ORDER,
+               amount_agents=DEFAULT_AMOUNT_AGENTS,
                **kwargs):
     """Builds a `FiremakerExMa` python environment.
 
@@ -725,9 +725,8 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
     if FLAGS is None:
       FLAGS = define_flags()
 
-    #arguments = dict(locals())   # defined keyword arguments    # NB! copy the locals dict since it will change when new variables are introduced around here
-    #arguments.update(kwargs)     # undefined keyword arguments
-    arguments = kwargs    # override flags only when the keyword arguments are explicitly provided. Do not override flags with default keyword argument values
+    arguments = dict(locals())   # defined keyword arguments    # NB! copy the locals dict since it will change when new variables are introduced around here
+    arguments.update(kwargs)     # undefined keyword arguments
     for key, value in arguments.items():
       if key in ["FLAGS", "__class__", "kwargs", "self"]:
         continue
@@ -749,7 +748,7 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
       EXTERNAL_TERRITORY_CHR: 6.0,
     }
     value_mapping.update({
-      AGENT_CHRS[agent_index]: float(len(value_mapping) + agent_index) for agent_index in range(0, max(1, FLAGS.amount_agents - 1))
+      AGENT_CHRS[agent_index]: float(len(value_mapping) + agent_index) for agent_index in range(0, max(1, amount_agents - 1))
     })
 
 
@@ -760,7 +759,7 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
                                   FLAGS.AGENT_WORKSHOP_ENERGY_REWARD,
                                 ]
 
-    if FLAGS.amount_agents == 1:
+    if amount_agents == 1:
       enabled_agent_mo_rewards += [FLAGS.SUPERVISOR_EXTERNAL_FIRE_REWARD]   # in case of only one agent and no supervisor, assign external fire reward to the agent
 
     enabled_supervisor_mo_rewards = []
@@ -777,16 +776,16 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
 
 
     enabled_ma_rewards = {
-      AGENT_CHRS[agent_index]: enabled_agent_mo_rewards for agent_index in range(0, max(1, FLAGS.amount_agents - 1))    # amount_agents - 1 : if there are more than one agent then reserve one agent spot for the supervisor
+      AGENT_CHRS[agent_index]: enabled_agent_mo_rewards for agent_index in range(0, max(1, amount_agents - 1))    # amount_agents - 1 : if there are more than one agent then reserve one agent spot for the supervisor
     }
-    if FLAGS.amount_agents > 1:   # if amount_agents == 1 then create only one worker agent
+    if amount_agents > 1:   # if amount_agents == 1 then create only one worker agent
       enabled_ma_rewards.update({
         SUPERVISOR_CHR: enabled_supervisor_mo_rewards,
       })
 
 
     action_set = list(safety_game_ma.DEFAULT_ACTION_SET)    # NB! clone since it will be modified
-    if FLAGS.noops:
+    if noops:
       action_set += [safety_game_ma.Actions.NOOP]
 
     if FLAGS.observation_direction_mode == 2 or FLAGS.action_direction_mode == 2:  # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
@@ -795,15 +794,13 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
     direction_set = safety_game_ma.DEFAULT_ACTION_SET + [safety_game_ma.Actions.NOOP]
 
 
-    kwargs.pop("max_iterations", None)    # will be specified explicitly during call to super.__init__()
-
     super(FiremakerExMa, self).__init__(
         enabled_ma_rewards,
         lambda: make_game(self.environment_data, 
                           FLAGS=FLAGS,
-                          level=FLAGS.level,
+                          level=level,
                           environment=self,
-                          amount_agents=FLAGS.amount_agents,
+                          amount_agents=amount_agents,
                         ),
         copy.copy(GAME_BG_COLOURS), copy.copy(GAME_FG_COLOURS),
         actions={ 
@@ -823,9 +820,9 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
         },
         value_mapping=value_mapping,
         # repainter=self.repainter,
-        max_iterations=FLAGS.max_iterations, 
+        max_iterations=max_iterations, 
         log_arguments=log_arguments,
-        randomize_agent_actions_order=FLAGS.randomize_agent_actions_order,
+        randomize_agent_actions_order=randomize_agent_actions_order,
         FLAGS=FLAGS,
         **kwargs)
 
