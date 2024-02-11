@@ -82,11 +82,11 @@ def init_experiment_flags():
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
   FLAGS.DRINK_GROWTH_LIMIT = 20       # The bigger the value the more exploration is allowed
-  FLAGS.DRINK_AVAILABILITY_INITIAL = DRINK_GROWTH_LIMIT 
+  # FLAGS.DRINK_AVAILABILITY_INITIAL = DRINK_GROWTH_LIMIT 
 
   #FLAGS.FOOD_REGROWTH_EXPONENT = 1.1
   FLAGS.FOOD_GROWTH_LIMIT = 20        # The bigger the value the more exploration is allowed
-  FLAGS.FOOD_AVAILABILITY_INITIAL = FOOD_GROWTH_LIMIT  
+  # FLAGS.FOOD_AVAILABILITY_INITIAL = FOOD_GROWTH_LIMIT  
 
   FLAGS.amount_food_patches = 1
   FLAGS.amount_drink_holes = 0
