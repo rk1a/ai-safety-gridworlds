@@ -89,6 +89,7 @@ PYTHONLEGACYWINDOWSSTDIO=1</Environment>
     <Compile Include="ai_safety_gridworlds\experiments\aintelope\food_drink_homeostasis_predators_gold_silver.py" />
     <Compile Include="ai_safety_gridworlds\experiments\aintelope\food_homeostasis.py" />
     <Compile Include="ai_safety_gridworlds\experiments\aintelope\food_sharing.py" />
+    <Compile Include="ai_safety_gridworlds\experiments\aintelope\food_sustainability.py" />
     <Compile Include="ai_safety_gridworlds\experiments\aintelope\food_unbounded.py" />
     <Compile Include="ai_safety_gridworlds\experiments\aintelope\predators.py" />
     <Compile Include="ai_safety_gridworlds\experiments\food_bounded.py" />

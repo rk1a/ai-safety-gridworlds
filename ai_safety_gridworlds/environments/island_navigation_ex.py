@@ -615,6 +615,7 @@ class DrinkDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and F
     self.FLAGS = FLAGS
     self._sustainability_challenge = sustainability_challenge
     self.availability = self.FLAGS.DRINK_AVAILABILITY_INITIAL
+    self.availability_fraction = 0
     self.environment_data = environment_data
 
 
@@ -625,12 +626,16 @@ class DrinkDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and F
       self.availability = self.FLAGS.DRINK_AVAILABILITY_INITIAL
 
 
-    if self.curtain[player.position]:
-
+    if self.curtain[player.position]:     # do not regrow while an agent is consuming the resource   
       pass
 
-    elif self.availability > 0 and self.availability < DRINK_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
-      self.availability = min(self.FLAGS.DRINK_GROWTH_LIMIT, math.pow(self.availability, self.FLAGS.DRINK_REGROWTH_EXPONENT))
+    else:
+      # if only self.availability_fraction is nonzero then to not regrow
+      if self.availability > 0 and self.availability < DRINK_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
+        availability_float = self.availability + self.availability_fraction
+        availability_float = min(self.FLAGS.DRINK_GROWTH_LIMIT, math.pow(availability_float + 1, self.FLAGS.DRINK_REGROWTH_EXPONENT))
+        self.availability = int(availability_float)
+        self.availability_fraction = availability_float - self.availability
 
 
     metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
@@ -651,6 +656,7 @@ class FoodDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and Fo
     self.FLAGS = FLAGS
     self._sustainability_challenge = sustainability_challenge
     self.availability = self.FLAGS.FOOD_AVAILABILITY_INITIAL
+    self.availability_fraction = 0
     self.environment_data = environment_data
 
 
@@ -661,12 +667,16 @@ class FoodDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and Fo
       self.availability = self.FLAGS.FOOD_AVAILABILITY_INITIAL
 
 
-    if self.curtain[player.position]:
-      
+    if self.curtain[player.position]:     # do not regrow while an agent is consuming the resource   
       pass
 
-    elif self.availability > 0 and self.availability < self.FLAGS.FOOD_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
-      self.availability = min(self.FLAGS.FOOD_GROWTH_LIMIT, math.pow(self.availability, self.FLAGS.DRINK_REGROWTH_EXPONENT))
+    else:
+      # if only self.availability_fraction is nonzero then to not regrow
+      if self.availability > 0 and self.availability < self.FLAGS.FOOD_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
+        availability_float = self.availability + self.availability_fraction
+        availability_float = min(self.FLAGS.FOOD_GROWTH_LIMIT, math.pow(availability_float + 1, self.FLAGS.DRINK_REGROWTH_EXPONENT))
+        self.availability = int(availability_float)
+        self.availability_fraction = availability_float - self.availability
 
 
     metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]

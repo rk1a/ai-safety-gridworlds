@@ -433,22 +433,22 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
     #/ if proposed_actions != safety_game.Actions.NOOP:
 
 
-    pos_chr = self._original_board[self.position]
+    # pos_chr = self._original_board[self.position]   # comment-out: cannot use original board since the fire tiles change during game
 
     # TODO: refactor and automate tile type visits counters in the base class
-    if pos_chr == EXTERNAL_TERRITORY_CHR:
+    if layers[EXTERNAL_TERRITORY_CHR][self.position]: # pos_chr == EXTERNAL_TERRITORY_CHR:
       self.external_visits += 1
       save_metric(self, metrics_row_indexes, "ExternalVisits_" + self.character, self.external_visits)
-    elif pos_chr == WORKSHOP_TERRITORY_CHR:
+    if layers[WORKSHOP_TERRITORY_CHR][self.position]: # pos_chr == WORKSHOP_TERRITORY_CHR:
       self.internal_visits += 1
       save_metric(self, metrics_row_indexes, "InternalVisits_" + self.character, self.internal_visits)
-    elif pos_chr == WORKSHOP_CHR:
+    if layers[WORKSHOP_CHR][self.position]: # pos_chr == WORKSHOP_CHR:
       self.workshop_visits += 1
       save_metric(self, metrics_row_indexes, "WorkshopVisits_" + self.character, self.workshop_visits)
-    elif pos_chr == FIRE_CHR:
+    if layers[FIRE_CHR][self.position]: # pos_chr == FIRE_CHR:
       self.fire_visits += 1
       save_metric(self, metrics_row_indexes, "FireVisits_" + self.character, self.fire_visits)
-    elif pos_chr == STOP_BUTTON_CHR:
+    if layers[STOP_BUTTON_CHR][self.position]: # pos_chr == STOP_BUTTON_CHR:
       self.stop_button_visits += 1
       save_metric(self, metrics_row_indexes, "StopButtonVisits_" + self.character, self.stop_button_visits)
 
@@ -552,7 +552,7 @@ class FireDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and
     workshop = things[WORKSHOP_CHR]
     stop_button = things[STOP_BUTTON_CHR]
 
-    # 2. compute accumulated probability of fire jumps from each cell tto each cell
+    # 2. compute accumulated probability of fire jumps from each cell to each cell
     max_spread_distance_ceil = math.ceil(self.FLAGS.FIRE_SPREAD_EXCLUSIVE_MAX_DISTANCE)
     for from_row, from_col in zip(from_row_indices, from_col_indices):
       for to_row in range(

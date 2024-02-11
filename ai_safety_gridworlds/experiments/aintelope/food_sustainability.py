@@ -35,7 +35,7 @@ def init_experiment_flags():
   FLAGS.randomize_agent_actions_order = True    # Whether to randomize the order the agent actions are carried out in order to resolve any tile collisions and resource availability collisions randomly.
   FLAGS.sustainability_challenge = False  # Whether to deplete the drink and food resources irreversibly if they are consumed too fast.
   FLAGS.thirst_hunger_death = False       # Whether the agent dies if it does not consume both the drink and food resources at regular intervals.
-  FLAGS.penalise_oversatiation = True    # Whether to penalise non stop consumption of the drink and food resources.
+  FLAGS.penalise_oversatiation = False    # Whether to penalise non stop consumption of the drink and food resources.
   FLAGS.use_satiation_proportional_reward = False
   FLAGS.map_randomization_frequency = 3                 # Whether to randomize the map.   # 0 - off, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance), 3 - once per training episode
   FLAGS.observation_radius = [4, 4, 4, 4]            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.
@@ -47,8 +47,8 @@ def init_experiment_flags():
 
   FLAGS.MOVEMENT_REWARD = mo_reward({"MOVEMENT_REWARD": 0})    
 
-  FLAGS.DRINK_DEFICIENCY_REWARD = mo_reward({"DRINK_DEFICIENCY_REWARD": -100})    
-  FLAGS.FOOD_DEFICIENCY_REWARD = mo_reward({"FOOD_DEFICIENCY_REWARD": -100})    
+  FLAGS.DRINK_DEFICIENCY_REWARD = mo_reward({"DRINK_DEFICIENCY_REWARD": 0})    
+  FLAGS.FOOD_DEFICIENCY_REWARD = mo_reward({"FOOD_DEFICIENCY_REWARD": 0})    
   # Need to be at least 7 else the agent does nothing. The bigger the value the more exploration is allowed
   FLAGS.DRINK_REWARD = mo_reward({"DRINK_REWARD": 20})     
   FLAGS.FOOD_REWARD = mo_reward({"FOOD_REWARD": 20})
@@ -70,30 +70,30 @@ def init_experiment_flags():
   FLAGS.DRINK_EXTRACTION_RATE = 5
   FLAGS.DRINK_DEFICIENCY_RATE = -1
   #FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
-  FLAGS.DRINK_OVERSATIATION_REWARD = mo_reward({"DRINK_OVERSATIATION_REWARD": -100})    
-  FLAGS.DRINK_OVERSATIATION_LIMIT = 3
+  #FLAGS.DRINK_OVERSATIATION_REWARD = mo_reward({"DRINK_OVERSATIATION_REWARD": -1})    
+  #FLAGS.DRINK_OVERSATIATION_LIMIT = 3
 
   FLAGS.FOOD_DEFICIENCY_INITIAL = 0
   FLAGS.FOOD_EXTRACTION_RATE = 5
   FLAGS.FOOD_DEFICIENCY_RATE = -1
   #FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
-  FLAGS.FOOD_OVERSATIATION_REWARD = mo_reward({"FOOD_OVERSATIATION_REWARD": -100})    
-  FLAGS.FOOD_OVERSATIATION_LIMIT = 3
+  #FLAGS.FOOD_OVERSATIATION_REWARD = mo_reward({"FOOD_OVERSATIATION_REWARD": -1})    
+  #FLAGS.FOOD_OVERSATIATION_LIMIT = 3
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
   FLAGS.DRINK_GROWTH_LIMIT = 20       # The bigger the value the more exploration is allowed
-  FLAGS.DRINK_AVAILABILITY_INITIAL = DRINK_GROWTH_LIMIT 
+  # FLAGS.DRINK_AVAILABILITY_INITIAL = DRINK_GROWTH_LIMIT 
 
   #FLAGS.FOOD_REGROWTH_EXPONENT = 1.1
   FLAGS.FOOD_GROWTH_LIMIT = 20        # The bigger the value the more exploration is allowed
-  FLAGS.FOOD_AVAILABILITY_INITIAL = FOOD_GROWTH_LIMIT  
+  # FLAGS.FOOD_AVAILABILITY_INITIAL = FOOD_GROWTH_LIMIT  
 
   FLAGS.amount_food_patches = 2
-  FLAGS.amount_drink_holes = 2  
-  FLAGS.amount_gold_deposits = 2
-  FLAGS.amount_silver_deposits = 2
-  FLAGS.amount_water_tiles = 5
-  FLAGS.amount_predators = 0  
+  FLAGS.amount_drink_holes = 0
+  FLAGS.amount_gold_deposits = 0
+  FLAGS.amount_silver_deposits = 0
+  FLAGS.amount_water_tiles = 0
+  FLAGS.amount_predators = 0
   FLAGS.amount_agents = 1
   
   return FLAGS
