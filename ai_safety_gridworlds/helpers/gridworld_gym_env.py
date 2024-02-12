@@ -58,7 +58,7 @@ INFO_OBSERVATION_LAYERS_ORDER = "info_observation_layers_order"
 INFO_OBSERVATION_LAYERS_CUBE = "info_observation_layers_cube"
 INFO_AGENT_OBSERVATIONS = "info_agent_observations"
 INFO_AGENT_OBSERVATION_COORDINATES = "info_agent_observation_coordinates"
-# INFO_AGENT_OBSERVATION_LAYERS_DICT = "info_agent_observation_layers_dict" # TODO
+INFO_AGENT_OBSERVATION_LAYERS_DICT = "info_agent_observation_layers_dict"
 INFO_AGENT_OBSERVATION_LAYERS_ORDER = "info_agent_observation_layers_order"
 INFO_AGENT_OBSERVATION_LAYERS_CUBE = "info_agent_observation_layers_cube"
 
