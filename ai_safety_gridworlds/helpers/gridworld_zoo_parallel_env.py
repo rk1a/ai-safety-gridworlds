@@ -768,6 +768,7 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
 
 class GridworldsObservationSpace(gym.Space):
 
+    # TODO: support for 3D observation cube as observation space
     def __init__(self, env, agent, use_transitions, flatten_observations):
         self._env = env
         if isinstance(env._env, safety_game_moma.SafetyEnvironmentMoMa):

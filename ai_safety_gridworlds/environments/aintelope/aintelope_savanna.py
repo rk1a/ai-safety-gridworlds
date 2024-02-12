@@ -1023,7 +1023,7 @@ class DrinkDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drin
           locations = list(zip(from_row_indices, from_col_indices)) # random.choice does not work on zip directly
 
           # pick random locations and remove a resource tile
-          remove_count = min(current_count - self.availability, len(locations))
+          remove_count = min(current_count - int(self.availability), len(locations))   # NB! need to cast to int since self.availability becomes a float sometimes, even though it contains an integer value
           indexes = self.environment_data[NP_RANDOM].choice(len(locations), remove_count, replace=False) # replace=False: a value cannot be selected multiple times    # need to get indexes first since random.choice does not work directly on list of tuples
           remove_from = [locations[index] for index in indexes]
           self.curtain[tuple(np.array(remove_from).T)] = False
@@ -1052,7 +1052,7 @@ class DrinkDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drin
 
         # pick random locations and spawn a resource tile
         if len(locations) > 0: # else random.choice throws an error
-          indexes = self.environment_data[NP_RANDOM].choice(len(locations), self.availability - current_count, replace=False) # replace=False: a value cannot be selected multiple times    # need to get indexes first since random.choice does not work directly on list of tuples
+          indexes = self.environment_data[NP_RANDOM].choice(len(locations), int(self.availability) - current_count, replace=False) # replace=False: a value cannot be selected multiple times    # need to get indexes first since random.choice does not work directly on list of tuples    # NB! need to cast to int since self.availability becomes a float sometimes, even though it contains an integer value
           spawn_to = [locations[index] for index in indexes]
           self.curtain[tuple(np.array(spawn_to).T)] = True
 
@@ -1151,7 +1151,7 @@ class FoodDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink
           locations = list(zip(from_row_indices, from_col_indices)) # random.choice does not work on zip directly
 
           # pick random locations and remove a resource tile
-          remove_count = min(current_count - self.availability, len(locations))
+          remove_count = min(current_count - int(self.availability), len(locations))   # NB! need to cast to int since self.availability becomes a float sometimes, even though it contains an integer value
           indexes = self.environment_data[NP_RANDOM].choice(len(locations), remove_count, replace=False) # replace=False: a value cannot be selected multiple times    # need to get indexes first since random.choice does not work directly on list of tuples
           remove_from = [locations[index] for index in indexes]
           self.curtain[tuple(np.array(remove_from).T)] = False
@@ -1180,7 +1180,7 @@ class FoodDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink
 
         # pick random locations and spawn a resource tile
         if len(locations) > 0: # else random.choice throws an error
-          indexes = self.environment_data[NP_RANDOM].choice(len(locations), self.availability - current_count, replace=False) # replace=False: a value cannot be selected multiple times    # need to get indexes first since random.choice does not work directly on list of tuples
+          indexes = self.environment_data[NP_RANDOM].choice(len(locations), int(self.availability) - current_count, replace=False) # replace=False: a value cannot be selected multiple times    # need to get indexes first since random.choice does not work directly on list of tuples    # NB! need to cast to int since self.availability becomes a float sometimes, even though it contains an integer value
           spawn_to = [locations[index] for index in indexes]
           self.curtain[tuple(np.array(spawn_to).T)] = True
 
