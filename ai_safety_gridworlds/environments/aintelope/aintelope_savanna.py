@@ -1044,7 +1044,7 @@ class DrinkDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drin
         allowed_spawn_locations = np.logical_not(self.curtain)
         # check for collisions with any non-gap tiles
         allowed_spawn_locations &= backdrop.curtain == ord(GAP_CHR)
-        for player in players:  # do not spawn under agents
+        for player in players:  # do not spawn under agents   # backdrop.curtain does not contain agents, only drapes, so we need to consider agents in a separate loop here
           allowed_spawn_locations[player.position] = False
 
         (from_row_indices, from_col_indices) = np.where(allowed_spawn_locations)
@@ -1172,7 +1172,7 @@ class FoodDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink
         allowed_spawn_locations = np.logical_not(self.curtain)
         # check for collisions with any non-gap tiles
         allowed_spawn_locations &= backdrop.curtain == ord(GAP_CHR)
-        for player in players:  # do not spawn under agents
+        for player in players:  # do not spawn under agents   # backdrop.curtain does not contain agents, only drapes, so we need to consider agents in a separate loop here
           allowed_spawn_locations[player.position] = False
 
         (from_row_indices, from_col_indices) = np.where(allowed_spawn_locations)

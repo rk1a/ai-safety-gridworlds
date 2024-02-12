@@ -414,16 +414,45 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
       return chars_coordinates
 
 
+  def get_layers_order(self, observation, occlusion_in_layers=False, layers_order=[]):
+
+    if layers_order == []:  # take all layers
+
+      if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
+
+        layers_list = []
+        layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+
+        layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
+        layers_order.sort()
+
+      else:  # return coordinates of only the topmost objects visible on the board
+
+        # TODO: there is a risk that some layer is invisible for a while and then this dimension gets lost from the observationcube
+
+        board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board   # when called on agent perspectives then the observation is of Observation type
+        chars = np.unique(board)
+
+        layers_order = chars.tolist()  # assignment to default argument does not cause the "mutable default argument" problem
+        layers_order.sort()
+
+    #/ if layers_order == []:
+
+    return layers_order
+
+
   def calculate_observation_layers_cube(self, observation, occlusion_in_layers=True, layers_order=[]):
+
+    layers_order = self.get_layers_order(observation, occlusion_in_layers, layers_order)
 
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
       layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers
 
-      if layers_order == []:  # take all layers
-        layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
-        layers_order.sort()
+      #if layers_order == []:  # take all layers
+      #  layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
+      #  layers_order.sort()
 
       for layer_key in layers_order:
         layer = layers.get(layer_key)
@@ -436,11 +465,11 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     else:  # return coordinates of only the topmost objects visible on the board
 
       board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board
-      chars = np.unique(board)
+      #chars = np.unique(board)
 
-      if layers_order == []:  # take all layers
-        layers_order = chars.tolist()  # assignment to default argument does not cause the "mutable default argument" problem
-        layers_order.sort()
+      #if layers_order == []:  # take all layers
+      #  layers_order = chars.tolist()  # assignment to default argument does not cause the "mutable default argument" problem
+      #  layers_order.sort()
 
       layers_list = []
       for layer_key in layers_order:
