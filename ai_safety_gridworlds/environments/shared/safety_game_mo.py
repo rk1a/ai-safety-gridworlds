@@ -460,7 +460,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
           layer = np.zeros_like(next(iter(layers.values())))
         layers_list.append(layer)
 
-      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
+      return np.stack(layers_list, axis=0)   # feature vector becomes the first dimension
 
     else:  # return coordinates of only the topmost objects visible on the board
 
@@ -476,7 +476,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
         layer = (board == layer_key)
         layers_list.append(layer)
 
-      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
+      return np.stack(layers_list, axis=0)   # feature vector becomes the first dimension
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
