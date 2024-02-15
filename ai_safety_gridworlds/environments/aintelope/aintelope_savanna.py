@@ -148,14 +148,14 @@ GAME_ART = [
 
 AGENT_CHR1 = '0'  # 'A'
 AGENT_CHR2 = '1'
-AGENT_CHR3 = '2'
-AGENT_CHR4 = '3'
-AGENT_CHR5 = '4'
-AGENT_CHR6 = '5'
-AGENT_CHR7 = '6'
-AGENT_CHR8 = '7'
-AGENT_CHR9 = '8'
-AGENT_CHR10 = '9'
+#AGENT_CHR3 = '2'
+#AGENT_CHR4 = '3'
+#AGENT_CHR5 = '4'
+#AGENT_CHR6 = '5'
+#AGENT_CHR7 = '6'
+#AGENT_CHR8 = '7'
+#AGENT_CHR9 = '8'
+#AGENT_CHR10 = '9'
 
 DANGER_TILE_CHR = 'W'   # in the original environment, WATER_TILE_CHR
 PREDATOR_NPC_CHR = 'P'   # predators are agents who are controlled by the environment logic (currently moving randomly)
@@ -173,14 +173,14 @@ GAP_CHR = ' '
 AGENT_CHRS = [  # TODO import defaults from safety_game_ma
   AGENT_CHR1,
   AGENT_CHR2,
-  AGENT_CHR3,
-  AGENT_CHR4,
-  AGENT_CHR5,
-  AGENT_CHR6,
-  AGENT_CHR7,
-  AGENT_CHR8,
-  AGENT_CHR9,
-  AGENT_CHR10,
+  #AGENT_CHR3,
+  #AGENT_CHR4,
+  #AGENT_CHR5,
+  #AGENT_CHR6,
+  #AGENT_CHR7,
+  #AGENT_CHR8,
+  #AGENT_CHR9,
+  #AGENT_CHR10,
 ]
 
 
@@ -497,11 +497,15 @@ def make_game(environment_data,
               SMALL_FOOD_CHR: [SmallFoodDrape, FLAGS, FLAGS.sustainability_challenge, FLAGS.use_food_availability_metric_instead_of_spawning_tiles]
            }
 
+  for agent_character in AGENT_CHRS[amount_agents:]:
+    drapes[agent_character] = [DummyAgentDrape]
+
+
   z_order = [DANGER_TILE_CHR, PREDATOR_NPC_CHR, DRINK_CHR, FOOD_CHR, SMALL_DRINK_CHR, SMALL_FOOD_CHR]
-  z_order += [AGENT_CHRS[agent_index] for agent_index in range(0, amount_agents)]
+  z_order += [AGENT_CHRS[agent_index] for agent_index in range(0, len(AGENT_CHRS))]
 
   # AGENT_CHR needs to be first else self.curtain[player.position]: does not work properly in drapes
-  update_schedule = [AGENT_CHRS[agent_index] for agent_index in range(0, amount_agents)]
+  update_schedule = [AGENT_CHRS[agent_index] for agent_index in range(0, len(AGENT_CHRS))]
   update_schedule += [DANGER_TILE_CHR, PREDATOR_NPC_CHR, DRINK_CHR, FOOD_CHR, SMALL_DRINK_CHR, SMALL_FOOD_CHR]
 
 
@@ -588,6 +592,14 @@ def make_game(environment_data,
 
 
   return result
+
+
+class DummyAgentDrape(safety_game_ma.EnvironmentDataDrape):
+  """A `Drape` corresponding to agents not present on map.
+
+  This class helps to keep the missing agent layers active in the observation.
+  """
+  pass
 
 
 class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
