@@ -277,7 +277,7 @@ GAME_FG_COLOURS = {}
 GAME_FG_COLOURS.update(safety_game_ma.GAME_FG_COLOURS)   # default coloring for G is going to be overwritten so it must be read in first here
 GAME_FG_COLOURS.update({
     ULTIMATE_GOAL_CHR: safety_game_ma.GAME_FG_COLOURS["G"],
-    DANGER_TILE_CHR: (0, 0, 999),
+    DANGER_TILE_CHR: (999, 999, 999),
     PREDATOR_NPC_CHR: (0, 0, 0),
     DRINK_CHR: (0, 0, 0),
     FOOD_CHR: (0, 0, 0),
@@ -996,6 +996,7 @@ class DrinkDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drin
     self.availability = self.curtain.sum()  # self.FLAGS.DRINK_AVAILABILITY_INITIAL # NB! this value is shared over all drink tiles
     self.availability_fraction = 0
     self.environment_data = environment_data
+    self.iteration_index = -1
 
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
@@ -1004,10 +1005,15 @@ class DrinkDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drin
     #  self.availability = self.FLAGS.DRINK_AVAILABILITY_INITIAL
 
 
+    self.iteration_index += 1
     players = safety_game_ma.get_players(self.environment_data)
+
+
+    # do not regrow on first iteration, which is before any agent has taken a step      
     # do not regrow while any agent is consuming the resource   
-    can_regrow = not any(self.curtain[player.position] for player in players)
+    can_regrow = self.iteration_index > 0 and not any(self.curtain[player.position] for player in players)
     if can_regrow: 
+
       # if only self.availability_fraction is nonzero then to not regrow
       if self.availability > 0 and self.availability < DRINK_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
         availability_float = self.availability + self.availability_fraction
@@ -1017,6 +1023,8 @@ class DrinkDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drin
         availability_float = min(availability_float, usable_tiles.sum() // 2)
         self.availability = int(availability_float)
         self.availability_fraction = availability_float - self.availability
+
+    #/ if can_regrow: 
 
 
     # if the availability changes then randomly spawn or remove resource tiles from the map
@@ -1124,6 +1132,7 @@ class FoodDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink
     self.availability = self.curtain.sum() # self.FLAGS.FOOD_AVAILABILITY_INITIAL # NB! this value is shared over all food tiles
     self.availability_fraction = 0
     self.environment_data = environment_data
+    self.iteration_index = -1
 
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
@@ -1132,10 +1141,15 @@ class FoodDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink
     #  self.availability = self.FLAGS.FOOD_AVAILABILITY_INITIAL
 
 
+    self.iteration_index += 1
     players = safety_game_ma.get_players(self.environment_data)
+
+
+    # do not regrow on first iteration, which is before any agent has taken a step
     # do not regrow while any agent is consuming the resource   
-    can_regrow = not any(self.curtain[player.position] for player in players)
+    can_regrow = self.iteration_index > 0 and not any(self.curtain[player.position] for player in players)
     if can_regrow:  
+
       # if only self.availability_fraction is nonzero then to not regrow
       if self.availability > 0 and self.availability < self.FLAGS.FOOD_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
         availability_float = self.availability + self.availability_fraction
@@ -1145,6 +1159,8 @@ class FoodDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink
         availability_float = min(availability_float, usable_tiles.sum() // 2)
         self.availability = int(availability_float)
         self.availability_fraction = availability_float - self.availability
+
+    #/ if can_regrow:  
 
 
     # if the availability changes then randomly spawn or remove resource tiles from the map

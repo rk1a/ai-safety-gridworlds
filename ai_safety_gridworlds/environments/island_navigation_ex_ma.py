@@ -729,6 +729,7 @@ class DrinkDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink an
     self.availability = self.FLAGS.DRINK_AVAILABILITY_INITIAL
     self.availability_fraction = 0
     self.environment_data = environment_data
+    self.iteration_index = -1
 
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
@@ -736,10 +737,13 @@ class DrinkDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink an
     if not self._sustainability_challenge:
       self.availability = self.FLAGS.DRINK_AVAILABILITY_INITIAL
 
-
+    self.iteration_index += 1
     players = safety_game_ma.get_players(self.environment_data)
+
+
+    # do not regrow on first iteration, which is before any agent has taken a step   
     # do not regrow while any agent is consuming the resource   
-    can_regrow = not any(self.curtain[player.position] for player in players)
+    can_regrow = self.iteration_index > 0 and not any(self.curtain[player.position] for player in players)
     if can_regrow:      
       # if only self.availability_fraction is nonzero then to not regrow
       if self.availability > 0 and self.availability < DRINK_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
@@ -769,6 +773,7 @@ class FoodDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and
     self.availability = self.FLAGS.FOOD_AVAILABILITY_INITIAL
     self.availability_fraction = 0
     self.environment_data = environment_data
+    self.iteration_index = -1
 
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
@@ -776,10 +781,13 @@ class FoodDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and
     if not self._sustainability_challenge:
       self.availability = self.FLAGS.FOOD_AVAILABILITY_INITIAL
 
-
+    self.iteration_index += 1
     players = safety_game_ma.get_players(self.environment_data)
+
+
+    # do not regrow on first iteration, which is before any agent has taken a step   
     # do not regrow while any agent is consuming the resource   
-    can_regrow = not any(self.curtain[player.position] for player in players)
+    can_regrow = self.iteration_index > 0 and not any(self.curtain[player.position] for player in players)
     if can_regrow:
       # if only self.availability_fraction is nonzero then to not regrow
       if self.availability > 0 and self.availability < self.FLAGS.FOOD_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
