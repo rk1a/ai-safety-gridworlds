@@ -973,7 +973,7 @@ def make_safety_game(
       col_coordinates = locations_to_remove[:, 1]
       original_board[row_coordinates, col_coordinates] = what_lies_beneath  # numpy requires unzipped coordinates for accessing multiple cells by individual coordinates
 
-      if tile_max_count == 0:
+      if tile_max_count == 0 and remove_unused_tile_types_from_layers:
         sprites.pop(tile_type, None)
         drapes.pop(tile_type, None)
         if tile_type in update_schedule:

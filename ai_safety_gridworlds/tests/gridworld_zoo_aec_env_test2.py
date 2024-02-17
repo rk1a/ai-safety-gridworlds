@@ -131,7 +131,7 @@ def test_gridworlds_seed(demos):
                 "ascii_observation_format": False,    # Zoo API seed_test cannot handle ascii observations
                 "scalarise": True,   # Zoo API tester cannot handle multi-objective rewards
                 "override_infos": True,  # Zoo seed_test is unable to compare infos unless they have simple structure.
-                "seed": index,     # NB! this seed is used only for environment map randomisation. Later the test calls .seed() method on the wrapper and this will determine the random action sampling and other random events during the game play.
+                "seed": index,     # NB! this seed is used mainly for environment map randomisation. Later the test calls .seed() method on the wrapper and this will determine the random action sampling and other random events during the game play.
             }
             env = lambda: GridworldZooAecEnv(**env_params)  # seed test requires lambda
 

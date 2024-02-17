@@ -54,10 +54,12 @@ INFO_OBSERVED_REWARD = "observed_reward"
 INFO_DISCOUNT = "discount"
 INFO_OBSERVATION_COORDINATES = "info_observation_coordinates"
 INFO_OBSERVATION_LAYERS_DICT = "info_observation_layers_dict"
+INFO_OBSERVATION_LAYERS_ORDER = "info_observation_layers_order"
 INFO_OBSERVATION_LAYERS_CUBE = "info_observation_layers_cube"
 INFO_AGENT_OBSERVATIONS = "info_agent_observations"
 INFO_AGENT_OBSERVATION_COORDINATES = "info_agent_observation_coordinates"
 INFO_AGENT_OBSERVATION_LAYERS_DICT = "info_agent_observation_layers_dict"
+INFO_AGENT_OBSERVATION_LAYERS_ORDER = "info_agent_observation_layers_order"
 INFO_AGENT_OBSERVATION_LAYERS_CUBE = "info_agent_observation_layers_cube"
 
 
@@ -150,9 +152,11 @@ class GridworldGymEnv(gym.Env):
         # self._last_observed_agent_board = None
         self._last_observation = None
         self._last_observation_coordinates = None
+        self._last_observation_layers_order = None
         self._last_observation_layers_cube = None
         self._last_agent_observation = None
         self._last_agent_observation_coordinates = None
+        self._last_agent_observation_layers_order = None
         self._last_agent_observation_layers_cube = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):   # TODO: ascii support for multi-objective environments
@@ -346,7 +350,8 @@ class GridworldGymEnv(gym.Env):
 
         if observe_from_agent_coordinates is None and observe_from_agent_directions is None:
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+                self._last_observation_layers_order = self._env.get_layers_order(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+                self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._last_observation_layers_order)
 
         if hasattr(self._env, "agent_perspectives_with_layers"): 
 
@@ -358,7 +363,8 @@ class GridworldGymEnv(gym.Env):
                 self._last_agent_observation_coordinates = agent_observations_coordinates[self._agent_chr]
 
             if self._layers_order_in_cube is not None:
-                self._last_agent_observation_layers_cube = self._env.calculate_observation_layers_cube(agent_observations[self._agent_chr], occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+                self._last_agent_observation_layers_order = self._env.get_layers_order(agent_observations[self._agent_chr], occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+                self._last_agent_observation_layers_cube = self._env.calculate_observation_layers_cube(agent_observations[self._agent_chr], occlusion_in_layers=self._occlusion_in_layers, layers_order=self._last_agent_observation_layers_order)
 
     #/ def _process_observation(self, obs):
 
@@ -385,6 +391,7 @@ class GridworldGymEnv(gym.Env):
             info[INFO_OBSERVATION_LAYERS_DICT] = obs[INFO_LAYERS]
 
         if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
+            info[INFO_OBSERVATION_LAYERS_ORDER] = self._last_observation_layers_order
             info[INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
 
         if hasattr(self._env, "agent_perspectives_with_layers"):
@@ -397,6 +404,7 @@ class GridworldGymEnv(gym.Env):
                 info[INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observation_coordinates
 
             if self._layers_order_in_cube is not None:
+                info[INFO_AGENT_OBSERVATION_LAYERS_ORDER] = self._last_agent_observation_layers_order
                 info[INFO_AGENT_OBSERVATION_LAYERS_CUBE] = self._last_agent_observation_layers_cube
 
 

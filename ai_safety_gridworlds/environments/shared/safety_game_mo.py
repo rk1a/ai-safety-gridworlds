@@ -414,16 +414,45 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
       return chars_coordinates
 
 
+  def get_layers_order(self, observation, occlusion_in_layers=False, layers_order=[]):
+
+    if layers_order == []:  # take all layers
+
+      if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
+
+        layers_list = []
+        layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+
+        layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
+        layers_order.sort()
+
+      else:  # return coordinates of only the topmost objects visible on the board
+
+        # TODO: there is a risk that some layer is invisible for a while and then this dimension gets lost from the observationcube
+
+        board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board   # when called on agent perspectives then the observation is of Observation type
+        chars = np.unique(board)
+
+        layers_order = chars.tolist()  # assignment to default argument does not cause the "mutable default argument" problem
+        layers_order.sort()
+
+    #/ if layers_order == []:
+
+    return layers_order
+
+
   def calculate_observation_layers_cube(self, observation, occlusion_in_layers=True, layers_order=[]):
+
+    layers_order = self.get_layers_order(observation, occlusion_in_layers, layers_order)
 
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
       layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers
 
-      if layers_order == []:  # take all layers
-        layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
-        layers_order.sort()
+      #if layers_order == []:  # take all layers
+      #  layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
+      #  layers_order.sort()
 
       for layer_key in layers_order:
         layer = layers.get(layer_key)
@@ -431,23 +460,23 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
           layer = np.zeros_like(next(iter(layers.values())))
         layers_list.append(layer)
 
-      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
+      return np.stack(layers_list, axis=0)   # feature vector becomes the first dimension
 
     else:  # return coordinates of only the topmost objects visible on the board
 
       board = observation["ascii" if ascii else "board"] if isinstance(observation, dict) else observation.board
-      chars = np.unique(board)
+      #chars = np.unique(board)
 
-      if layers_order == []:  # take all layers
-        layers_order = chars.tolist()  # assignment to default argument does not cause the "mutable default argument" problem
-        layers_order.sort()
+      #if layers_order == []:  # take all layers
+      #  layers_order = chars.tolist()  # assignment to default argument does not cause the "mutable default argument" problem
+      #  layers_order.sort()
 
       layers_list = []
       for layer_key in layers_order:
         layer = (board == layer_key)
         layers_list.append(layer)
 
-      return np.stack(layers_list, axis=-1)   # feature vector becomes the last dimension
+      return np.stack(layers_list, axis=0)   # feature vector becomes the first dimension
 
 
   # adapted from SafetyEnvironment.reset() in ai_safety_gridworlds\environments\shared\safety_game.py and from Environment.reset() in ai_safety_gridworlds\environments\shared\rl\pycolab_interface.py
@@ -1128,33 +1157,32 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
 
 
   # TODO: refactor to agent class
-  def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None, observe_from_agent_directions=None, ascii=True):  # TODO: refactor into agents
+  # TODO
+  #def agent_perspectives(self, observation, for_agents=None, for_layer=None, observe_from_agent_coordinates=None, observe_from_agent_directions=None, ascii=True):  # TODO: refactor into agents
 
-    # outside_game_chr = WALL_CHR  # TODO: config flag
-    outside_game_chr = self._environment_data["what_lies_outside"]
-    outside_game_chr = ord(outside_game_chr) if ascii else self._value_mapping[outside_game_chr]
+  #  # outside_game_chr = WALL_CHR  # TODO: config flag
+  #  outside_game_chr = self._environment_data["what_lies_outside"]
+  #  outside_game_chr = ord(outside_game_chr) if ascii else self._value_mapping[outside_game_chr]
 
-    if observe_from_agent_coordinates is None:
-      observe_from_agent_coordinates = {}
-    if observe_from_agent_directions is None:
-      observe_from_agent_directions = {}
+  #  if observe_from_agent_coordinates is None:
+  #    observe_from_agent_coordinates = {}
+  #  if observe_from_agent_directions is None:
+  #    observe_from_agent_directions = {}
 
-    return { 
-      agent.character: get_agent_perspective(   # TODO
-        agent, 
-        observation, 
-        outside_game_chr, 
-        for_layer=for_layer, 
-        observe_from_coordinate=observe_from_agent_coordinates.get(agent.character),
-        observe_from_agent_direction=observe_from_agent_directions.get(agent.character),
-      )
-      for agent 
-      in (
-        for_agents 
-        if for_agents 
-        else safety_game_ma.get_players(self._environment_data)
-      ) 
-    }
+
+  #  agent = self._environment_data[AGENT_SPRITE]
+  #  assert for_agents is None or (len(list(for_agents)) == 1 and list(for_agents)[0] == agent)
+
+  #  return { 
+  #    agent.character: get_agent_perspective(   # TODO
+  #      agent, 
+  #      observation, 
+  #      outside_game_chr, 
+  #      for_layer=for_layer, 
+  #      observe_from_coordinate=observe_from_agent_coordinates.get(agent.character),
+  #      observe_from_agent_direction=observe_from_agent_directions.get(agent.character),
+  #    )
+  #  }
 
 
 

@@ -54,10 +54,12 @@ INFO_OBSERVED_REWARD = "observed_reward"
 INFO_DISCOUNT = "discount"
 INFO_OBSERVATION_COORDINATES = "info_observation_coordinates"
 INFO_OBSERVATION_LAYERS_DICT = "info_observation_layers_dict"
+INFO_OBSERVATION_LAYERS_ORDER = "info_observation_layers_order"
 INFO_OBSERVATION_LAYERS_CUBE = "info_observation_layers_cube"
 INFO_AGENT_OBSERVATIONS = "info_agent_observations"
 INFO_AGENT_OBSERVATION_COORDINATES = "info_agent_observation_coordinates"
 INFO_AGENT_OBSERVATION_LAYERS_DICT = "info_agent_observation_layers_dict"
+INFO_AGENT_OBSERVATION_LAYERS_ORDER = "info_agent_observation_layers_order"
 INFO_AGENT_OBSERVATION_LAYERS_CUBE = "info_agent_observation_layers_cube"
 
 
@@ -150,9 +152,11 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         self._last_observation = None
         self._last_observation_coordinates = None
+        self._last_observation_layers_order = None
         self._last_observation_layers_cube = None
         self._last_agent_observations = None
         self._last_agent_observations_coordinates = None
+        self._last_agent_observations_layers_orders = None
         self._last_agent_observations_layers_cubes = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -262,7 +266,8 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         if observe_from_agent_coordinates is None and observe_from_agent_directions is None:            
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
-                self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+                self._last_observation_layers_order = self._env.get_layers_order(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube)
+                self._last_observation_layers_cube = self._env.calculate_observation_layers_cube(obs, occlusion_in_layers=self._occlusion_in_layers, layers_order=self._last_observation_layers_order)
 
         if hasattr(self._env, "agent_perspectives_with_layers"): 
             # TODO: for step() method, calculate observations and coordinates only for current agent 
@@ -275,7 +280,8 @@ class GridworldZooParallelEnv(ParallelEnv):
                 self._last_agent_observations_coordinates = { agent_name: agent_observations_coordinates[agent_chr] for agent_name, agent_chr in self.agent_name_mapping.items() }
 
             if self._layers_order_in_cube_per_agent is not None:
-                self._last_agent_observations_layers_cubes = { agent_name: self._env.calculate_observation_layers_cube(agent_observations[agent_chr], occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube_per_agent.get(agent_name, [])) for agent_name, agent_chr in self.agent_name_mapping.items() }
+                self._last_agent_observations_layers_orders = { agent_name: self._env.get_layers_order(agent_observations[agent_chr], occlusion_in_layers=self._occlusion_in_layers, layers_order=self._layers_order_in_cube_per_agent.get(agent_name, [])) for agent_name, agent_chr in self.agent_name_mapping.items() }
+                self._last_agent_observations_layers_cubes = { agent_name: self._env.calculate_observation_layers_cube(agent_observations[agent_chr], occlusion_in_layers=self._occlusion_in_layers, layers_order=self._last_agent_observations_layers_orders[agent_name]) for agent_name, agent_chr in self.agent_name_mapping.items() }
 
     #/ def _process_observation(self, obs):
 
@@ -304,19 +310,22 @@ class GridworldZooParallelEnv(ParallelEnv):
 
             if self._layers_order_in_cube is not None and hasattr(self._env, "calculate_observation_layers_cube"):
                 for agent in self.agents:
-                    infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube   # shared global observation must be returned via agent keys
+                    # shared global observation must be returned via agent keys
+                    infos[agent][INFO_OBSERVATION_LAYERS_ORDER] = self._last_observation_layers_order
+                    infos[agent][INFO_OBSERVATION_LAYERS_CUBE] = self._last_observation_layers_cube
 
             if hasattr(self._env, "agent_perspectives_with_layers"):
                 for agent in self.agents:
                     infos[agent][INFO_AGENT_OBSERVATIONS] = self._last_agent_observations[agent]["ascii" if self._ascii_observation_format else "board"]
 
                     if self._layers_in_observation:
-                        infos[agent][INFO_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent][INFO_LAYERS]
+                        infos[agent][INFO_AGENT_OBSERVATION_LAYERS_DICT] = self._last_agent_observations[agent][INFO_LAYERS]
 
                     if self._object_coordinates_in_observation:
                         infos[agent][INFO_AGENT_OBSERVATION_COORDINATES] = self._last_agent_observations_coordinates[agent]
 
                     if self._layers_order_in_cube_per_agent is not None:
+                        infos[agent][INFO_AGENT_OBSERVATION_LAYERS_ORDER] = self._last_agent_observations_layers_orders[agent]
                         infos[agent][INFO_AGENT_OBSERVATION_LAYERS_CUBE] = self._last_agent_observations_layers_cubes[agent]
 
         else:   # if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -759,6 +768,7 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
 
 class GridworldsObservationSpace(gym.Space):
 
+    # TODO: support for 3D observation cube as observation space
     def __init__(self, env, agent, use_transitions, flatten_observations):
         self._env = env
         if isinstance(env._env, safety_game_moma.SafetyEnvironmentMoMa):
