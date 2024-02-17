@@ -144,6 +144,9 @@ class AIntelopeSavannaEnvironmentMaExperiment(AIntelopeSavannaEnvironmentMa):
         LOG_QVALUES_PER_TILETYPE,
       ]
 
+    if not FLAGS.enable_logging:
+      log_columns = None
+
     if log_filename_comment is None:
       log_filename_comment = os.path.splitext(os.path.basename(__file__))[0]
 

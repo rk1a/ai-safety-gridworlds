@@ -67,6 +67,7 @@ DEFAULT_ACTION_DIRECTION_MODE = 2         # 0 - fixed, 1 - relative, depending o
 DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS = False    # Whether to remove tile types not present on initial map from observation layers.
 DEFAULT_USE_FOOD_AVAILABILITY_METRIC_INSTEAD_OF_SPAWNING_TILES = False
 DEFAULT_USE_DRINK_AVAILABILITY_METRIC_INSTEAD_OF_SPAWNING_TILES = False
+DEFAULT_ENABLE_LOGGING = False
 
 
 GAME_ART = [
@@ -342,6 +343,8 @@ def define_flags():
 
   flags.DEFINE_boolean('remove_unused_tile_types_from_layers', DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS,
                        'Whether to remove tile types not present on initial map from observation layers.')
+
+  flags.DEFINE_boolean('enable_logging', DEFAULT_ENABLE_LOGGING, 'Enable logging.')
 
   flags.DEFINE_integer('amount_agents', DEFAULT_AMOUNT_AGENTS, 'Amount of agents.')
 
@@ -1444,6 +1447,9 @@ def main(unused_argv):
     LOG_METRICS,
     LOG_QVALUES_PER_TILETYPE,
   ]
+
+  if not FLAGS.enable_logging:
+    log_columns = None
 
   env = AIntelopeSavannaEnvironmentMa(
     scalarise=False,
