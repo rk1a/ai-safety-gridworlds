@@ -29,6 +29,9 @@ def init_experiment_flags():
   FLAGS = define_flags()
 
 
+  # TODO: option to kill the agent if it steps on danger or predator tile
+
+
   FLAGS.level = 0   # 0-6
   FLAGS.max_iterations = 100
   FLAGS.noops = True                      # Whether to include NOOP as a possible agent action.
@@ -39,16 +42,16 @@ def init_experiment_flags():
   FLAGS.use_satiation_proportional_reward = False
   FLAGS.map_randomization_frequency = 3                 # Whether to randomize the map.   # 0 - off, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance), 3 - once per training episode
   FLAGS.observation_radius = [4, 4, 4, 4]            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.
-  FLAGS.observation_direction_mode = 2    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
-  FLAGS.action_direction_mode = 2         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
+  FLAGS.observation_direction_mode = 1    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
+  FLAGS.action_direction_mode = 1         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
   FLAGS.remove_unused_tile_types_from_layers = False    # Whether to remove tile types not present on initial map from observation layers.
 
 
 
-  FLAGS.MOVEMENT_SCORE = mo_reward({"MOVEMENT_SCORE": 0})    
+  FLAGS.MOVEMENT_SCORE = mo_reward({"MOVEMENT_SCORE": -1})    
 
-  FLAGS.DRINK_DEFICIENCY_SCORE = mo_reward({"DRINK_DEFICIENCY_SCORE": 0})    
-  FLAGS.FOOD_DEFICIENCY_SCORE = mo_reward({"FOOD_DEFICIENCY_SCORE": 0})    
+  FLAGS.DRINK_DEFICIENCY_SCORE = mo_reward({"DRINK_DEFICIENCY_SCORE": -100})    
+  FLAGS.FOOD_DEFICIENCY_SCORE = mo_reward({"FOOD_DEFICIENCY_SCORE": -100})    
   # Need to be at least 7 else the agent does nothing. The bigger the value the more exploration is allowed
   FLAGS.DRINK_SCORE = mo_reward({"DRINK_SCORE": 20})     
   FLAGS.FOOD_SCORE = mo_reward({"FOOD_SCORE": 20})
@@ -61,41 +64,41 @@ def init_experiment_flags():
   #FLAGS.GOLD_SCORE = mo_reward({"GOLD_SCORE": 40})      
   #FLAGS.SILVER_SCORE = mo_reward({"SILVER_SCORE": 30})    
 
-  #FLAGS.DANGER_TILE_SCORE = mo_reward({"INJURY_SCORE": -50})      
-  #FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY_SCORE": -100})    
+  FLAGS.DANGER_TILE_SCORE = mo_reward({"INJURY_SCORE": -50})    
+  FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY_SCORE": -100})    
   #FLAGS.THIRST_HUNGER_DEATH_SCORE = mo_reward({"THIRST_HUNGER_DEATH_SCORE": -50})    
 
 
   FLAGS.DRINK_DEFICIENCY_INITIAL = 0
-  FLAGS.DRINK_EXTRACTION_RATE = 5
+  FLAGS.DRINK_EXTRACTION_RATE = 0
   FLAGS.DRINK_DEFICIENCY_RATE = -1
   #FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION_SCORE": -1})    
   #FLAGS.DRINK_OVERSATIATION_LIMIT = 3
 
   FLAGS.FOOD_DEFICIENCY_INITIAL = 0
-  FLAGS.FOOD_EXTRACTION_RATE = 5
+  FLAGS.FOOD_EXTRACTION_RATE = 0
   FLAGS.FOOD_DEFICIENCY_RATE = -1
   #FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION_SCORE": -1})    
   #FLAGS.FOOD_OVERSATIATION_LIMIT = 3
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
-  FLAGS.DRINK_GROWTH_LIMIT = 20       # The bigger the value the more exploration is allowed
+  FLAGS.DRINK_GROWTH_LIMIT = 1       # The bigger the value the more exploration is allowed
   # FLAGS.DRINK_AVAILABILITY_INITIAL = DRINK_GROWTH_LIMIT 
 
   #FLAGS.FOOD_REGROWTH_EXPONENT = 1.1
-  FLAGS.FOOD_GROWTH_LIMIT = 20        # The bigger the value the more exploration is allowed
+  FLAGS.FOOD_GROWTH_LIMIT = 1        # The bigger the value the more exploration is allowed
   # FLAGS.FOOD_AVAILABILITY_INITIAL = FOOD_GROWTH_LIMIT  
 
-  FLAGS.amount_food_patches = 2
-  FLAGS.amount_drink_holes = 0
-  FLAGS.amount_gold_deposits = 0
-  FLAGS.amount_silver_deposits = 0
-  FLAGS.amount_water_tiles = 0
-  FLAGS.amount_predators = 0
-  FLAGS.amount_agents = 1
-  
+  FLAGS.amount_food_patches = 1
+  FLAGS.amount_drink_holes = 1 
+  FLAGS.amount_gold_deposits = 1
+  FLAGS.amount_silver_deposits = 1
+  FLAGS.amount_water_tiles = 2
+  FLAGS.amount_predators = 1
+  FLAGS.amount_agents = 2
+
   return FLAGS
 
 
@@ -184,9 +187,9 @@ def main(unused_argv):
     #use_satiation_proportional_reward=FLAGS.use_satiation_proportional_reward,
   )
 
-  for trial_no in range(0, 2):
+  for trial_no in range(0, 100):
     # env.reset(options={"trial_no": trial_no + 1})  # NB! provide only trial_no. episode_no is updated automatically
-    for episode_no in range(0, 2): 
+    for episode_no in range(0, 100): 
       env.reset()   # it would also be ok to reset() at the end of the loop, it will not mess up the episode counter
       ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
       ui.play(env)

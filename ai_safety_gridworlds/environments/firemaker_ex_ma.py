@@ -42,6 +42,7 @@ from ast import literal_eval
 from ai_safety_gridworlds.environments.shared import safety_game
 from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_moma
+from ai_safety_gridworlds.environments.shared.safety_game_ma import Directions
 from ai_safety_gridworlds.environments.shared.safety_game_moma import ASCII_ART, NP_RANDOM, METRICS_MATRIX, METRICS_LABELS, METRICS_ROW_INDEXES
 from ai_safety_gridworlds.environments.shared.safety_game_moma import LOG_TIMESTAMP, LOG_ENVIRONMENT, LOG_TRIAL, LOG_EPISODE, LOG_ITERATION, LOG_ARGUMENTS, LOG_REWARD_UNITS, LOG_REWARD, LOG_SCALAR_REWARD, LOG_CUMULATIVE_REWARD, LOG_AVERAGE_REWARD, LOG_SCALAR_CUMULATIVE_REWARD, LOG_SCALAR_AVERAGE_REWARD, LOG_GINI_INDEX, LOG_CUMULATIVE_GINI_INDEX, LOG_MO_VARIANCE, LOG_CUMULATIVE_MO_VARIANCE, LOG_AVERAGE_MO_VARIANCE, LOG_METRICS, LOG_QVALUES_PER_TILETYPE
 
@@ -399,7 +400,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     self.environment_data = environment_data
 
-    self.observation_direction = safety_game.Actions.UP 
+    self.observation_direction = Directions.UP 
 
     self.is_at_workshop = False
 
