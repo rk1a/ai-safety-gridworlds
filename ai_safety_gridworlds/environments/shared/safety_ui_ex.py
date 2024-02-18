@@ -377,8 +377,9 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     # print metrics
     if metrics is not None:
 
-      self._screen_addstr(screen, start_row, start_col, "Metrics:", curses.color_pair(0)) 
-      max_first_col_width = max(max_first_col_width, len("Metrics:"))
+      if not isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+        self._screen_addstr(screen, start_row, start_col, "Metrics:", curses.color_pair(0)) 
+        max_first_col_width = max(max_first_col_width, len("Metrics:"))
 
       if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
         len_agents = len(self._env._environment_data[AGENT_SPRITE].keys())
@@ -472,7 +473,7 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
         current_agent_start_col = current_agent_start_col + next_agent_start_col + agent_padding
 
-        if agent_index == -1:   # show agent metrics under global metrics, not beside it
+        if agent_index == -1 and isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):   # show agent metrics under global metrics, not beside it
           current_agent_start_col = start_col
           start_row += max_output_row_index + 1 + 2
           max_output_row_index = 0
