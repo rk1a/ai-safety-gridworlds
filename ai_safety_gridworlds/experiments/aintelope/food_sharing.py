@@ -70,14 +70,14 @@ def init_experiment_flags():
   FLAGS.DRINK_EXTRACTION_RATE = 5
   FLAGS.DRINK_DEFICIENCY_RATE = -1
   #FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
-  FLAGS.DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION_SCORE": -100})    
+  FLAGS.DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION_SCORE": 0}) # NB! oversatiation penalty should be zero here, so that the agent is not incetivised to share food purely from self-interest
   FLAGS.DRINK_OVERSATIATION_LIMIT = 3
 
   FLAGS.FOOD_DEFICIENCY_INITIAL = 0
   FLAGS.FOOD_EXTRACTION_RATE = 5
   FLAGS.FOOD_DEFICIENCY_RATE = -1
   #FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
-  FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION_SCORE": -100})    
+  FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION_SCORE": 0}) # NB! oversatiation penalty should be zero here, so that the agent is not incetivised to share food purely from self-interest  
   FLAGS.FOOD_OVERSATIATION_LIMIT = 3
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
