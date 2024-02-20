@@ -70,9 +70,6 @@ class AIntelopeSavannaEnvironmentMaExperiment(AIntelopeSavannaEnvironmentMa):
 
   def __init__(self,
                 FLAGS=None,
-                log_columns=None,
-                log_arguments_to_separate_file=True,
-                log_filename_comment=None,
                 **kwargs):
     """Builds a `AIntelopeSavannaEnvironmentMaExperiment` python environment.
 
@@ -80,56 +77,9 @@ class AIntelopeSavannaEnvironmentMaExperiment(AIntelopeSavannaEnvironmentMa):
     """
 
     FLAGS = override_flags(init_experiment_flags, FLAGS)
-
-
-    if log_columns is None:
-      log_columns = [
-        # LOG_TIMESTAMP,
-        # LOG_ENVIRONMENT,
-        LOG_TRIAL,       
-        LOG_EPISODE,        
-        LOG_ITERATION,
-        # LOG_ARGUMENTS,     
-        # LOG_REWARD_UNITS,     # TODO
-        LOG_REWARD,
-        LOG_SCALAR_REWARD,
-        LOG_CUMULATIVE_REWARD,
-        LOG_AVERAGE_REWARD,
-        LOG_SCALAR_CUMULATIVE_REWARD, 
-        LOG_SCALAR_AVERAGE_REWARD, 
-        LOG_GINI_INDEX, 
-        LOG_CUMULATIVE_GINI_INDEX,
-        LOG_MO_VARIANCE, 
-        LOG_CUMULATIVE_MO_VARIANCE,
-        LOG_AVERAGE_MO_VARIANCE,
-        LOG_METRICS,
-        LOG_QVALUES_PER_TILETYPE,
-      ]
-
-    if not FLAGS.enable_logging:
-      log_columns = None
-
-    if log_filename_comment is None:
-      log_filename_comment = os.path.splitext(os.path.basename(__file__))[0]
-
-
-    args = {
-      "level": FLAGS.level, 
-      "max_iterations": FLAGS.max_iterations, 
-      "noops": FLAGS.noops,
-      "sustainability_challenge": FLAGS.sustainability_challenge,
-      "thirst_hunger_death": FLAGS.thirst_hunger_death,
-      "penalise_oversatiation": FLAGS.penalise_oversatiation,
-      "use_satiation_proportional_reward": FLAGS.use_satiation_proportional_reward,
-    }
-    args.update(kwargs)
-
     super(AIntelopeSavannaEnvironmentMaExperiment, self).__init__(        
         FLAGS=FLAGS,
-        log_columns=log_columns,
-        log_arguments_to_separate_file=log_arguments_to_separate_file,
-        log_filename_comment=log_filename_comment,
-        **args)
+        **kwargs)
 
 
 

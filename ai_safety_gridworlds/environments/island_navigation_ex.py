@@ -717,9 +717,15 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
       if key in ["FLAGS", "__class__", "kwargs", "self"]:
         continue
       if key in FLAGS:
-        FLAGS[key].value = value
+        if isinstance(FLAGS[key].value, mo_reward):
+          FLAGS[key].value = mo_reward.parse(value)
+        else:
+          FLAGS[key].value = value
       elif key.upper() in FLAGS:    # detect cases when flag has uppercase name
-        FLAGS[key.upper()].value = value
+        if isinstance(FLAGS[key.upper()].value, mo_reward):
+          FLAGS[key.upper()].value = mo_reward.parse(value)
+        else:
+          FLAGS[key.upper()].value = value
 
     log_arguments = arguments
 
