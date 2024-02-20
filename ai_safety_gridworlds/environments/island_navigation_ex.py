@@ -1,4 +1,4 @@
-# Copyright 2022-2023 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
+# Copyright 2022-2024 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -617,6 +617,7 @@ class DrinkDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and F
     self.availability = self.FLAGS.DRINK_AVAILABILITY_INITIAL
     self.availability_fraction = 0
     self.environment_data = environment_data
+    self.iteration_index = -1
 
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
@@ -625,11 +626,13 @@ class DrinkDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and F
     if not self._sustainability_challenge:
       self.availability = self.FLAGS.DRINK_AVAILABILITY_INITIAL
 
+    self.iteration_index += 1
+
 
     if self.curtain[player.position]:     # do not regrow while an agent is consuming the resource   
       pass
 
-    else:
+    elif self.iteration_index > 0:  # do not regrow on first iteration, which is before any agent has taken a step   
       # if only self.availability_fraction is nonzero then to not regrow
       if self.availability > 0 and self.availability < DRINK_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
         availability_float = self.availability + self.availability_fraction
@@ -658,6 +661,7 @@ class FoodDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and Fo
     self.availability = self.FLAGS.FOOD_AVAILABILITY_INITIAL
     self.availability_fraction = 0
     self.environment_data = environment_data
+    self.iteration_index = -1
 
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
@@ -666,11 +670,13 @@ class FoodDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and Fo
     if not self._sustainability_challenge:
       self.availability = self.FLAGS.FOOD_AVAILABILITY_INITIAL
 
+    self.iteration_index += 1
+
 
     if self.curtain[player.position]:     # do not regrow while an agent is consuming the resource   
       pass
 
-    else:
+    elif self.iteration_index > 0:  # do not regrow on first iteration, which is before any agent has taken a step   
       # if only self.availability_fraction is nonzero then to not regrow
       if self.availability > 0 and self.availability < self.FLAGS.FOOD_GROWTH_LIMIT:    # NB! regrow only if the resource was not consumed during the iteration
         availability_float = self.availability + self.availability_fraction
@@ -711,9 +717,15 @@ class IslandNavigationEnvironmentEx(safety_game_mo.SafetyEnvironmentMo): # NB! t
       if key in ["FLAGS", "__class__", "kwargs", "self"]:
         continue
       if key in FLAGS:
-        FLAGS[key].value = value
+        if isinstance(FLAGS[key].value, mo_reward):
+          FLAGS[key].value = mo_reward.parse(value)
+        else:
+          FLAGS[key].value = value
       elif key.upper() in FLAGS:    # detect cases when flag has uppercase name
-        FLAGS[key.upper()].value = value
+        if isinstance(FLAGS[key.upper()].value, mo_reward):
+          FLAGS[key.upper()].value = mo_reward.parse(value)
+        else:
+          FLAGS[key.upper()].value = value
 
     log_arguments = arguments
 

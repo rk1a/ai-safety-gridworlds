@@ -1,4 +1,4 @@
-# Copyright 2022 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
+# Copyright 2022-2024 Roland Pihlakas. https://github.com/levitation-opensource/multiobjective-ai-safety-gridworlds
 # Copyright 2018 The AI Safety Gridworlds Authors. All Rights Reserved.
 # Copyright 2017 the pycolab Authors
 #
@@ -314,6 +314,18 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     return leftmost_column - 3   # ADDED
 
 
+  def _format_float(self, value):
+
+    if isinstance(value, str):    # for some reason np.isscalar() returns True for strings
+      return value
+    elif np.isscalar(value):
+      if abs(value) < 1e-10: # TODO: tune/config
+        value = 0
+      return "{0:G}".format(value) # TODO: tune/config
+    else:
+      return str(value)
+
+
   # adapted from CursesUi._display(self, screen, observations, score, elapsed) in pycolab\human_ui.py
   def _display(self, screen, observations, score, elapsed, update_time_counter_only=False):
 
@@ -377,19 +389,113 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     # print metrics
     if metrics is not None:
 
-      self._screen_addstr(screen, start_row, start_col, "Metrics:", curses.color_pair(0)) 
-      for row_index, row in enumerate(metrics):
-        for col_index, cell in enumerate(row):
-          if col_index == 0:
-            col_offset = 0
-          elif col_index == 1:
-            col_offset = max_first_col_width
-          else:
-            col_offset = metrics_cell_widths[col_index - 1]
+      if not isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+        self._screen_addstr(screen, start_row, start_col, "Metrics:", curses.color_pair(0)) 
+        max_first_col_width = max(max_first_col_width, len("Metrics:"))
 
-          self._screen_addstr(screen, start_row + 1 + row_index, start_col + col_offset, str(cell), curses.color_pair(0)) 
+      if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+        len_agents = len(self._env._environment_data[AGENT_SPRITE].keys())
+      else:
+        len_agents = 0
 
-      start_row += len(metrics) + 2
+      current_agent_start_col = start_col
+      max_output_row_index = 0
+
+      for agent_index in range(-1, len_agents):
+
+        next_agent_start_col = 0 # current_agent_start_col
+
+
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+          if agent_index == -1: # global metrics
+
+            self._screen_addstr(screen, start_row, current_agent_start_col, "Global metrics:", curses.color_pair(0))
+            max_first_col_width = max(max_first_col_width, len("Global metrics:"))
+
+          else: # if agent_index >= 0:
+
+            agent_key = list(self._env._environment_data[AGENT_SPRITE].keys())[agent_index]
+            self._screen_addstr(screen, start_row, current_agent_start_col, "Agent " + agent_key + "", curses.color_pair(0))
+            max_first_col_width = max(max_first_col_width, len("Agent " + agent_key + ""))
+
+            self._screen_addstr(screen, start_row + 2, current_agent_start_col, "Metrics:", curses.color_pair(0))
+            max_first_col_width = max(max_first_col_width, len("Metrics:"))
+
+        #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+
+        output_row_index = -1 + (2 if agent_index != -1 else 0)
+        for row_index, row in enumerate(metrics):
+          for col_index, cell in enumerate(row):
+
+            if col_index == 0:
+              col_offset = 0
+            elif col_index == 1:
+              col_offset = max_first_col_width
+            else:
+              col_offset = metrics_cell_widths[col_index - 1]
+
+            if col_index == 0:
+              if cell is None:
+                break # skip this metrics row without a label
+            else:
+              if cell is None:
+                cell = 0
+
+
+            cell = self._format_float(cell)
+
+
+            if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+              if col_index == 0:
+
+                parts = cell.split("_")   # TODO: implement a better way to detect metrics which are related to a particular agent
+
+                if agent_index == -1:
+                  if len(parts) > 1 and len(parts[-1]) == 1:
+                    break # skip agent-specific metrics row
+
+                else:
+                  agent_key = list(self._env._environment_data[AGENT_SPRITE].keys())[agent_index]
+
+                  if len(parts) == 1 or len(parts[-1]) != 1:
+                    break # skip global metrics row
+                  elif len(parts) > 1 and parts[-1] != agent_key:
+                    break # skip other agent's metrics row
+                  else:
+                    cell = "_".join(parts[:-1])
+
+              #/ if col_index == 0:
+
+            #/ if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+
+
+            if col_index == 0:
+              output_row_index += 1
+
+
+            self._screen_addstr(screen, start_row + 1 + output_row_index, current_agent_start_col + col_offset, cell, curses.color_pair(0)) 
+            next_agent_start_col = max(next_agent_start_col, col_offset + len(cell))
+            max_output_row_index = max(max_output_row_index, output_row_index)
+
+          #/ for col_index, cell in enumerate(row):
+        #/ for row_index, row in enumerate(metrics):
+
+        current_agent_start_col = current_agent_start_col + next_agent_start_col + agent_padding
+
+        if agent_index == -1 and isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):   # show agent metrics under global metrics, not beside it
+          current_agent_start_col = start_col
+          start_row += max_output_row_index + 1 + 2
+          max_output_row_index = 0
+
+      #/ for agent_index, observation in range(-1, len_agents):
+
+      # start_row += len(metrics) + 2
+      start_row += max_output_row_index + 1 + 2
+
+    #/ if metrics is not None:
 
 
     # print reward dimensions too
@@ -408,28 +514,31 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         agent_start_row = start_row
         next_agent_start_col = 0 # current_agent_start_col
 
-        self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Agent " + agent, curses.color_pair(0)) 
-        next_agent_start_col = max(next_agent_start_col, len("Agent " + agent))
-        agent_start_row += 2
+        if metrics is None:   # else the agent names are already printed above
+          self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Agent " + agent, curses.color_pair(0)) 
+          next_agent_start_col = max(next_agent_start_col, len("Agent " + agent))
+          agent_start_row += 2
 
         agent_last_reward = last_reward[agent]
-        self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Last reward:", curses.color_pair(0)) 
-        next_agent_start_col = max(next_agent_start_col, len("Last reward:"))
+        self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Last score:", curses.color_pair(0)) 
+        next_agent_start_col = max(next_agent_start_col, len("Last score:"))
         for row_index, (key, value) in enumerate(agent_last_reward.items()):
+          value = self._format_float(value)
           self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col, key, curses.color_pair(0)) 
-          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, value, curses.color_pair(0)) 
           next_agent_start_col = max(next_agent_start_col, len(key))
-          next_agent_start_col = max(next_agent_start_col, max_first_col_width + len(str(value)))
+          next_agent_start_col = max(next_agent_start_col, max_first_col_width + len(value))
         agent_start_row += len(agent_last_reward) + 2
  
         agent_episode_return = episode_return[agent]
         self._screen_addstr(screen, agent_start_row, current_agent_start_col, "Episode return:", curses.color_pair(0)) 
         next_agent_start_col = max(next_agent_start_col, len("Episode return:"))
         for row_index, (key, value) in enumerate(agent_episode_return.items()):
+          value = self._format_float(value)
           self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col, key, curses.color_pair(0)) 
-          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+          self._screen_addstr(screen, agent_start_row + 1 + row_index, current_agent_start_col + max_first_col_width, value, curses.color_pair(0)) 
           next_agent_start_col = max(next_agent_start_col, len(key))
-          next_agent_start_col = max(next_agent_start_col, max_first_col_width + len(str(value)))
+          next_agent_start_col = max(next_agent_start_col, max_first_col_width + len(value))
         agent_start_row += len(agent_episode_return) + 2
 
         agent_start_rows.append(agent_start_row)
@@ -447,22 +556,24 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
       self._screen_addstr(screen, start_row, start_col, "Last reward:", curses.color_pair(0)) 
       for row_index, (key, value) in enumerate(last_reward.items()):
+        value = self._format_float(value)
         self._screen_addstr(screen, start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
-        self._screen_addstr(screen, start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+        self._screen_addstr(screen, start_row + 1 + row_index, start_col + max_first_col_width, value, curses.color_pair(0)) 
       start_row += len(last_reward) + 2
 
       self._screen_addstr(screen, start_row, start_col, "Episode return:", curses.color_pair(0)) 
       for row_index, (key, value) in enumerate(episode_return.items()):
+        value = self._format_float(value)
         self._screen_addstr(screen, start_row + 1 + row_index, start_col, key, curses.color_pair(0)) 
-        self._screen_addstr(screen, start_row + 1 + row_index, start_col + max_first_col_width, str(value), curses.color_pair(0)) 
+        self._screen_addstr(screen, start_row + 1 + row_index, start_col + max_first_col_width, value, curses.color_pair(0)) 
       start_row += len(episode_return) + 2
 
     else:
 
       self._screen_addstr(screen, start_row,     start_col, "Last reward:   ", curses.color_pair(0)) 
       self._screen_addstr(screen, start_row + 1, start_col, "Episode return:", curses.color_pair(0)) 
-      self._screen_addstr(screen, start_row,     start_col + max_first_col_width, str(self._env._last_reward), curses.color_pair(0)) 
-      self._screen_addstr(screen, start_row + 1, start_col + max_first_col_width, str(self._env.episode_return), curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row,     start_col + max_first_col_width, self._format_float(self._env._last_reward), curses.color_pair(0)) 
+      self._screen_addstr(screen, start_row + 1, start_col + max_first_col_width, self._format_float(self._env.episode_return), curses.color_pair(0)) 
 
 
   def _screen_addstr(self, screen, row, col, text, color_pair):
