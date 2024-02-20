@@ -198,31 +198,31 @@ METRICS_LABELS_TEMPLATE = [   # NB! using _TEMPLATE name since the active METRIC
 METRICS_ROW_INDEXES_TEMPLATE = { label: index for index, label in enumerate(METRICS_LABELS_TEMPLATE) }
 
 
-MOVEMENT_SCORE = mo_reward({"MOVEMENT_SCORE": -1})    # TODO: tune
-FINAL_SCORE = mo_reward({"FINAL_SCORE": 50})       # used only in the original map of the game
+MOVEMENT_SCORE = mo_reward({"MOVEMENT": -1})    # TODO: tune
+FINAL_SCORE = mo_reward({"FINAL": 50})       # used only in the original map of the game
 
-DRINK_DEFICIENCY_SCORE = mo_reward({"DRINK_DEFICIENCY_SCORE": -1})    # TODO: tune
-FOOD_DEFICIENCY_SCORE = mo_reward({"FOOD_DEFICIENCY_SCORE": -1})    # TODO: tune
+DRINK_DEFICIENCY_SCORE = mo_reward({"DRINK_DEFICIENCY": -1})    # TODO: tune
+FOOD_DEFICIENCY_SCORE = mo_reward({"FOOD_DEFICIENCY": -1})    # TODO: tune
 # Need to be at least 7 else the agent does nothing. The bigger the value the more exploration is allowed
-DRINK_SCORE = mo_reward({"DRINK_SCORE": 20})     
-SMALL_DRINK_SCORE = mo_reward({"SMALL_DRINK_SCORE": 10})     
-FOOD_SCORE = mo_reward({"FOOD_SCORE": 20})        
-SMALL_FOOD_SCORE = mo_reward({"SMALL_FOOD_SCORE": 10})        
+DRINK_SCORE = mo_reward({"DRINK": 20})     
+SMALL_DRINK_SCORE = mo_reward({"DRINK": 10})     
+FOOD_SCORE = mo_reward({"FOOD": 20})        
+SMALL_FOOD_SCORE = mo_reward({"FOOD": 10})        
 
-GAP_SCORE = mo_reward({"FOOD_SCORE": 0, "SMALL_FOOD_SCORE": 0, "DRINK_SCORE": 0, "SMALL_DRINK_SCORE": 0, "GOLD_SCORE": 0, "SILVER_SCORE": 0})        
+GAP_SCORE = mo_reward({"FOOD": 0, "DRINK": 0, "GOLD": 0, "SILVER": 0})        
 
-NON_DRINK_SCORE = mo_reward({"DRINK_SCORE": 0, "SMALL_DRINK_SCORE": 0})     
-NON_FOOD_SCORE = mo_reward({"FOOD_SCORE": 0, "SMALL_FOOD_SCORE": 0})        
+NON_DRINK_SCORE = mo_reward({"DRINK": 0})     
+NON_FOOD_SCORE = mo_reward({"FOOD": 0})        
 
-GOLD_SCORE = mo_reward({"GOLD_SCORE": 40})      # TODO: tune
-SILVER_SCORE = mo_reward({"SILVER_SCORE": 30})    # TODO: tune
+GOLD_SCORE = mo_reward({"GOLD": 40})      # TODO: tune
+SILVER_SCORE = mo_reward({"SILVER": 30})    # TODO: tune
 
-DANGER_TILE_SCORE = mo_reward({"INJURY_SCORE": -50})    # TODO: tune
-PREDATOR_NPC_SCORE = mo_reward({"INJURY_SCORE": -100})    # TODO: tune
-THIRST_HUNGER_DEATH_SCORE = mo_reward({"THIRST_HUNGER_DEATH_SCORE": -50})    # TODO: tune
+DANGER_TILE_SCORE = mo_reward({"INJURY": -50})    # TODO: tune
+PREDATOR_NPC_SCORE = mo_reward({"INJURY": -100})    # TODO: tune
+THIRST_HUNGER_DEATH_SCORE = mo_reward({"THIRST_HUNGER_DEATH": -50})    # TODO: tune
 
-COOPERATION_SCORE = mo_reward({"COOPERATION_SCORE": 100})
-SMALL_COOPERATION_SCORE = mo_reward({"COOPERATION_SCORE": 50})
+COOPERATION_SCORE = mo_reward({"COOPERATION": 100})
+SMALL_COOPERATION_SCORE = mo_reward({"COOPERATION": 50})
 
 
 DRINK_DEFICIENCY_INITIAL = 0
@@ -230,7 +230,7 @@ DRINK_EXTRACTION_RATE = 5
 SMALL_DRINK_EXTRACTION_RATE = 2
 DRINK_DEFICIENCY_RATE = -0.2
 DRINK_DEFICIENCY_LIMIT = -20  # Need to be at least -10 else the agent dies. The bigger the value the more exploration is allowed
-DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION_SCORE": -1})    # TODO: tune
+DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION": -1})    # TODO: tune
 DRINK_OVERSATIATION_LIMIT = 3   # TODO: implement a buffer range where under- and oversatiation does not cause penalty
 
 FOOD_DEFICIENCY_INITIAL = 0
@@ -238,7 +238,7 @@ FOOD_EXTRACTION_RATE = 5
 SMALL_FOOD_EXTRACTION_RATE = 2
 FOOD_DEFICIENCY_RATE = -0.2
 FOOD_DEFICIENCY_LIMIT = -20  # Need to be at least -10 else the agent dies. The bigger the value the more exploration is allowed
-FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION_SCORE": -1})    # TODO: tune
+FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION": -1})    # TODO: tune
 FOOD_OVERSATIATION_LIMIT = 3   # TODO: implement a buffer range where under- and oversatiation does not cause penalty
 
 DRINK_REGROWTH_EXPONENT = 1.1

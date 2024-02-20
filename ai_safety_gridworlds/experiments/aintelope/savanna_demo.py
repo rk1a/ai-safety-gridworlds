@@ -48,39 +48,39 @@ def init_experiment_flags():
 
 
 
-  FLAGS.MOVEMENT_SCORE = mo_reward({"MOVEMENT_SCORE": -1})    
+  FLAGS.MOVEMENT_SCORE = mo_reward({"MOVEMENT": -1})    
 
-  FLAGS.DRINK_DEFICIENCY_SCORE = mo_reward({"DRINK_DEFICIENCY_SCORE": -100})    
-  FLAGS.FOOD_DEFICIENCY_SCORE = mo_reward({"FOOD_DEFICIENCY_SCORE": -100})    
+  FLAGS.DRINK_DEFICIENCY_SCORE = mo_reward({"DRINK_DEFICIENCY": -100})    
+  FLAGS.FOOD_DEFICIENCY_SCORE = mo_reward({"FOOD_DEFICIENCY": -100})    
   # Need to be at least 7 else the agent does nothing. The bigger the value the more exploration is allowed
-  FLAGS.DRINK_SCORE = mo_reward({"DRINK_SCORE": 20})     
-  FLAGS.FOOD_SCORE = mo_reward({"FOOD_SCORE": 20})
-  FLAGS.GAP_SCORE = mo_reward({"FOOD_SCORE": 0, "DRINK_SCORE": 0}) #, "GOLD_SCORE": 0, "SILVER_SCORE": 0})
-  FLAGS.NON_DRINK_SCORE = mo_reward({"DRINK_SCORE": 0})     
-  FLAGS.NON_FOOD_SCORE = mo_reward({"FOOD_SCORE": 0})          
+  FLAGS.DRINK_SCORE = mo_reward({"DRINK": 20})     
+  FLAGS.FOOD_SCORE = mo_reward({"FOOD": 20})
+  FLAGS.GAP_SCORE = mo_reward({"FOOD": 0, "DRINK": 0}) #, "GOLD": 0, "SILVER": 0})
+  FLAGS.NON_DRINK_SCORE = mo_reward({"DRINK": 0})     
+  FLAGS.NON_FOOD_SCORE = mo_reward({"FOOD": 0})          
 
-  FLAGS.GAP_SCORE = mo_reward({"FOOD_SCORE": 0, "DRINK_SCORE": 0})         
+  FLAGS.GAP_SCORE = mo_reward({"FOOD": 0, "DRINK": 0})         
 
-  #FLAGS.GOLD_SCORE = mo_reward({"GOLD_SCORE": 40})      
-  #FLAGS.SILVER_SCORE = mo_reward({"SILVER_SCORE": 30})    
+  #FLAGS.GOLD_SCORE = mo_reward({"GOLD": 40})      
+  #FLAGS.SILVER_SCORE = mo_reward({"SILVER": 30})    
 
-  FLAGS.DANGER_TILE_SCORE = mo_reward({"INJURY_SCORE": -50})    
-  FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY_SCORE": -100})    
-  #FLAGS.THIRST_HUNGER_DEATH_SCORE = mo_reward({"THIRST_HUNGER_DEATH_SCORE": -50})    
+  FLAGS.DANGER_TILE_SCORE = mo_reward({"INJURY": -50})    
+  FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY": -100})    
+  #FLAGS.THIRST_HUNGER_DEATH_SCORE = mo_reward({"THIRST_HUNGER_DEATH": -50})    
 
 
   FLAGS.DRINK_DEFICIENCY_INITIAL = 0
   FLAGS.DRINK_EXTRACTION_RATE = 0
   FLAGS.DRINK_DEFICIENCY_RATE = -0.2
   #FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
-  #FLAGS.DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION_SCORE": -1})    
+  #FLAGS.DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION": -1})    
   #FLAGS.DRINK_OVERSATIATION_LIMIT = 3
 
   FLAGS.FOOD_DEFICIENCY_INITIAL = 0
   FLAGS.FOOD_EXTRACTION_RATE = 0
   FLAGS.FOOD_DEFICIENCY_RATE = -0.2
   #FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
-  #FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION_SCORE": -1})    
+  #FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION": -1})    
   #FLAGS.FOOD_OVERSATIATION_LIMIT = 3
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
