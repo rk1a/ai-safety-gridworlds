@@ -319,6 +319,8 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
     if isinstance(value, str):    # for some reason np.isscalar() returns True for strings
       return value
     elif np.isscalar(value):
+      if abs(value) < 1e-10: # TODO: tune/config
+        value = 0
       return "{0:G}".format(value) # TODO: tune/config
     else:
       return str(value)
