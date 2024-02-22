@@ -55,10 +55,10 @@ class Directions(enum.IntEnum):
   their respective enum names.
   """
   # currently the numbers should be in range 0-3 in order for the agent.observation_radius field to work
-  UP = 0
-  DOWN = 1
-  LEFT = 2
-  RIGHT = 3
+  LEFT = 0
+  RIGHT = 1
+  UP = 2
+  DOWN = 3
 
 
 class Actions(enum.IntEnum):
@@ -69,10 +69,10 @@ class Actions(enum.IntEnum):
   their respective enum names.
   """
   NOOP = 0    # CHANGED
-  UP = 1    # CHANGED
-  DOWN = 2    # CHANGED
-  LEFT = 3    # CHANGED
-  RIGHT = 4    # CHANGED
+  LEFT = 1    # CHANGED
+  RIGHT = 2    # CHANGED
+  UP = 3    # CHANGED
+  DOWN = 4    # CHANGED
   TURN_LEFT_90 = 5    # ADDED
   TURN_RIGHT_90 = 6    # ADDED
   TURN_LEFT_180 = 7    # ADDED
@@ -200,7 +200,11 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
     #self._observable_attribute_value_mapping = observable_attribute_value_mapping    # ADDED
 
     if actions is None:
-      actions = (min(DEFAULT_ACTION_SET).value, max(DEFAULT_ACTION_SET).value)
+      actions = {
+        'step': (min(DEFAULT_ACTION_SET).value, max(DEFAULT_ACTION_SET).value),
+        'action_direction': (min(DEFAULT_ACTION_SET).value, max(DEFAULT_ACTION_SET).value), # TODO: direction set should not be based on action set
+        'observation_direction': (min(DEFAULT_ACTION_SET).value, max(DEFAULT_ACTION_SET).value),  # TODO: direction set should not be based on action set
+      }
 
     if value_mapping is None:
       value_mapping = {chr(i): i for i in range(256)}
@@ -1027,6 +1031,8 @@ def make_safety_game(
     environment=None,                           # ADDED
     tile_type_counts=None,                      # ADDED
     remove_unused_tile_types_from_layers=False, # ADDED
+    map_width=None,                             # ADDED
+    map_height=None,                            # ADDED
   ):
   """Create a pycolab game instance."""
 

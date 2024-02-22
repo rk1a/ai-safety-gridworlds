@@ -28,6 +28,7 @@ from ai_safety_gridworlds.environments.shared.mo_reward import mo_reward
 from ai_safety_gridworlds.environments.shared.ma_reward import ma_reward
 from ai_safety_gridworlds.environments.shared.safety_game_moma import AGENT_SPRITE
 from ai_safety_gridworlds.environments.shared import safety_game
+from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared import safety_game_mo_base
 from ai_safety_gridworlds.environments.shared import safety_game_mo
 from ai_safety_gridworlds.environments.shared import safety_game_moma
@@ -166,27 +167,32 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         # Receive a new observation, reward, pcontinue; update total return.
         action = self._keycodes_to_actions[keycode]
 
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):          
-          agents_actions = { self._env.current_agent.character: { "step": action } }
-          self._env.step(agents_actions)
+        # TODO: support for mo environments
+        if action < self._env._valid_actions[0].minimum or self._env._valid_actions[0].maximum < action:
+          # skip invalid action
+          update_time_counter_only = True
         else:
-          self._env.step(action)
+          if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):          
+            agents_actions = { self._env.current_agent.character: { "step": action } }
+            self._env.step(agents_actions)
+          else:
+            self._env.step(action)
 
-        # Use undistilled observations.
-        observation = self._game._board  # pylint: disable=protected-access
-        if self._repainter: observation = self._repainter(observation)
+          # Use undistilled observations.
+          observation = self._game._board  # pylint: disable=protected-access
+          if self._repainter: observation = self._repainter(observation)
       
 
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):   # ADDED
-          if not self.is_game_over():   # avoid infinite loop below
-            agents = list(self._env._environment_data[AGENT_SPRITE].values())
-            while True:   # loop over all agents until next alive agent is found
-              self._env.current_agent_index += 1
-              # cannot use self.get_alive_agents() here since if last stepped agent dies then next agent would be skipped because of changed agents order
-              self._env.current_agent_index = self._env.current_agent_index % len(agents)
-              self._env.current_agent = agents[self._env.current_agent_index]
-              if not self._env._game_over.get(self._env.current_agent.character):
-                break
+          if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):   # ADDED
+            if not self.is_game_over():   # avoid infinite loop below
+              agents = list(self._env._environment_data[AGENT_SPRITE].values())
+              while True:   # loop over all agents until next alive agent is found
+                self._env.current_agent_index += 1
+                # cannot use self.get_alive_agents() here since if last stepped agent dies then next agent would be skipped because of changed agents order
+                self._env.current_agent_index = self._env.current_agent_index % len(agents)
+                self._env.current_agent = agents[self._env.current_agent_index]
+                if not self._env._game_over.get(self._env.current_agent.character):
+                  break
         
       else:
         update_time_counter_only = True   # optimisation and flicker reduction: if keycode is -1 and delay does not trigger no-op (-1 not in self._keycodes_to_actions) then just update the time counter and not the whole screen    # ADDED
@@ -601,21 +607,21 @@ def make_human_curses_ui_with_noop_keys(game_bg_colours, game_fg_colours, noop_k
     A curses UI game object.
   """
 
-  keys_to_actions={
-                    curses.KEY_UP:      safety_game.Actions.UP,
-                    curses.KEY_DOWN:    safety_game.Actions.DOWN,
-                    curses.KEY_LEFT:    safety_game.Actions.LEFT,
-                    curses.KEY_RIGHT:   safety_game.Actions.RIGHT,
-                    'q':                safety_game.Actions.QUIT,
-                    'Q':                safety_game.Actions.QUIT
+  keys_to_actions={   # TODO: use safety_game, safety_game_mo_base, or safety_game_ma depending on the game
+                    curses.KEY_UP:      safety_game_mo_base.Actions.UP,
+                    curses.KEY_DOWN:    safety_game_mo_base.Actions.DOWN,
+                    curses.KEY_LEFT:    safety_game_mo_base.Actions.LEFT,
+                    curses.KEY_RIGHT:   safety_game_mo_base.Actions.RIGHT,
+                    'q':                safety_game_mo_base.Actions.QUIT,
+                    'Q':                safety_game_mo_base.Actions.QUIT
                   }
 
   if noop_keys:
      keys_to_actions.update({
         # middle button on keypad
-        curses.KEY_B2: safety_game.Actions.NOOP,  # KEY_B2: Center of keypad - https://docs.python.org/3/library/curses.html
+        curses.KEY_B2: safety_game_mo_base.Actions.NOOP,  # KEY_B2: Center of keypad - https://docs.python.org/3/library/curses.html
         # space bar
-        ' ': safety_game.Actions.NOOP,
+        ' ': safety_game_mo_base.Actions.NOOP,
         # -1: Actions.NOOP,           # curses delay timeout "keycode" is -1
       })
 

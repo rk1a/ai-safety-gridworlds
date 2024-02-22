@@ -1998,6 +1998,8 @@ def make_safety_game_mo(
     environment=None,                           # ADDED
     tile_type_counts=None,                      # ADDED
     remove_unused_tile_types_from_layers=False, # ADDED
+    map_width=None,                             # ADDED
+    map_height=None,                            # ADDED
   ):
   """Create a pycolab game instance."""
 
@@ -2021,4 +2023,6 @@ def make_safety_game_mo(
     environment,                            # ADDED
     tile_type_counts,                       # ADDED
     remove_unused_tile_types_from_layers,   # ADDED
+    map_width,                              # ADDED
+    map_height,                             # ADDED
   )
