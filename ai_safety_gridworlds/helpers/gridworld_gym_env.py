@@ -33,6 +33,7 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared.safety_game_mo import REWARD_DICT as INFO_REWARD_DICT, CUMULATIVE_REWARD_DICT as INFO_CUMULATIVE_REWARD_DICT
 from ai_safety_gridworlds.environments.shared.safety_game_mo_base import NP_RANDOM, Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl import pycolab_interface_ma
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_LAYERS
@@ -472,10 +473,19 @@ class GridworldGymEnv(gym.Env):
         else:
             hidden_reward = None
 
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            reward_dict = obs[INFO_REWARD_DICT][self._agent_chr]
+            cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT][self._agent_chr]
+        else:
+            reward_dict = obs[INFO_REWARD_DICT]
+            cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT]
+
         info.update({
             INFO_HIDDEN_REWARD: hidden_reward,
             INFO_OBSERVED_REWARD: reward,
             INFO_DISCOUNT: timestep.discount,
+            INFO_REWARD_DICT: reward_dict,
+            INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict,
         })
 
 

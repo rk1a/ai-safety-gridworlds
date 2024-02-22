@@ -34,6 +34,7 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared.safety_game_moma import REWARD_DICT as INFO_REWARD_DICT, CUMULATIVE_REWARD_DICT as INFO_CUMULATIVE_REWARD_DICT
 from ai_safety_gridworlds.environments.shared.safety_game_ma import NP_RANDOM, Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_LAYERS
 from ai_safety_gridworlds.environments.shared import safety_game_mo
@@ -645,10 +646,19 @@ class GridworldZooAecEnv(AECEnv):
         else:
             hidden_reward = None
 
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+            reward_dict = obs[INFO_REWARD_DICT][self._next_agent]
+            cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT][self._next_agent]
+        else:
+            reward_dict = obs[INFO_REWARD_DICT]
+            cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT]
+
         info.update({
             INFO_HIDDEN_REWARD: hidden_reward,
             INFO_OBSERVED_REWARD: rewards[self._next_agent],
-            INFO_DISCOUNT: timestep.discount,            
+            INFO_DISCOUNT: timestep.discount,    
+            INFO_REWARD_DICT: reward_dict,
+            INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict
         })
 
 

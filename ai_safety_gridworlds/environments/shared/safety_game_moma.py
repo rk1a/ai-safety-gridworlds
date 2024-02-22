@@ -71,6 +71,8 @@ Z_ORDER = 'z_order'
 ASCII_ART = 'ascii_art'   # ADDED
 NP_RANDOM = 'np_random'   # ADDED
 SEED = 'seed'   # ADDED
+REWARD_DICT = 'reward_dict'   # ADDED
+CUMULATIVE_REWARD_DICT = 'cumulative_reward_dict'   # ADDED
 
 
 # timestamp, environment_name, episode_no, iteration_no, environment_flags, reward_unit_sizes, rewards, cumulative_rewards, metrics
@@ -1018,6 +1020,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
                         for k, v in six.iteritems(observation2)                # CHANGED
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED
+                                     REWARD_DICT, CUMULATIVE_REWARD_DICT,    # ADDED
                                      # CUMULATIVE_REWARD, AVERAGE_REWARD    # TODO
                                     ]}
 
@@ -1028,6 +1031,8 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       observation_spec[INFO_OBSERVATION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_OBSERVATION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
       observation_spec[INFO_ACTION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_ACTION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
       observation_spec[METRICS_DICT] = dict()                                             
+      observation_spec[REWARD_DICT] = dict()
+      observation_spec[CUMULATIVE_REWARD_DICT] = dict()
           
       self._drop_last_episode()
     #/ if observation is None:
@@ -1171,10 +1176,12 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     iteration = self._current_game.the_plot.frame
 
 
+    cumulative_reward_dims = self._episode_return.tolist(self.enabled_ma_rewards)
+    timestep.observation[CUMULATIVE_REWARD_DICT] = self._episode_return.tofull(self.enabled_ma_rewards)  
+
     timestep.observation[CUMULATIVE_REWARD] = {}
     timestep.observation[AVERAGE_REWARD] = {}
     average_reward_dims = {}
-    cumulative_reward_dims = self._episode_return.tolist(self.enabled_ma_rewards)
     scalar_cumulative_reward = {}
     scalar_average_reward = {}
     for agent_key, agent_cumulative_reward_dims in cumulative_reward_dims.items():
@@ -1204,9 +1211,11 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
     # conversion of ma_reward to a np.array or float
     if timestep.reward is not None:
-      reward_dims = timestep.reward.tolist(self.enabled_ma_rewards)      
+      reward_dims = timestep.reward.tolist(self.enabled_ma_rewards) 
+      timestep.observation[REWARD_DICT] = timestep.reward.tofull(self.enabled_ma_rewards)
     else: # NB! do not return None since GridworldGymEnv wrapper would convert that to scalar 0
       reward_dims = ma_reward({}).tolist(self.enabled_ma_rewards)
+      timestep.observation[REWARD_DICT] = ma_reward({}).tofull(self.enabled_ma_rewards)
 
 
     scalar_reward = {}
