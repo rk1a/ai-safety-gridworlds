@@ -647,8 +647,8 @@ class GridworldZooAecEnv(AECEnv):
             hidden_reward = None
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            reward_dict = obs[INFO_REWARD_DICT][self._next_agent]
-            cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT][self._next_agent]
+            reward_dict = obs[INFO_REWARD_DICT][self.agent_name_mapping[self._next_agent]]
+            cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT][self.agent_name_mapping[self._next_agent]]
         else:
             reward_dict = obs[INFO_REWARD_DICT]
             cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT]
