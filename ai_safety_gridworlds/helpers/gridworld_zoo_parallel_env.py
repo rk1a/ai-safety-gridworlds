@@ -297,6 +297,8 @@ class GridworldZooParallelEnv(ParallelEnv):
                       {
                           INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION, {}).get(self.agent_name_mapping[agent]),
                           INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION, {}).get(self.agent_name_mapping[agent]),
+                          INFO_REWARD_DICT: obs.get(INFO_REWARD_DICT, {}).get(self.agent_name_mapping[agent]),
+                          INFO_CUMULATIVE_REWARD_DICT: obs.get(INFO_CUMULATIVE_REWARD_DICT, {}).get(self.agent_name_mapping[agent]),
                       }
                       for agent in self.agents
                    }
@@ -335,6 +337,8 @@ class GridworldZooParallelEnv(ParallelEnv):
                 agent: {
                     INFO_OBSERVATION_DIRECTION: obs.get(INFO_OBSERVATION_DIRECTION),
                     INFO_ACTION_DIRECTION: obs.get(INFO_ACTION_DIRECTION),
+                    INFO_REWARD_DICT: obs.get(INFO_REWARD_DICT),
+                    INFO_CUMULATIVE_REWARD_DICT: obs.get(INFO_CUMULATIVE_REWARD_DICT),
                 }
                 for agent in self.agents
             }
@@ -351,7 +355,7 @@ class GridworldZooParallelEnv(ParallelEnv):
 
 
         for k, v in obs.items():
-            if k not in ("RGB", INFO_LAYERS):
+            if k not in ("RGB", INFO_LAYERS, INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_REWARD_DICT, INFO_CUMULATIVE_REWARD_DICT):
                 for agent in self.agents:
                     infos[agent][k] = v   # shared global observation must be returned via agent keys
 
@@ -446,15 +450,15 @@ class GridworldZooParallelEnv(ParallelEnv):
         else:
             hidden_reward = None
 
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            reward_dict = {}
-            cumulative_reward_dict = {}
-            for agent in self.agents:
-                reward_dict[agent] = obs[INFO_REWARD_DICT][self.agent_name_mapping[agent]]
-                cumulative_reward_dict[agent] = obs[INFO_CUMULATIVE_REWARD_DICT][self.agent_name_mapping[agent]]
-        else:
-            reward_dict = obs[INFO_REWARD_DICT]
-            cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT]
+        #if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+        #    reward_dict = {}
+        #    cumulative_reward_dict = {}
+        #    for agent in self.agents:
+        #        reward_dict[agent] = obs[INFO_REWARD_DICT][self.agent_name_mapping[agent]]
+        #        cumulative_reward_dict[agent] = obs[INFO_CUMULATIVE_REWARD_DICT][self.agent_name_mapping[agent]]
+        #else:
+        #    reward_dict = obs[INFO_REWARD_DICT]
+        #    cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT]
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             # TODO
@@ -463,8 +467,8 @@ class GridworldZooParallelEnv(ParallelEnv):
                           INFO_HIDDEN_REWARD: hidden_reward[agent] if hidden_reward is not None else None,
                           INFO_OBSERVED_REWARD: rewards[agent],
                           INFO_DISCOUNT: timestep.discount, # [agent],    # TODO: agent-based discount
-                          INFO_REWARD_DICT: reward_dict[agent],
-                          INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict[agent],
+                          # INFO_REWARD_DICT: reward_dict[agent],
+                          # INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict[agent],
                       })
 
         else:   # if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -473,8 +477,8 @@ class GridworldZooParallelEnv(ParallelEnv):
                     INFO_HIDDEN_REWARD: hidden_reward,
                     INFO_OBSERVED_REWARD: rewards[agent],
                     INFO_DISCOUNT: timestep.discount, 
-                    INFO_REWARD_DICT: reward_dict[agent],
-                    INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict[agent],
+                    # INFO_REWARD_DICT: reward_dict[agent],
+                    # INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict[agent],
                 })
 
 
