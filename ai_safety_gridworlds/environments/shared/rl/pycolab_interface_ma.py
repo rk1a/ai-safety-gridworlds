@@ -300,7 +300,7 @@ class EnvironmentMa(safety_game.SafetyEnvironment):   # need to use safety_game.
     # First discrete actions:
     if discrete_actions is not None:
 
-      discrete_actions = discrete_actions["step"]
+      #discrete_actions = discrete_actions["step"]
 
       if isinstance(discrete_actions, dict):                # ADDED
         discrete_actions = discrete_actions.values()        # ADDED

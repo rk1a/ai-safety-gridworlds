@@ -693,8 +693,8 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
             assert action_spec[1].dtype == "float32"
             # self.min_action = action_spec[0].minimum.astype(int)
             # self.max_action = action_spec[0].maximum.astype(int)
-            self.min_action = action_spec[0].minimum.astype(int).item()   # spec for step modality
-            self.max_action = action_spec[0].maximum.astype(int).item()   # spec for step modality
+            self.min_action = action_spec[0].minimum.astype(int)[0]   # spec for step modality
+            self.max_action = action_spec[0].maximum.astype(int)[0]   # spec for step modality
             # TODO: multimodal action spec
             action_spec = action_spec[0]
             shape = (1,)

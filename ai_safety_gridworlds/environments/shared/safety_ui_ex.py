@@ -168,10 +168,15 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
         action = self._keycodes_to_actions[keycode]
 
         # TODO: support for mo environments
-        if action < self._env._valid_actions[0].minimum or self._env._valid_actions[0].maximum < action:
-          # skip invalid action
-          update_time_counter_only = True
+        is_valid_action = True
+        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+          if action < self._env._valid_actions[0].minimum[0] or self._env._valid_actions[0].maximum[0] < action:
+            is_valid_action = False
         else:
+          if action < int(self._env._valid_actions.minimum) or int(self._env._valid_actions.maximum) < action:
+            is_valid_action = False
+
+        if is_valid_action:
           if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):          
             agents_actions = { self._env.current_agent.character: { "step": action } }
             self._env.step(agents_actions)
@@ -193,6 +198,9 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
                 self._env.current_agent = agents[self._env.current_agent_index]
                 if not self._env._game_over.get(self._env.current_agent.character):
                   break
+
+        else: #/ if is_valid_action:
+          update_time_counter_only = True
         
       else:
         update_time_counter_only = True   # optimisation and flicker reduction: if keycode is -1 and delay does not trigger no-op (-1 not in self._keycodes_to_actions) then just update the time counter and not the whole screen    # ADDED
@@ -607,6 +615,7 @@ def make_human_curses_ui_with_noop_keys(game_bg_colours, game_fg_colours, noop_k
     A curses UI game object.
   """
 
+  # NB! right now multi-objective and multi-agent environments need to use same action map values since the environment is not known yet when this factory method is called 
   keys_to_actions={   # TODO: use safety_game, safety_game_mo_base, or safety_game_ma depending on the game
                     curses.KEY_UP:      safety_game_mo_base.Actions.UP,
                     curses.KEY_DOWN:    safety_game_mo_base.Actions.DOWN,

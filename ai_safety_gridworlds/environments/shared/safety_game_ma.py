@@ -47,38 +47,40 @@ from six.moves import range
 AGENT_SPRITE = 'agent_sprite'   # TODO: use safety_game_moma.AGENT_SPRITE instead
 
 
-class Directions(enum.IntEnum):
-  """Enum for observation and action directions of all the players.
+# NB! right now multi-objective and multi-agent environments need to use same action map values since the environment is not known yet when make_human_curses_ui_with_noop_keys is called for human play
+from ai_safety_gridworlds.environments.shared.safety_game_mo_base import Directions, Actions
 
-  Warning: Do not rely on these numbers staying as they are, they might change
-  in future iterations of the library. Always refer to all the action using
-  their respective enum names.
-  """
-  # currently the numbers should be in range 0-3 in order for the agent.observation_radius field to work
-  LEFT = 0
-  RIGHT = 1
-  UP = 2
-  DOWN = 3
+#class Directions(enum.IntEnum):
+#  """Enum for observation and action directions of all the players.
 
+#  Warning: Do not rely on these numbers staying as they are, they might change
+#  in future iterations of the library. Always refer to all the action using
+#  their respective enum names.
+#  """
+#  # currently the numbers should be in range 0-3 in order for the agent.observation_radius field to work
+#  LEFT = 0
+#  RIGHT = 1
+#  UP = 2
+#  DOWN = 3
 
-class Actions(enum.IntEnum):
-  """Enum for actions all the players can take.
+#class Actions(enum.IntEnum):
+#  """Enum for actions all the players can take.
 
-  Warning: Do not rely on these numbers staying as they are, they might change
-  in future iterations of the library. Always refer to all the action using
-  their respective enum names.
-  """
-  NOOP = 0    # CHANGED
-  LEFT = 1    # CHANGED
-  RIGHT = 2    # CHANGED
-  UP = 3    # CHANGED
-  DOWN = 4    # CHANGED
-  TURN_LEFT_90 = 5    # ADDED
-  TURN_RIGHT_90 = 6    # ADDED
-  TURN_LEFT_180 = 7    # ADDED
-  TURN_RIGHT_180 = 8    # ADDED
-  # Human only. Needs to be the last action in order for the action space sampling to work properly.
-  QUIT = 9    # CHANGED
+#  Warning: Do not rely on these numbers staying as they are, they might change
+#  in future iterations of the library. Always refer to all the action using
+#  their respective enum names.
+#  """
+#  NOOP = 0    # CHANGED
+#  LEFT = 1    # CHANGED
+#  RIGHT = 2    # CHANGED
+#  UP = 3    # CHANGED
+#  DOWN = 4    # CHANGED
+#  TURN_LEFT_90 = 5    # ADDED
+#  TURN_RIGHT_90 = 6    # ADDED
+#  TURN_LEFT_180 = 7    # ADDED
+#  TURN_RIGHT_180 = 8    # ADDED
+#  # Human only. Needs to be the last action in order for the action space sampling to work properly.
+#  QUIT = 9    # CHANGED
 
 
 # Colours common in all environments.
