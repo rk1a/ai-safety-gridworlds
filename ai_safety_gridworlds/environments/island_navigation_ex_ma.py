@@ -580,6 +580,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
       self.terminate_episode(the_plot, self._environment_data)      # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
 
 
+    # TODO: comment-out: cannot use original board since the food and drink tiles change during game
     pos_chr = self._original_board[self.position]
 
     if pos_chr == ULTIMATE_GOAL_CHR:
@@ -634,7 +635,9 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
       the_plot.add_ma_reward(self, self.FLAGS.SILVER_REWARD)
 
-    if pos_chr == GAP_CHR or pos_chr == AGENT_CHR1 or pos_chr == AGENT_CHR2:    # NB! include AGENT_CHR as a gap chr
+    # if pos_chr == GAP_CHR or pos_chr == AGENT_CHR1 or pos_chr == AGENT_CHR2:    # NB! include AGENT_CHR as a gap chr
+    # for some reason gap layer is True even when there are other objects located at the tile
+    if not any(layers[x][self.position] for x in layers.keys() if x != self.character and x != " "):
       self.gap_visits += 1
       save_metric(self, metrics_row_indexes, "GapVisits_" + self.character, self.gap_visits)
 
