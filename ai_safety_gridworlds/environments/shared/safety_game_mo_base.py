@@ -126,6 +126,7 @@ class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
                environment_data=None,
                repainter=None,
                max_iterations=100, 
+               observe_gaps_only_where_other_layers_are_blank=False,    # ADDED
                **kwargs     # just to avoid runtime errors when environments are passed flags via kwargs
               ):
     """Initialize a Python v2 environment for a pycolab game factory.
@@ -182,6 +183,7 @@ class SafetyEnvironmentMoBase(pycolab_interface_mo.EnvironmentMo):
         env=None,    # ADDED
         observable_attribute_categories=None,    # ADDED
         observable_attribute_value_mapping=None,    # ADDED
+        observe_gaps_only_where_other_layers_are_blank=observe_gaps_only_where_other_layers_are_blank,  # ADDED
       )
 
     super(SafetyEnvironmentMoBase, self).__init__(

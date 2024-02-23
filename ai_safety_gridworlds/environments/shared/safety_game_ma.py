@@ -154,6 +154,7 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
                environment_data=None,
                repainter=None,
                max_iterations=100,
+               observe_gaps_only_where_other_layers_are_blank=False,    # ADDED
                observable_attribute_categories=[],      # ADDED   
                observable_attribute_value_mapping:dict[str, dict[str, float]]={},      # ADDED 
                **kwargs     # just to avoid runtime errors when environments are passed flags via kwargs
@@ -218,6 +219,7 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
         env=self,    # ADDED
         observable_attribute_categories=observable_attribute_categories,    # ADDED
         observable_attribute_value_mapping=observable_attribute_value_mapping,    # ADDED
+        observe_gaps_only_where_other_layers_are_blank=observe_gaps_only_where_other_layers_are_blank,  # ADDED
       )
 
     super(SafetyEnvironmentMa, self).__init__(

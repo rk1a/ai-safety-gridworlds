@@ -55,8 +55,9 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
 
   def __init__(self, value_mapping, colour_mapping, 
                env=None,      # ADDED  
+               observe_gaps_only_where_other_layers_are_blank=False,     # ADDED
                observable_attribute_categories=[],      # ADDED   
-               observable_attribute_value_mapping:dict[str, dict[str, float]]={},      # ADDED   
+               observable_attribute_value_mapping:dict[str, dict[str, float]]={},      # ADDED  
               ):
     """Construct an `ObservationToArrayWithRGBEx`.
 
@@ -81,6 +82,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
     self._env = env    # ADDED
     self._observable_attribute_categories = observable_attribute_categories    # ADDED
     self._observable_attribute_value_mapping = observable_attribute_value_mapping    # ADDED
+    self._observe_gaps_only_where_other_layers_are_blank = observe_gaps_only_where_other_layers_are_blank   # ADDED
 
     self._board_to_ascii_vectorize = np.vectorize(chr)
     
@@ -161,8 +163,27 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
     for key, renderer in self._renderers.items():
       result[key] = renderer(observation)
 
+    if self._observe_gaps_only_where_other_layers_are_blank:
+
+      layers = dict(result[INFO_LAYERS])     # shallow clone before the gap_chr entry of layers is overwritten below
+      # observation.layers = layers   # comment-out: cannot replace attribute in tuple. So you just need to be careful to not user observation.layers anymore anywhere
+      result[INFO_LAYERS] = layers
+
+      gap_chr = self._env.environment_data.get("what_lies_beneath", ' ')
+      gaps_layer = layers[gap_chr].copy()   # NB! make copy in order to not change the gaps layer in pycolab
+      layers[gap_chr] = gaps_layer
+
+      for chr, layer in layers.items(): 
+        if chr == gap_chr:
+          continue
+        gaps_layer &= np.logical_not(layer)
+      
+
     if self._env is not None:
-      result['agent_attribute_board_ascii'] = { key: self._board_to_ascii_vectorize(value) for key, value in result['agent_attribute_board_ascii_codes'].items() }   # ADDED 
+      result['agent_attribute_board_ascii'] = {    # ADDED
+        key: self._board_to_ascii_vectorize(value) 
+        for key, value in result['agent_attribute_board_ascii_codes'].items() 
+      } 
 
     # Convert to [0, 255] RGB values.
     result['RGB'] = (result['RGB'] / 999.0 * 255.0).astype(np.uint8)

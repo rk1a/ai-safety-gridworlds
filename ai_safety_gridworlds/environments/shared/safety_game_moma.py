@@ -546,7 +546,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_coordinates = {}
-      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+      layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
       for layer_key, layer in layers.items():
         # if not ascii then translate key to corresponding observation value
@@ -586,7 +586,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
         layers_list = []
-        layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+        layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
         layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
         layers_order.sort()
@@ -613,7 +613,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
-      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+      layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
       #if layers_order == []:  # take all layers
       #  layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem

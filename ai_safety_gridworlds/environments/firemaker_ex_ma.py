@@ -830,7 +830,8 @@ class FiremakerExMa(safety_game_moma.SafetyEnvironmentMoMa):
         },
         value_mapping=value_mapping,
         # repainter=self.repainter,
-        max_iterations=FLAGS.max_iterations, 
+        max_iterations=FLAGS.max_iterations,         
+        observe_gaps_only_where_other_layers_are_blank=True,  # NB!
         log_arguments=log_arguments,
         randomize_agent_actions_order=FLAGS.randomize_agent_actions_order,
         FLAGS=FLAGS,
