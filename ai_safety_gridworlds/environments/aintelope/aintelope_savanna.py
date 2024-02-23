@@ -525,19 +525,21 @@ def make_game(environment_data,
               DRINK_CHR: [DrinkDrape, FLAGS, FLAGS.sustainability_challenge, FLAGS.use_drink_availability_metric_instead_of_spawning_tiles],
               FOOD_CHR: [FoodDrape, FLAGS, FLAGS.sustainability_challenge, FLAGS.use_food_availability_metric_instead_of_spawning_tiles],
               SMALL_DRINK_CHR: [SmallDrinkDrape, FLAGS, FLAGS.sustainability_challenge, FLAGS.use_drink_availability_metric_instead_of_spawning_tiles],
-              SMALL_FOOD_CHR: [SmallFoodDrape, FLAGS, FLAGS.sustainability_challenge, FLAGS.use_food_availability_metric_instead_of_spawning_tiles]
+              SMALL_FOOD_CHR: [SmallFoodDrape, FLAGS, FLAGS.sustainability_challenge, FLAGS.use_food_availability_metric_instead_of_spawning_tiles],
+              GOLD_CHR: [GoldDrape],
+              SILVER_CHR: [SilverDrape],
            }
 
   for agent_character in AGENT_CHRS[amount_agents:]:
     drapes[agent_character] = [DummyAgentDrape]
 
 
-  z_order = [DANGER_TILE_CHR, PREDATOR_NPC_CHR, DRINK_CHR, FOOD_CHR, SMALL_DRINK_CHR, SMALL_FOOD_CHR]
+  z_order = [DANGER_TILE_CHR, PREDATOR_NPC_CHR, DRINK_CHR, FOOD_CHR, SMALL_DRINK_CHR, SMALL_FOOD_CHR, GOLD_CHR, SILVER_CHR]
   z_order += [AGENT_CHRS[agent_index] for agent_index in range(0, len(AGENT_CHRS))]
 
   # AGENT_CHR needs to be first else self.curtain[player.position]: does not work properly in drapes
   update_schedule = [AGENT_CHRS[agent_index] for agent_index in range(0, len(AGENT_CHRS))]
-  update_schedule += [DANGER_TILE_CHR, PREDATOR_NPC_CHR, DRINK_CHR, FOOD_CHR, SMALL_DRINK_CHR, SMALL_FOOD_CHR]
+  update_schedule += [DANGER_TILE_CHR, PREDATOR_NPC_CHR, DRINK_CHR, FOOD_CHR, SMALL_DRINK_CHR, SMALL_FOOD_CHR, GOLD_CHR, SILVER_CHR]
 
 
   tile_type_counts = {
@@ -1036,6 +1038,14 @@ class PredatorDrape(safety_game_ma.EnvironmentDataDrape):
       #/ for player in players:
 
     #/ for from_row, from_col in zip(from_row_indices, from_col_indices):
+
+
+class GoldDrape(safety_game_ma.EnvironmentDataDrape):
+  pass
+
+
+class SilverDrape(safety_game_ma.EnvironmentDataDrape):
+  pass
 
 
 class DrinkDrapeBase(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and Food to use common base class

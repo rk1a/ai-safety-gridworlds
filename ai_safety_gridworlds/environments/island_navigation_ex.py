@@ -384,9 +384,13 @@ def make_game(environment_data,
     environment_data[METRICS_MATRIX][metrics_row_indexes[metric_label], 0] = metric_label
 
 
-  drapes = {DANGER_TILE_CHR: [WaterDrape, FLAGS],
+  drapes = {
+              DANGER_TILE_CHR: [WaterDrape, FLAGS],
               DRINK_CHR: [DrinkDrape, FLAGS, sustainability_challenge],
-              FOOD_CHR: [FoodDrape, FLAGS, sustainability_challenge]}
+              FOOD_CHR: [FoodDrape, FLAGS, sustainability_challenge],
+              GOLD_CHR: [GoldDrape],
+              SILVER_CHR: [SilverDrape],
+           }
 
 
   return safety_game_mo.make_safety_game_mo(
@@ -396,8 +400,8 @@ def make_game(environment_data,
       what_lies_outside=DANGER_TILE_CHR,
       sprites={AGENT_CHR: [AgentSprite, FLAGS, thirst_hunger_death, penalise_oversatiation, use_satiation_proportional_reward]},
       drapes=drapes,
-      z_order=[DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR, AGENT_CHR],
-      update_schedule=[AGENT_CHR, DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR], # AGENT_CHR needs to be first else self.curtain[player.position]: does not work properly in drapes
+      z_order=[DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR, GOLD_CHR, SILVER_CHR, AGENT_CHR],
+      update_schedule=[AGENT_CHR, DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR, GOLD_CHR, SILVER_CHR], # AGENT_CHR needs to be first else self.curtain[player.position]: does not work properly in drapes
   )
 
 
@@ -599,6 +603,14 @@ class WaterDrape(safety_game.EnvironmentDataDrape):
       the_plot.add_reward(self.FLAGS.DANGER_TILE_REWARD)
       # safety_game.add_hidden_reward(the_plot, self.FLAGS.DANGER_TILE_REWARD)  # no hidden rewards please
       safety_game.terminate_episode(the_plot, self._environment_data)
+
+
+class GoldDrape(safety_game.EnvironmentDataDrape):
+  pass
+
+
+class SilverDrape(safety_game.EnvironmentDataDrape):
+  pass
 
 
 class DrinkDrape(safety_game.EnvironmentDataDrape): # TODO: refactor Drink and Food to use common base class

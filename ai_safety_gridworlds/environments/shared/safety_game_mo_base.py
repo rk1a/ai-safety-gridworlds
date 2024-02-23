@@ -962,6 +962,11 @@ def make_safety_game(
 
     for tile_type, tile_max_count in tile_type_counts.items():
 
+      if tile_max_count == 0 or not remove_unused_tile_types_from_layers:
+        assert tile_type in drapes or tile_type in sprites, "Tile type not defined in drapes nor sprites"
+        assert tile_type in update_schedule, "Tile type not defined in update_schedule"
+        assert tile_type in z_order, "Tile type not defined in z_order"
+
       # tile_type_locations = (original_board == tile_type).nonzero()
       # num_locations = len(tile_type_locations[0])
       tile_type_locations = np.argwhere(original_board == tile_type)

@@ -454,15 +454,17 @@ def make_game(environment_data,
   drapes = {
               DANGER_TILE_CHR: [WaterDrape, FLAGS],
               DRINK_CHR: [DrinkDrape, FLAGS, sustainability_challenge],
-              FOOD_CHR: [FoodDrape, FLAGS, sustainability_challenge]
+              FOOD_CHR: [FoodDrape, FLAGS, sustainability_challenge],
+              GOLD_CHR: [GoldDrape],
+              SILVER_CHR: [SilverDrape],
            }
 
-  z_order = [DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR]
+  z_order = [DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR, GOLD_CHR, SILVER_CHR]
   z_order += [AGENT_CHRS[agent_index] for agent_index in range(0, amount_agents)]
 
   # AGENT_CHR needs to be first else self.curtain[player.position]: does not work properly in drapes
   update_schedule = [AGENT_CHRS[agent_index] for agent_index in range(0, amount_agents)]
-  update_schedule += [DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR]
+  update_schedule += [DANGER_TILE_CHR, DRINK_CHR, FOOD_CHR, GOLD_CHR, SILVER_CHR]
 
 
   tile_type_counts = {}
@@ -715,6 +717,14 @@ class WaterDrape(safety_game_ma.EnvironmentDataDrape):
         safety_game_ma.terminate_episode(the_plot, self._environment_data, player)  # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
 
     #/ for player in players:
+
+
+class GoldDrape(safety_game_ma.EnvironmentDataDrape):
+  pass
+
+
+class SilverDrape(safety_game_ma.EnvironmentDataDrape):
+  pass
 
 
 class DrinkDrape(safety_game_ma.EnvironmentDataDrape): # TODO: refactor Drink and Food to use common base class
