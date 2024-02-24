@@ -1630,6 +1630,7 @@ def make_safety_game_mo(
     environment_data,
     the_ascii_art,
     what_lies_beneath,
+    what_lies_outside,
     backdrop,
     sprites,
     drapes,

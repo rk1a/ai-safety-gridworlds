@@ -72,6 +72,7 @@ DEFAULT_OBSERVATION_RADIUS = [2, 2, 2, 2]          # How many tiles away from th
 DEFAULT_OBSERVATION_DIRECTION_MODE = 1    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_ACTION_DIRECTION_MODE = 1         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS = False    # Whether to remove tile types not present on initial map from observation layers.
+DEFAULT_ENABLE_LOGGING = False
 
 
 GAME_ART = [
@@ -306,6 +307,12 @@ def define_flags():
   flags.DEFINE_boolean('remove_unused_tile_types_from_layers', DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS,
                        'Whether to remove tile types not present on initial map from observation layers.')
 
+  flags.DEFINE_boolean('enable_logging', DEFAULT_ENABLE_LOGGING, 'Enable logging.')
+
+  # default map width and height are zero, which means the original ascii art dimensions are used
+  flags.DEFINE_integer('map_width', None, 'Map width')
+  flags.DEFINE_integer('map_height', None, 'Map height')
+
   flags.DEFINE_integer('amount_agents', DEFAULT_AMOUNT_AGENTS, 'Amount of agents.')
 
 
@@ -471,6 +478,8 @@ def make_game(environment_data,
 
   # removing extra agents from the map
   # TODO: implement a way to optionally randomize the agent locations as well and move agent amount setting / extra agent disablement code to the make_safety_game method
+  for agent_character in AGENT_CHRS[:amount_agents]:
+    tile_type_counts[agent_character] = 1
   for agent_character in AGENT_CHRS[amount_agents:]:
     tile_type_counts[agent_character] = 0
 
@@ -489,6 +498,8 @@ def make_game(environment_data,
       environment=environment,
       tile_type_counts=tile_type_counts,
       remove_unused_tile_types_from_layers=FLAGS.remove_unused_tile_types_from_layers,
+      map_width=FLAGS.map_width, 
+      map_height=FLAGS.map_height,  
   )
 
 

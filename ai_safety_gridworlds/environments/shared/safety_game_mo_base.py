@@ -901,6 +901,7 @@ def make_safety_game(
     environment_data,
     the_ascii_art,
     what_lies_beneath,
+    what_lies_outside,
     backdrop=SafetyBackdrop,
     sprites=None,
     drapes=None,
@@ -943,13 +944,15 @@ def make_safety_game(
     tile_type_counts_key = list(tile_type_counts.items())
     tile_type_counts_key.sort()
 
+    ascii_art_key = "\n".join(the_ascii_art)
+
     # NB! if np_random argument is provided then that is not considered here for randomization_key calculation
     if map_randomization_frequency == 1:    # 1 - once per experiment run
-      randomization_key = environment_class + "|" + str(seed) + "|" + str(tile_type_counts_key)
+      randomization_key = environment_class + "|" + str(seed) + "|" + str(tile_type_counts_key) + "|" + ascii_art_key + "|" + str(map_width) + "|" + str(map_height)
     elif map_randomization_frequency == 2:  # 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance)
-      randomization_key = environment_class + "|" + str(seed) + "|" + str(trial_no) + "|" + str(tile_type_counts_key)
+      randomization_key = environment_class + "|" + str(seed) + "|" + str(trial_no) + "|" + str(tile_type_counts_key) + "|" + ascii_art_key + "|" + str(map_width) + "|" + str(map_height)
     elif map_randomization_frequency == 3:  # 3 - once per training episode
-      randomization_key = environment_class + "|" + str(seed) + "|" + str(trial_no) + "|" + str(episode_no) + "|" + str(tile_type_counts_key)
+      randomization_key = environment_class + "|" + str(seed) + "|" + str(trial_no) + "|" + str(episode_no) + "|" + str(tile_type_counts_key) + "|" + ascii_art_key + "|" + str(map_width) + "|" + str(map_height)
     else:
       raise ValueError("map_randomization_frequency")
 
@@ -960,66 +963,141 @@ def make_safety_game(
       (the_ascii_art, original_board) = randomized_maps_per_environment[randomization_key]
 
 
-  if tile_type_counts:
+  resize_board = False
+  if (
+      (map_height is not None or map_width is not None) # at least one of the parameters is set
+      and (map_height != original_board.shape[0] or map_width != original_board.shape[1]) # at least one of the parameters is different from original board
+    ):
 
-    for tile_type, tile_max_count in tile_type_counts.items():
+    assert tile_type_counts                   # NB! allow map resizing only when tile type counts is provided   # TODO: map resizing could work without tile type counts being explicitly provided as well, but then the tile type counts needs to be calculated by the code here
+    assert map_randomization_frequency > 0    # NB! allow map resizing only when randomization is enabled
 
-      if tile_max_count == 0 or not remove_unused_tile_types_from_layers:
-        assert tile_type in drapes or tile_type in sprites, "Tile type not defined in drapes nor sprites"
-        assert tile_type in update_schedule, "Tile type not defined in update_schedule"
-        assert tile_type in z_order, "Tile type not defined in z_order"
+    if enable_randomize:  # if map was already generated during previous iteration and is reused now, then do not resize the board again
+      resize_board = True
+    
+      if map_height is None:
+        map_height = original_board.shape[0]
 
-      # tile_type_locations = (original_board == tile_type).nonzero()
-      # num_locations = len(tile_type_locations[0])
-      tile_type_locations = np.argwhere(original_board == tile_type)
-      num_locations = len(tile_type_locations)
-      num_items_to_remove = max(0, num_locations - tile_max_count)
-      # replace - Whether the sample is with or without replacement. Default is True, meaning that a value of a can be selected multiple times.
-      indexes_to_remove = np_random.choice(num_locations, size=num_items_to_remove, replace=False)
-      # locations_to_remove = (tile_type_locations[0][indexes_to_remove], tile_type_locations[1][indexes_to_remove])
-      locations_to_remove = tile_type_locations[indexes_to_remove]
-      row_coordinates = locations_to_remove[:, 0]
-      col_coordinates = locations_to_remove[:, 1]
-      original_board[row_coordinates, col_coordinates] = what_lies_beneath  # numpy requires unzipped coordinates for accessing multiple cells by individual coordinates
+      if map_width is None:
+        map_width = original_board.shape[1]
 
-      if tile_max_count == 0 and remove_unused_tile_types_from_layers:
-        sprites.pop(tile_type, None)
-        drapes.pop(tile_type, None)
-        if tile_type in update_schedule:
-          del update_schedule[update_schedule.index(tile_type)]          
-        if tile_type in z_order:
-          del z_order[z_order.index(tile_type)]
-
-    #/ for tile_type, tile_max_count in tile_type_counts.items():
-
-    the_ascii_art = list(map(''.join, original_board.tolist()))
-
-  #/ if tile_type_counts:
+  #/ detect map resize need
 
 
-  if map_randomization_frequency >= 1 and enable_randomize:
+  if resize_board:
 
     if preserve_map_edges_when_randomizing:
-      submap = original_board[1:-1, 1:-1]
+      assert map_height > 2 and map_width > 2
+      shape = (map_height - 2, map_width - 2)
     else:
-      submap = original_board
+      shape = (map_height, map_width)
 
-    shape = submap.shape
-    submap = submap.reshape(shape[0] * shape[1])  # need to convert to vector form since np.random.shuffle shuffles only one dimension at a time
+
+    submap = np.zeros(shape[0] * shape[1], original_board.dtype)  # need to use vector form since np.random.shuffle shuffles only one dimension at a time
+      
+    # linearly fill tile types into the vector form submap, reshuffle later
+    next_i = 0
+    for tile_type, tile_max_count in tile_type_counts.items():
+      assert next_i + tile_max_count <= submap.shape[0]
+      submap[next_i : next_i + tile_max_count] = tile_type
+      next_i += tile_max_count
+
+    submap[next_i : ] = what_lies_beneath
+
     np_random.shuffle(submap)
     submap = submap.reshape(shape)
 
+
     if preserve_map_edges_when_randomizing:
+      original_board_initial = original_board
+      original_board = np.zeros((map_height, map_width), original_board.dtype)
+
+      # TODO: resample map edges from original_board_initial
+      original_board.fill(what_lies_outside)
+
       original_board[1:-1, 1:-1] = submap
+
     else:
       original_board = submap
 
     the_ascii_art = list(map(''.join, original_board.tolist()))
 
-  #/ if map_randomization_frequency >= 1 and enable_randomize:
+  else: #/ if resize_board:
+
+    if tile_type_counts and enable_randomize:
+
+      for tile_type, tile_max_count in tile_type_counts.items():
+
+        if tile_max_count == 0 or not remove_unused_tile_types_from_layers:
+          assert tile_type in drapes or tile_type in sprites, "Tile type not defined in drapes nor sprites"
+          assert tile_type in update_schedule, "Tile type not defined in update_schedule"
+          assert tile_type in z_order, "Tile type not defined in z_order"
+
+        # tile_type_locations = (original_board == tile_type).nonzero()
+        # num_locations = len(tile_type_locations[0])
+        tile_type_locations = np.argwhere(original_board == tile_type)
+        num_locations = len(tile_type_locations)
+        num_items_to_remove = max(0, num_locations - tile_max_count)
+
+
+        if num_items_to_remove > 0:
+
+          assert map_randomization_frequency >= 1   # if tile type counts are specified and are different from the counts on original map then randomization should happen at least once
+
+          # replace - Whether the sample is with or without replacement. Default is True, meaning that a value of a can be selected multiple times.
+          indexes_to_remove = np_random.choice(num_locations, size=num_items_to_remove, replace=False)
+          # locations_to_remove = (tile_type_locations[0][indexes_to_remove], tile_type_locations[1][indexes_to_remove])
+          locations_to_remove = tile_type_locations[indexes_to_remove]
+          row_coordinates = locations_to_remove[:, 0]
+          col_coordinates = locations_to_remove[:, 1]
+          original_board[row_coordinates, col_coordinates] = what_lies_beneath  # numpy requires unzipped coordinates for accessing multiple cells by individual coordinates
+
+        #/ if num_items_to_remove > 0:
+
+
+        if tile_max_count == 0 and remove_unused_tile_types_from_layers:
+
+          sprites.pop(tile_type, None)
+          drapes.pop(tile_type, None)
+          if tile_type in update_schedule:
+            del update_schedule[update_schedule.index(tile_type)]          
+          if tile_type in z_order:
+            del z_order[z_order.index(tile_type)]
+
+        #/ if tile_max_count == 0 and remove_unused_tile_types_from_layers:
+
+      #/ for tile_type, tile_max_count in tile_type_counts.items():
+
+      the_ascii_art = list(map(''.join, original_board.tolist()))
+
+    #/ if tile_type_counts and enable_randomize:
+
+
+    if map_randomization_frequency >= 1 and enable_randomize:
+
+      if preserve_map_edges_when_randomizing:
+        submap = original_board[1:-1, 1:-1]
+      else:
+        submap = original_board
+
+      shape = submap.shape
+      submap = submap.reshape(shape[0] * shape[1])  # need to convert to vector form since np.random.shuffle shuffles only one dimension at a time
+      np_random.shuffle(submap)
+      submap = submap.reshape(shape)
+
+      if preserve_map_edges_when_randomizing:
+        original_board[1:-1, 1:-1] = submap
+      else:
+        original_board = submap
+
+      the_ascii_art = list(map(''.join, original_board.tolist()))
+
+    #/ if map_randomization_frequency >= 1 and enable_randomize:
+
+  #/ if resize_board:
   
   
-  if enable_randomize and environment is not None:  # obtain earlier randomized map
+  if enable_randomize and environment is not None:  # save randomized map
     # map_randomizations_per_environment[environment_class] = randomization_key
     randomized_maps_per_environment[randomization_key] = (the_ascii_art, original_board)
     

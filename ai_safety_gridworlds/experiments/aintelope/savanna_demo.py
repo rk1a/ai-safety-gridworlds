@@ -125,6 +125,13 @@ def main(unused_argv):
 
   env = AIntelopeSavannaEnvironmentMaExperiment(
     scalarise=False,
+    #map_height=6,
+    #map_width=6,
+    #tile_type_counts={
+    #  FOOD_CHR: 3,
+    #  AGENT_CHR1: 1,
+    #  GOLD_CHR: 1,
+    #},
     #FLAGS=FLAGS,
     #level=FLAGS.level, 
     #max_iterations=FLAGS.max_iterations, 
