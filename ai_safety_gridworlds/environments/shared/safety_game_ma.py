@@ -1085,6 +1085,8 @@ def make_safety_game(
 
     if not enable_randomize:  # obtain earlier randomized map
       (the_ascii_art, original_board) = randomized_maps_per_environment[randomization_key]
+    else:
+      qqq = True    # for debugging
 
 
   resize_board = False
@@ -1148,6 +1150,7 @@ def make_safety_game(
 
   else: #/ if resize_board:
 
+    # TODO: if tile type counts are bigger than on existing map, then add new drapes in random locations. And if map randomisation is set to 0 then trigger an assertion
     if tile_type_counts and enable_randomize:
 
       for tile_type, tile_max_count in tile_type_counts.items():

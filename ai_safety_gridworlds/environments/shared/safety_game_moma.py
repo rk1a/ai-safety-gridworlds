@@ -514,15 +514,17 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       relative_agent_layers_coordinates = {}
 
       if agent_coordinates is not None and len(agent_coordinates) > 0:   # agent found in the layers?   # TODO: handle cases where the agent is overlapped by another agent
-        agent_coordinates_x = agent_coordinates[0][0]
-        agent_coordinates_y = agent_coordinates[0][1]
+
+        # NB! the coordinate order from np.where is y, x
+        agent_coordinates_y = agent_coordinates[0][0]
+        agent_coordinates_x = agent_coordinates[0][1]
 
         for layer_key, layer_coordinates in agent_layers_coordinates.items():
           relative_agent_layer_coordinates = []
 
           # TODO: configuration flag specifying whether agent coordinates should be relative or absolute. Consider that in this case the layer_coordinates are already offset by the corner of the agent's perspective.
           # subtract agent perspective center, considering agent's observation direction. Agent direction is already considered while calculating agent_self_observation above.
-          for x, y in layer_coordinates:
+          for y, x in layer_coordinates:    # NB! the coordinate order from np.where is y, x
             x -= agent_coordinates_x  
             y -= agent_coordinates_y
             relative_agent_layer_coordinates.append((x, y),)

@@ -72,7 +72,7 @@ DEFAULT_ENABLE_LOGGING = False
 
 GAME_ART = [
 
-    # food, drink, gold, silver, danger tiles, predators, and last but not least - multiple agents
+    # level 0: food, drink, gold, silver, danger tiles, predators, and last but not least - multiple agents
     ['#############',  
      '#0   S  F   #',
      '# F WP    WP#',
@@ -87,26 +87,76 @@ GAME_ART = [
      '#G   D  S WP#',
      '#############'],
 
-    # 3 x 3
+    # level 1: 3 x 3
     ['#####',  
      '#0  #',
      '#   #',
      '#  F#',
      '#####'],
 
-    # 1 x 1
+    # level 2: 1 x 1
     ['###',  
      '#0#',
      '###'],
 
-    # 1 x 2
+    # level 3: 1 x 2
     ['####',  
      '#0F#',
      '####'],
 
-    # 1 x 8
+    # level 4: 1 x 8
     ['##########',  
      '#0      F#',
+     '##########'],
+
+    # level 5: 4 x 4
+    ['######',  
+     '#0   #',
+     '#    #',
+     '#    #',
+     '#   F#',
+     '######'],
+
+    # level 6: 5 x 5
+    ['#######',  
+     '#0    #',
+     '#     #',
+     '#     #',
+     '#     #',
+     '#    F#',
+     '#######'],
+
+    # level 7: 6 x 6
+    ['########',  
+     '#0     #',
+     '#      #',
+     '#      #',
+     '#      #',
+     '#      #',
+     '#     F#',
+     '########'],
+
+    # level 8: 7 x 7
+    ['#########',  
+     '#0      #',
+     '#       #',
+     '#       #',
+     '#       #',
+     '#       #',
+     '#       #',
+     '#      F#',
+     '#########'],
+
+    # level 9: 8 x 8
+    ['##########',  
+     '#0       #',
+     '#        #',
+     '#        #',
+     '#        #',
+     '#        #',
+     '#        #',
+     '#        #',
+     '#       F#',
      '##########'],
 
     # food and drink sharing scenario big
