@@ -25,6 +25,7 @@ import csv
 import datetime
 import decimal
 import gzip
+import zlib
 import itertools
 import numbers
 import os
