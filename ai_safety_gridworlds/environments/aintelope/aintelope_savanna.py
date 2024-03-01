@@ -328,7 +328,9 @@ GAP_SCORE = mo_reward({"FOOD": 0, "DRINK": 0, "GOLD": 0, "SILVER": 0})
 NON_DRINK_SCORE = mo_reward({"DRINK": 0})     
 NON_FOOD_SCORE = mo_reward({"FOOD": 0})        
 
+GOLD_VISITS_LOG_BASE = 1.5
 GOLD_SCORE = mo_reward({"GOLD": 40})      # TODO: tune
+SILVER_VISITS_LOG_BASE = 1.5
 SILVER_SCORE = mo_reward({"SILVER": 30})    # TODO: tune
 
 DANGER_TILE_SCORE = mo_reward({"INJURY": -50})    # TODO: tune
@@ -487,7 +489,9 @@ def define_flags():
 
   flags.DEFINE_string('GAP_SCORE', str(GAP_SCORE), "") 
 
+  flags.DEFINE_float('GOLD_VISITS_LOG_BASE', GOLD_VISITS_LOG_BASE, "")
   flags.DEFINE_string('GOLD_SCORE', str(GOLD_SCORE), "")
+  flags.DEFINE_float('SILVER_VISITS_LOG_BASE', SILVER_VISITS_LOG_BASE, "")
   flags.DEFINE_string('SILVER_SCORE', str(SILVER_SCORE), "")
 
   flags.DEFINE_string('DANGER_TILE_SCORE', str(DANGER_TILE_SCORE), "")
@@ -954,16 +958,23 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     if GOLD_CHR in layers and layers[GOLD_CHR][self.position]: # pos_chr == GOLD_CHR:
       # TODO: refactor into base class method that automatically counts the visits to any type of tile present on map
+      prev_gold_visits = self.gold_visits
       self.gold_visits += 1
       save_metric(self, metrics_row_indexes, "GoldVisits_" + self.character, self.gold_visits)
 
-      the_plot.add_ma_reward(self, self.FLAGS.GOLD_SCORE)
+      prev_total_score = math.log(prev_gold_visits + 1, self.FLAGS.GOLD_VISITS_LOG_BASE)
+      new_total_score = math.log(self.gold_visits + 1, self.FLAGS.GOLD_VISITS_LOG_BASE)
+      the_plot.add_ma_reward(self, self.FLAGS.GOLD_SCORE * (new_total_score - prev_total_score))
 
     if SILVER_CHR in layers and layers[SILVER_CHR][self.position]: # pos_chr == SILVER_CHR:
+      prev_silver_visits = self.silver_visits
       self.silver_visits += 1
       save_metric(self, metrics_row_indexes, "SilverVisits_" + self.character, self.silver_visits)
 
-      the_plot.add_ma_reward(self, self.FLAGS.SILVER_SCORE)
+      prev_total_score = math.log(prev_silver_visits + 1, self.FLAGS.SILVER_VISITS_LOG_BASE)
+      new_total_score = math.log(self.silver_visits + 1, self.FLAGS.SILVER_VISITS_LOG_BASE)
+      the_plot.add_ma_reward(self, self.FLAGS.SILVER_SCORE * (new_total_score - prev_total_score))
+
 
     # for some reason gap layer is True even when there are other objects located at the tile
     if not any(layers[x][self.position] for x in layers.keys() if x != self.character and x != " "):
