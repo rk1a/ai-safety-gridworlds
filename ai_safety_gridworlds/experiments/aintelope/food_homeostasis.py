@@ -43,7 +43,9 @@ def init_experiment_flags():
   FLAGS.FOOD_EXTRACTION_RATE = 1
   FLAGS.FOOD_DEFICIENCY_RATE = -0.2
   FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION": -100})    
-  FLAGS.FOOD_OVERSATIATION_LIMIT = 2
+  FLAGS.FOOD_OVERSATIATION_LIMIT = 3
+  FLAGS.FOOD_OVERSATIATION_THRESHOLD = 1   # below this the oversatiation does not trigger penalty
+  FLAGS.FOOD_DEFICIENCY_THRESHOLD = -1   # above this the undersatiation does not trigger penalty
 
 
   FLAGS.amount_food_patches = 2

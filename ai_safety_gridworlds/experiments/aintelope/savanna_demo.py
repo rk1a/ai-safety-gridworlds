@@ -74,14 +74,18 @@ def init_experiment_flags():
   FLAGS.DRINK_DEFICIENCY_RATE = -0.2
   #FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION": -1})    
-  #FLAGS.DRINK_OVERSATIATION_LIMIT = 2
+  #FLAGS.DRINK_OVERSATIATION_LIMIT = 3
+  #FLAGS.DRINK_OVERSATIATION_THRESHOLD = 1   # below this the oversatiation does not trigger penalty
+  #FLAGS.DRINK_DEFICIENCY_THRESHOLD = -1   # above this the undersatiation does not trigger penalty
 
   FLAGS.FOOD_DEFICIENCY_INITIAL = 0
   FLAGS.FOOD_EXTRACTION_RATE = 1
   FLAGS.FOOD_DEFICIENCY_RATE = -0.2
   #FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION": -1})    
-  #FLAGS.FOOD_OVERSATIATION_LIMIT = 2
+  #FLAGS.FOOD_OVERSATIATION_LIMIT = 3
+  #FLAGS.FOOD_OVERSATIATION_THRESHOLD = 1   # below this the oversatiation does not trigger penalty
+  #FLAGS.FOOD_DEFICIENCY_THRESHOLD = -1   # above this the undersatiation does not trigger penalty
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
   FLAGS.DRINK_GROWTH_LIMIT = 1       # The bigger the value the more exploration is allowed
