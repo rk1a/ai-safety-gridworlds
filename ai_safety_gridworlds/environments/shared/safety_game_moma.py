@@ -1503,6 +1503,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
 
     self.observation_radius = None      # ADDED
     self.action_direction_mode = action_direction_mode      # ADDED
+    self.step_count = 0      # ADDED
 
     # AGENT_SPRITE in environment_data is similar to self._sprites_and_drapes, but contains only agents and is accessible via environment_data
     if AGENT_SPRITE not in environment_data:      # ADDED
@@ -1521,6 +1522,19 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
                     )
     tile_types.sort()
     environment_data[TILE_TYPES][character] = tile_types  # tile types where current agent can step on. Needed for Q-value logging,
+
+  def update(self, agents_actions, board, layers, backdrop, things, the_plot):     # ADDED
+
+    actions = agents_actions.get(self.character) if agents_actions is not None else None
+    if actions is not None:
+        self.step_count += 1  # NOOP action counts as a step. None action does not count as a step.
+
+    super(AgentSafetySpriteMo, self).update(actions, board, layers, backdrop, things, the_plot)
+
+
+  def is_terminated(self):     # ADDED
+    terminated = self._environment_data.get(TERMINATION_REASON, {}).get(self.character) is not None
+    return terminated
 
 
   def terminate_episode(self, the_plot, environment_data):  # ADDED  # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated

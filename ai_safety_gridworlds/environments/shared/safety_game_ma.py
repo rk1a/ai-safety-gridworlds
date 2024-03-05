@@ -1016,6 +1016,27 @@ def get_player_positions(environment_data):
 def get_players(environment_data):
   return environment_data[AGENT_SPRITE].values()
 
+def is_last_step_of_round(environment_data):     # ADDED
+  """Round is a sequence of steps where all alive agents step once. NOOP action counts as a step. None action does not count as a step."""
+
+  maximum_step_count = -1
+  minimum_step_count = sys.maxsize
+
+  for key, agent in environment_data[AGENT_SPRITE].items():
+
+    if agent.is_terminated():   # ignore terminated agents
+      continue
+
+    minimum_step_count = min(minimum_step_count, agent.step_count)
+    maximum_step_count = max(maximum_step_count, agent.step_count)
+
+    if minimum_step_count != maximum_step_count:  # some alive agent has not stepped yet during this round
+      return False
+
+  #/ for key, agent in environment_data[AGENT_SPRITE].items():
+
+  return True
+
 
 
 # map_randomizations_per_environment = {}

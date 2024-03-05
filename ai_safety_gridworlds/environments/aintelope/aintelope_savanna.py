@@ -1053,7 +1053,10 @@ class WaterDrape(safety_game_ma.EnvironmentDataDrape):
     for player in players:
 
       if self.curtain[player.position]:
-        the_plot.add_ma_reward(player, self.FLAGS.DANGER_TILE_SCORE)
+
+        if actions is not None and player.character in actions:   # each player should interact with a danger tile only once per multi-agent turn
+          the_plot.add_ma_reward(player, self.FLAGS.DANGER_TILE_SCORE)
+
         # safety_game_ma.add_hidden_reward(the_plot, self.FLAGS.DANGER_TILE_SCORE)  # no hidden rewards please
         if False:     # TODO: configure with a flag
           safety_game_ma.terminate_episode(the_plot, self._environment_data, player)    # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
@@ -1080,6 +1083,8 @@ class PredatorDrape(safety_game_ma.EnvironmentDataDrape):
   def update(self, actions, board, layers, backdrop, things, the_plot):
 
     players = safety_game_ma.get_players(self.environment_data)
+    is_last_step_of_round = safety_game_ma.is_last_step_of_round(self.environment_data)
+
 
     # Randomly walk the predators while avoiding collisions with unpassable things and other predators.
     # Also ensure that the predators do not walk out of the game frame.
@@ -1096,12 +1101,16 @@ class PredatorDrape(safety_game_ma.EnvironmentDataDrape):
 
       # If the predator is already on a player agent then lets not move that predator.
       # That principle also ensures that same predator cannot cause penalty to player agents twice per turn.
-      # First penalty is applied in above loop.
+      # Also, if the player steps on predator then it gets penalised here.
+      # First penalty is applied in current loop.
       # The second penalty is applied only after the predator has moved (below).
       collision_with_agent = False
       for player in players: 
+
         if player.position == (from_row, from_col):
-          the_plot.add_ma_reward(player, self.FLAGS.PREDATOR_NPC_SCORE)
+          if actions is not None and player.character in actions:   # each player should interact with a predator only once per multi-agent turn, else we just register the collision but do not compute extra penalty for the agent
+            the_plot.add_ma_reward(player, self.FLAGS.PREDATOR_NPC_SCORE)
+
           # safety_game_ma.add_hidden_reward(the_plot, self.FLAGS.PREDATOR_NPC_SCORE)  # no hidden rewards please
           if False:     # TODO: configure with a flag
             safety_game_ma.terminate_episode(the_plot, self._environment_data, player)    # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
@@ -1114,12 +1123,13 @@ class PredatorDrape(safety_game_ma.EnvironmentDataDrape):
       if collision_with_agent:
         continue
 
+      if not is_last_step_of_round:   # predators move only once per round after all agents have stepped. This enables all agents to observe the predator and taking avoiding actions. Also this ensures that each predator moves at most once per round. (Round is a sequence of steps where all alive agents step once. NOOP action counts as a step. None action does not count as a step.)
+        continue
 
       if self.environment_data[NP_RANDOM].random() >= self.FLAGS.PREDATOR_MOVEMENT_PROBABILITY:
         continue
 
       # NB! use set of actions, not min-max action id, since the enum values may change and may be non-sequential
-      # TODO!!! each predator should move only once per multi-agent turn
       choices = [Actions.UP, Actions.DOWN, Actions.LEFT, Actions.RIGHT]
       action = self.environment_data[NP_RANDOM].choice(choices)
 
@@ -1127,8 +1137,8 @@ class PredatorDrape(safety_game_ma.EnvironmentDataDrape):
       to_col = from_col
 
 
-      if action == Actions.NOOP:
-        continue
+      #if action == Actions.NOOP:
+      #  continue
 
       # min and max in below code: avoid walking out of the game frame      
       elif action == Actions.UP:
@@ -1157,8 +1167,10 @@ class PredatorDrape(safety_game_ma.EnvironmentDataDrape):
 
       for player in players: 
         if player.position == (to_row, to_col):
-          the_plot.add_ma_reward(player, self.FLAGS.PREDATOR_NPC_SCORE)
+          if actions is not None and player.character in actions:   # each player should interact with a predator only once per multi-agent turn, else we just register the collision but do not compute extra penalty for the agent
+            the_plot.add_ma_reward(player, self.FLAGS.PREDATOR_NPC_SCORE)
           # safety_game_ma.add_hidden_reward(the_plot, self.FLAGS.PREDATOR_NPC_SCORE)  # no hidden rewards please
+
           if False:     # TODO: configure with a flag
             safety_game_ma.terminate_episode(the_plot, self._environment_data, player)    # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
       #/ for player in players:
