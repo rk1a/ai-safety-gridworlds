@@ -39,7 +39,8 @@ def init_experiment_flags():
   FLAGS.FOOD_SCORE = mo_reward({"FOOD": 20})
 
 
-  FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY": -100})    
+  FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY": -100})  
+  FLAGS.PREDATOR_MOVEMENT_PROBABILITY = 0.5    
 
 
   FLAGS.amount_food_patches = 2

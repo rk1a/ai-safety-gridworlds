@@ -180,14 +180,14 @@ DRINK_EXTRACTION_RATE = 10
 DRINK_DEFICIENCY_RATE = -1
 DRINK_DEFICIENCY_LIMIT = -20  # Need to be at least -10 else the agent dies. The bigger the value the more exploration is allowed
 DRINK_OVERSATIATION_REWARD = mo_reward({"DRINK_OVERSATIATION_REWARD": -1})    # TODO: tune
-DRINK_OVERSATIATION_LIMIT = 3
+DRINK_OVERSATIATION_LIMIT = 4
 
 FOOD_DEFICIENCY_INITIAL = 0
 FOOD_EXTRACTION_RATE = 10
 FOOD_DEFICIENCY_RATE = -1
 FOOD_DEFICIENCY_LIMIT = -20  # Need to be at least -10 else the agent dies. The bigger the value the more exploration is allowed
 FOOD_OVERSATIATION_REWARD = mo_reward({"FOOD_OVERSATIATION_REWARD": -1})    # TODO: tune
-FOOD_OVERSATIATION_LIMIT = 3
+FOOD_OVERSATIATION_LIMIT = 4
 
 DRINK_REGROWTH_EXPONENT = 1.1
 DRINK_GROWTH_LIMIT = 20       # Need to be at least 10 else the agent dies. The bigger the value the more exploration is allowed

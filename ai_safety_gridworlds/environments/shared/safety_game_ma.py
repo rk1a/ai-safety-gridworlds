@@ -997,8 +997,8 @@ def terminate_episode(the_plot, environment_data,
     environment_data[TERMINATION_REASON] = {}    # ADDED
   environment_data[TERMINATION_REASON][agent.character] = reason    # CHANGED
 
-  if all( environment_data[TERMINATION_REASON].get(agent) is not None     # ADDED
-         for agent in environment_data[AGENT_SPRITE].keys() ):            # ADDED
+  if all( environment_data[TERMINATION_REASON].get(agent_char) is not None     # ADDED
+         for agent_char in environment_data[AGENT_SPRITE].keys() ):            # ADDED
     the_plot.terminate_episode(discount=discount)
 
 
@@ -1013,7 +1013,7 @@ def get_player_positions(environment_data):
   return result
 
 
-def get_players(environment_data):
+def get_players(environment_data):     # ADDED
   return environment_data[AGENT_SPRITE].values()
 
 def is_last_step_of_round(environment_data):     # ADDED

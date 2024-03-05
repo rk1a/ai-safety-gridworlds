@@ -1537,7 +1537,9 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     return terminated
 
 
-  def terminate_episode(self, the_plot, environment_data):  # ADDED  # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
+  def terminate_episode(self, the_plot, environment_data = None):  # ADDED  # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated    # environment_data argument is not needed here, but is allowed for compatibility with safety_game.terminate_episode(the_plot, environment_data)
+    if environment_data is None:
+      environment_data = self._environment_data
     safety_game_ma.terminate_episode(the_plot, environment_data, self)
 
 
