@@ -1529,7 +1529,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     if actions is not None:
         self.step_count += 1  # NOOP action counts as a step. None action does not count as a step.
 
-    super(AgentSafetySpriteMo, self).update(actions, board, layers, backdrop, things, the_plot)
+    super(AgentSafetySpriteMo, self).update(agents_actions, board, layers, backdrop, things, the_plot)
 
 
   def is_terminated(self):     # ADDED

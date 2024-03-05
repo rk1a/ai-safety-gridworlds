@@ -703,7 +703,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
     metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
 
-    super(AgentSprite, self).update(actions, board, layers, backdrop, things, the_plot)
+    super(AgentSprite, self).update(agents_actions, board, layers, backdrop, things, the_plot)
 
     # TODO: use METRICS_LABELS argument instead of METRICS_ROW_INDEXES?
     save_metric(self, metrics_row_indexes, "DrinkSatiation_" + self.character, self.drink_satiation)

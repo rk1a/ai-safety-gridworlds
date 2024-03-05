@@ -49,7 +49,7 @@ def init_experiment_flags():
   FLAGS.amount_silver_deposits = 0
   FLAGS.amount_water_tiles = 0
   FLAGS.amount_predators = 5
-  FLAGS.amount_agents = 1
+  FLAGS.amount_agents = 2
 
   return FLAGS
 

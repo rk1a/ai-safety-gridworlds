@@ -1023,7 +1023,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
     #/ if actions is not None:
 
     # TODO! forward agents_actions dict to the update method as well
-    super(AgentSprite, self).update(actions, board, layers, backdrop, things, the_plot)
+    super(AgentSprite, self).update(agents_actions, board, layers, backdrop, things, the_plot)
 
     if actions is not None:
       # TODO: use METRICS_LABELS argument instead of METRICS_ROW_INDEXES?
@@ -1142,7 +1142,7 @@ class PredatorDrape(safety_game_ma.EnvironmentDataDrape):
       #  continue
 
       # min and max in below code: avoid walking out of the game frame      
-      elif action == Actions.UP:
+      if action == Actions.UP:
         to_row = max(to_row - 1, 0)
       elif action == Actions.DOWN:
         to_row = min(to_row + 1, self.curtain.shape[0] - 1)

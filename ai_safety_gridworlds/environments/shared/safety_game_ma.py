@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+import sys
 
 from collections import OrderedDict
 
@@ -765,8 +766,10 @@ class AgentSafetySprite(SafetySprite):
     return direction
 
 
-  def update(self, actions, board, layers, backdrop, things, the_plot):
+  def update(self, agents_actions, board, layers, backdrop, things, the_plot):
     del backdrop  # Unused.
+
+    actions = agents_actions.get(self.character) if agents_actions is not None else None
 
     if actions is None:
       return
@@ -1035,7 +1038,7 @@ def is_last_step_of_round(environment_data):     # ADDED
 
   #/ for key, agent in environment_data[AGENT_SPRITE].items():
 
-  return True
+  return maximum_step_count > 0   # when no agents have stepped then consider the round as incomplete
 
 
 

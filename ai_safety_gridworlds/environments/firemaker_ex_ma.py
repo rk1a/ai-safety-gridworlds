@@ -473,7 +473,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
 
       # metrics_row_indexes = self.environment_data[METRICS_ROW_INDEXES]
 
-      super(AgentSprite, self).update(actions, board, layers, backdrop, things, the_plot)
+      super(AgentSprite, self).update(agents_actions, board, layers, backdrop, things, the_plot)
 
     #/ if actions is not None:
 
