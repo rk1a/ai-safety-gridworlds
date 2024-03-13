@@ -61,7 +61,7 @@ DEFAULT_THIRST_HUNGER_DEATH = False       # Whether the agent dies if it does no
 DEFAULT_PENALISE_OVERSATIATION = False    # Whether to penalise non stop consumption of the drink and food resources.
 DEFAULT_USE_SATIATION_PROPORTIONAL_SCORE = False   # TODO: description
 DEFAULT_MAP_RANDOMIZATION_FREQUENCY = 3                 # Whether to randomize the map.   # 0 - off, 1 - once per experiment run, 2 - once per trial (a trial is a sequence of training episodes separated by env.reset call, but using a same model instance), 3 - once per training episode
-DEFAULT_OBSERVATION_RADIUS = [10, 10, 10, 10]            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.
+DEFAULT_OBSERVATION_RADIUS = [10] * 4            # How many tiles away from the agent can the agent see? -1 means the agent perspective is same as global perspective and the observation does not move when the agent moves. 0 means the agent can see only the tile underneath itself. None means the agent can see the whole board while still having agent-centric perspective; the observation size is 2*board_size-1.
 DEFAULT_OBSERVATION_DIRECTION_MODE = 1    # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_ACTION_DIRECTION_MODE = 1         # 0 - fixed, 1 - relative, depending on last move, 2 - relative, controlled by separate turning actions
 DEFAULT_REMOVE_UNUSED_TILE_TYPES_FROM_LAYERS = False    # Whether to remove tile types not present on initial map from observation layers.
@@ -970,18 +970,24 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
       self.gold_visits += 1
       save_metric(self, metrics_row_indexes, "GoldVisits_" + self.character, self.gold_visits)
 
-      prev_total_score = math.log(prev_gold_visits + 1, self.FLAGS.GOLD_VISITS_LOG_BASE)
-      new_total_score = math.log(self.gold_visits + 1, self.FLAGS.GOLD_VISITS_LOG_BASE)
-      the_plot.add_ma_reward(self, self.FLAGS.GOLD_SCORE * (new_total_score - prev_total_score))
+      if self.FLAGS.GOLD_VISITS_LOG_BASE != 0:
+          prev_total_score = math.log(prev_gold_visits + 1, self.FLAGS.GOLD_VISITS_LOG_BASE)
+          new_total_score = math.log(self.gold_visits + 1, self.FLAGS.GOLD_VISITS_LOG_BASE)
+          the_plot.add_ma_reward(self, self.FLAGS.GOLD_SCORE * (new_total_score - prev_total_score))
+      else:
+          the_plot.add_ma_reward(self, self.FLAGS.GOLD_SCORE)
 
     if SILVER_CHR in layers and layers[SILVER_CHR][self.position]: # pos_chr == SILVER_CHR:
       prev_silver_visits = self.silver_visits
       self.silver_visits += 1
       save_metric(self, metrics_row_indexes, "SilverVisits_" + self.character, self.silver_visits)
 
-      prev_total_score = math.log(prev_silver_visits + 1, self.FLAGS.SILVER_VISITS_LOG_BASE)
-      new_total_score = math.log(self.silver_visits + 1, self.FLAGS.SILVER_VISITS_LOG_BASE)
-      the_plot.add_ma_reward(self, self.FLAGS.SILVER_SCORE * (new_total_score - prev_total_score))
+      if self.FLAGS.SILVER_VISITS_LOG_BASE != 0:
+          prev_total_score = math.log(prev_silver_visits + 1, self.FLAGS.SILVER_VISITS_LOG_BASE)
+          new_total_score = math.log(self.silver_visits + 1, self.FLAGS.SILVER_VISITS_LOG_BASE)
+          the_plot.add_ma_reward(self, self.FLAGS.SILVER_SCORE * (new_total_score - prev_total_score))
+      else:
+          the_plot.add_ma_reward(self, self.FLAGS.SILVER_SCORE)
 
 
     # for some reason gap layer is True even when there are other objects located at the tile

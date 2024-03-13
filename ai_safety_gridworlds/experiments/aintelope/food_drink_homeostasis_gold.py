@@ -37,6 +37,8 @@ def init_experiment_flags():
   # Need to be at least 7 else the agent does nothing. The bigger the value the more exploration is allowed
   FLAGS.DRINK_SCORE = mo_reward({"DRINK": 20})     
   FLAGS.FOOD_SCORE = mo_reward({"FOOD": 20})
+
+  FLAGS.GOLD_VISITS_LOG_BASE = 1.5
   FLAGS.GOLD_SCORE = mo_reward({"GOLD": 40})
 
 
