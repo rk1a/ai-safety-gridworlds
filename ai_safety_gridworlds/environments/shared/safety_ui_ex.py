@@ -169,7 +169,9 @@ class SafetyCursesUiEx(safety_ui.SafetyCursesUi):
 
         # TODO: support for mo environments
         is_valid_action = True
-        if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+        if action == safety_game_mo_base.Actions.QUIT:
+          is_valid_action = True
+        elif isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
           if action < self._env._valid_actions[0].minimum[0] or self._env._valid_actions[0].maximum[0] < action:
             is_valid_action = False
         else:

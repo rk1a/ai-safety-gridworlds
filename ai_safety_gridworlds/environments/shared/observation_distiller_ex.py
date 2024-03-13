@@ -26,7 +26,6 @@ from __future__ import print_function
 
 # Dependency imports
 from ai_safety_gridworlds.environments.shared import observation_distiller
-from ai_safety_gridworlds.environments.shared import safety_game_ma
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_mo import INFO_LAYERS
 
 import numpy as np
@@ -54,7 +53,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
   """
 
   def __init__(self, value_mapping, colour_mapping, 
-               env=None,      # ADDED  
+               environment_data=None,      # ADDED  
                observe_gaps_only_where_other_layers_are_blank=False,     # ADDED
                observable_attribute_categories=[],      # ADDED   
                observable_attribute_value_mapping:dict[str, dict[str, float]]={},      # ADDED  
@@ -79,7 +78,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
     """
     super(ObservationToArrayWithRGBEx, self).__init__(value_mapping, colour_mapping)
 
-    self._env = env    # ADDED
+    self._environment_data = environment_data    # ADDED
     self._observable_attribute_categories = observable_attribute_categories    # ADDED
     self._observable_attribute_value_mapping = observable_attribute_value_mapping    # ADDED
     self._observe_gaps_only_where_other_layers_are_blank = observe_gaps_only_where_other_layers_are_blank   # ADDED
@@ -92,7 +91,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
         'ascii': lambda observation: self._board_to_ascii_vectorize(observation.board),   # Rendering function for the `ascii` value. converting ordinals to chars.
     })
 
-    if self._env is not None:
+    if self._environment_data is not None:
       self._renderers['agent_attribute_board_ascii_codes'] = self.compute_agent_attribute_board
       self._renderers['agent_attribute_layers'] = self.compute_agent_attribute_layers
 
@@ -110,8 +109,8 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
       layers[attribute] = layer
 
       # for character, entity in six.iteritems(self._env._sprites_and_drapes):  # process agents in the reverse z-order just as in _render() method in engine.py
-      for character in self._env.environment_data[Z_ORDER]:
-        entity = self._env.environment_data[AGENT_SPRITE].get(character)
+      for character in self._environment_data[Z_ORDER]:
+        entity = self._environment_data[AGENT_SPRITE].get(character)
         if entity is not None:  # does that character represent an agent?
           if entity.visible:    # TODO: does this check need to be applied elsewhere too?
             
@@ -128,7 +127,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
     for attribute in self._observable_attribute_categories:
       layers[attribute] = {}
 
-      for character, entity in self._env.environment_data[AGENT_SPRITE].items():
+      for character, entity in self._environment_data[AGENT_SPRITE].items():
       # for character, entity in six.iteritems(self._env._sprites_and_drapes):  # process agents in the reverse z-order just as in _render() method in engine.py
         # if isinstance(entity, safety_game_ma.SafetySprite) and entity.visible:
         if entity.visible:  
@@ -169,7 +168,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
       # observation.layers = layers   # comment-out: cannot replace attribute in tuple. So you just need to be careful to not user observation.layers anymore anywhere
       result[INFO_LAYERS] = layers
 
-      gap_chr = self._env.environment_data.get("what_lies_beneath", ' ')
+      gap_chr = self._environment_data.get("what_lies_beneath", ' ')
       gaps_layer = layers[gap_chr].copy()   # NB! make copy in order to not change the gaps layer in pycolab
       layers[gap_chr] = gaps_layer
 
@@ -179,7 +178,7 @@ class ObservationToArrayWithRGBEx(observation_distiller.ObservationToArrayWithRG
         gaps_layer &= np.logical_not(layer)
       
 
-    if self._env is not None:
+    if self._environment_data is not None:
       result['agent_attribute_board_ascii'] = {    # ADDED
         key: self._board_to_ascii_vectorize(value) 
         for key, value in result['agent_attribute_board_ascii_codes'].items() 

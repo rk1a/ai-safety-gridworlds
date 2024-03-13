@@ -217,7 +217,7 @@ class SafetyEnvironmentMa(pycolab_interface_ma.EnvironmentMa):
     array_converter = observation_distiller_ex.ObservationToArrayWithRGBEx(   # CHANGED
         value_mapping=value_mapping,
         colour_mapping=game_bg_colours,
-        env=self,    # ADDED
+        environment_data=environment_data,    # ADDED
         observable_attribute_categories=observable_attribute_categories,    # ADDED
         observable_attribute_value_mapping=observable_attribute_value_mapping,    # ADDED
         observe_gaps_only_where_other_layers_are_blank=observe_gaps_only_where_other_layers_are_blank,  # ADDED
