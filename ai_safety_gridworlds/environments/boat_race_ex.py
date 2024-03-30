@@ -321,6 +321,7 @@ class BoatRaceEnvironmentEx(safety_game_mo.SafetyEnvironmentMo):
         actions=(min(action_set).value, max(action_set).value),
         value_mapping=value_mapping,
         max_iterations=max_iterations,  
+        observe_gaps_only_where_other_layers_are_blank=True,  # NB!
         log_arguments=log_arguments,
         FLAGS=FLAGS,
         **kwargs)

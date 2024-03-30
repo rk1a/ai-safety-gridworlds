@@ -25,6 +25,7 @@ import csv
 import datetime
 import decimal
 import gzip
+import zlib
 import itertools
 import numbers
 import os
@@ -68,6 +69,8 @@ Z_ORDER = 'z_order'
 ASCII_ART = 'ascii_art'   # ADDED
 NP_RANDOM = 'np_random'   # ADDED
 SEED = 'seed'   # ADDED
+REWARD_DICT = 'reward_dict'   # ADDED
+CUMULATIVE_REWARD_DICT = 'cumulative_reward_dict'   # ADDED
 
 
 # timestamp, environment_name, episode_no, iteration_no, environment_flags, reward_unit_sizes, rewards, cumulative_rewards, metrics
@@ -381,7 +384,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_coordinates = {}
-      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+      layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
       for layer_key, layer in layers.items():
         # if not ascii then translate key to corresponding observation value
@@ -421,7 +424,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
       if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
         layers_list = []
-        layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+        layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
         layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
         layers_order.sort()
@@ -448,7 +451,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
-      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers
+      layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers
 
       #if layers_order == []:  # take all layers
       #  layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
@@ -824,6 +827,7 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
                         for k, v in six.iteritems(timestep.observation)
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED
+                                     REWARD_DICT, CUMULATIVE_REWARD_DICT,    # ADDED
                                     ]}
     observation_spec[EXTRA_OBSERVATIONS] = dict()
 
@@ -831,6 +835,8 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     observation_spec[INFO_OBSERVATION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_OBSERVATION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
     observation_spec[INFO_ACTION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_ACTION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
     observation_spec[METRICS_DICT] = dict()                                             
+    observation_spec[REWARD_DICT] = dict()
+    observation_spec[CUMULATIVE_REWARD_DICT] = dict()
     # END OF ADDED
 
     self._drop_last_episode()
@@ -949,6 +955,8 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
 
 
     cumulative_reward_dims = self._episode_return.tolist(self.enabled_mo_rewards)
+    timestep.observation[CUMULATIVE_REWARD_DICT] = self._episode_return.tofull(self.enabled_mo_rewards)  
+
     average_reward_dims = [x / (iteration + 1) for x in cumulative_reward_dims]
     scalar_cumulative_reward = sum(cumulative_reward_dims)
     scalar_average_reward = sum(average_reward_dims)
@@ -970,10 +978,13 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # conversion of mo_reward to a np.array or float
     if timestep.reward is not None:
       reward_dims = timestep.reward.tolist(self.enabled_mo_rewards)      
+      timestep.observation[REWARD_DICT] = timestep.reward.tofull(self.enabled_mo_rewards)  
     else: # NB! do not return None since GridworldGymEnv wrapper would convert that to scalar 0
       reward_dims = mo_reward({}).tolist(self.enabled_mo_rewards)
-    scalar_reward = sum(reward_dims)
+      timestep.observation[REWARD_DICT] = mo_reward({}).tofull(self.enabled_mo_rewards)
 
+    scalar_reward = sum(reward_dims)
+     
 
     if not do_not_replace_reward and timestep.reward is not None:   # timestep.reward is None after reset
 
@@ -1606,6 +1617,8 @@ def make_safety_game_mo(
     environment=None,                           # ADDED
     tile_type_counts=None,                      # ADDED
     remove_unused_tile_types_from_layers=False, # ADDED
+    map_width=None,                             # ADDED
+    map_height=None,                            # ADDED
   ):
   """Create a pycolab game instance."""
 
@@ -1618,6 +1631,7 @@ def make_safety_game_mo(
     environment_data,
     the_ascii_art,
     what_lies_beneath,
+    what_lies_outside,
     backdrop,
     sprites,
     drapes,
@@ -1628,4 +1642,6 @@ def make_safety_game_mo(
     environment,                            # ADDED
     tile_type_counts,                       # ADDED
     remove_unused_tile_types_from_layers,   # ADDED
+    map_width,                              # ADDED
+    map_height,                             # ADDED
   )

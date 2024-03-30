@@ -25,6 +25,7 @@ import csv
 import datetime
 import decimal
 import gzip
+import zlib
 import itertools
 import numbers
 import os
@@ -71,6 +72,8 @@ Z_ORDER = 'z_order'
 ASCII_ART = 'ascii_art'   # ADDED
 NP_RANDOM = 'np_random'   # ADDED
 SEED = 'seed'   # ADDED
+REWARD_DICT = 'reward_dict'   # ADDED
+CUMULATIVE_REWARD_DICT = 'cumulative_reward_dict'   # ADDED
 
 
 # timestamp, environment_name, episode_no, iteration_no, environment_flags, reward_unit_sizes, rewards, cumulative_rewards, metrics
@@ -512,15 +515,17 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       relative_agent_layers_coordinates = {}
 
       if agent_coordinates is not None and len(agent_coordinates) > 0:   # agent found in the layers?   # TODO: handle cases where the agent is overlapped by another agent
-        agent_coordinates_x = agent_coordinates[0][0]
-        agent_coordinates_y = agent_coordinates[0][1]
+
+        # NB! the coordinate order from np.where is y, x
+        agent_coordinates_y = agent_coordinates[0][0]
+        agent_coordinates_x = agent_coordinates[0][1]
 
         for layer_key, layer_coordinates in agent_layers_coordinates.items():
           relative_agent_layer_coordinates = []
 
           # TODO: configuration flag specifying whether agent coordinates should be relative or absolute. Consider that in this case the layer_coordinates are already offset by the corner of the agent's perspective.
           # subtract agent perspective center, considering agent's observation direction. Agent direction is already considered while calculating agent_self_observation above.
-          for x, y in layer_coordinates:
+          for y, x in layer_coordinates:    # NB! the coordinate order from np.where is y, x
             x -= agent_coordinates_x  
             y -= agent_coordinates_y
             relative_agent_layer_coordinates.append((x, y),)
@@ -544,7 +549,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_coordinates = {}
-      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+      layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
       for layer_key, layer in layers.items():
         # if not ascii then translate key to corresponding observation value
@@ -584,7 +589,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
         layers_list = []
-        layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+        layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
         layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
         layers_order.sort()
@@ -611,7 +616,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
 
       layers_list = []
-      layers = observation[INFO_LAYERS] if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
+      layers = observation[INFO_LAYERS] # if isinstance(observation, dict) else observation.layers   # when called on agent perspectives then the observation is of Observation type
 
       #if layers_order == []:  # take all layers
       #  layers_order = list(layers.keys())  # assignment to default argument does not cause the "mutable default argument" problem
@@ -1018,6 +1023,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
                         for k, v in six.iteritems(observation2)                # CHANGED
                         if k not in [EXTRA_OBSERVATIONS, METRICS_DICT,                  # CHANGE
                                      INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, # ADDED
+                                     REWARD_DICT, CUMULATIVE_REWARD_DICT,    # ADDED
                                      # CUMULATIVE_REWARD, AVERAGE_REWARD    # TODO
                                     ]}
 
@@ -1028,6 +1034,8 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       observation_spec[INFO_OBSERVATION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_OBSERVATION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
       observation_spec[INFO_ACTION_DIRECTION] = specs.BoundedArraySpec([1], np.int32, name=INFO_ACTION_DIRECTION, minimum=int(Actions.UP), maximum=int(Actions.RIGHT))
       observation_spec[METRICS_DICT] = dict()                                             
+      observation_spec[REWARD_DICT] = dict()
+      observation_spec[CUMULATIVE_REWARD_DICT] = dict()
           
       self._drop_last_episode()
     #/ if observation is None:
@@ -1171,10 +1179,12 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     iteration = self._current_game.the_plot.frame
 
 
+    cumulative_reward_dims = self._episode_return.tolist(self.enabled_ma_rewards)
+    timestep.observation[CUMULATIVE_REWARD_DICT] = self._episode_return.tofull(self.enabled_ma_rewards)  
+
     timestep.observation[CUMULATIVE_REWARD] = {}
     timestep.observation[AVERAGE_REWARD] = {}
     average_reward_dims = {}
-    cumulative_reward_dims = self._episode_return.tolist(self.enabled_ma_rewards)
     scalar_cumulative_reward = {}
     scalar_average_reward = {}
     for agent_key, agent_cumulative_reward_dims in cumulative_reward_dims.items():
@@ -1204,9 +1214,11 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
     # conversion of ma_reward to a np.array or float
     if timestep.reward is not None:
-      reward_dims = timestep.reward.tolist(self.enabled_ma_rewards)      
+      reward_dims = timestep.reward.tolist(self.enabled_ma_rewards) 
+      timestep.observation[REWARD_DICT] = timestep.reward.tofull(self.enabled_ma_rewards)
     else: # NB! do not return None since GridworldGymEnv wrapper would convert that to scalar 0
       reward_dims = ma_reward({}).tolist(self.enabled_ma_rewards)
+      timestep.observation[REWARD_DICT] = ma_reward({}).tofull(self.enabled_ma_rewards)
 
 
     scalar_reward = {}
@@ -1491,6 +1503,7 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
 
     self.observation_radius = None      # ADDED
     self.action_direction_mode = action_direction_mode      # ADDED
+    self.step_count = 0      # ADDED
 
     # AGENT_SPRITE in environment_data is similar to self._sprites_and_drapes, but contains only agents and is accessible via environment_data
     if AGENT_SPRITE not in environment_data:      # ADDED
@@ -1510,8 +1523,23 @@ class AgentSafetySpriteMo(AgentSafetySprite):   # TODO: rename to AgentSafetySpr
     tile_types.sort()
     environment_data[TILE_TYPES][character] = tile_types  # tile types where current agent can step on. Needed for Q-value logging,
 
+  def update(self, agents_actions, board, layers, backdrop, things, the_plot):     # ADDED
 
-  def terminate_episode(self, the_plot, environment_data):  # ADDED  # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated
+    actions = agents_actions.get(self.character) if agents_actions is not None else None
+    if actions is not None:
+        self.step_count += 1  # NOOP action counts as a step. None action does not count as a step.
+
+    super(AgentSafetySpriteMo, self).update(agents_actions, board, layers, backdrop, things, the_plot)
+
+
+  def is_terminated(self):     # ADDED
+    terminated = self._environment_data.get(TERMINATION_REASON, {}).get(self.character) is not None
+    return terminated
+
+
+  def terminate_episode(self, the_plot, environment_data = None):  # ADDED  # NB! this terminates agent, not episode. Episode terminates only when all agents are terminated    # environment_data argument is not needed here, but is allowed for compatibility with safety_game.terminate_episode(the_plot, environment_data)
+    if environment_data is None:
+      environment_data = self._environment_data
     safety_game_ma.terminate_episode(the_plot, environment_data, self)
 
 
@@ -1998,6 +2026,8 @@ def make_safety_game_mo(
     environment=None,                           # ADDED
     tile_type_counts=None,                      # ADDED
     remove_unused_tile_types_from_layers=False, # ADDED
+    map_width=None,                             # ADDED
+    map_height=None,                            # ADDED
   ):
   """Create a pycolab game instance."""
 
@@ -2011,6 +2041,7 @@ def make_safety_game_mo(
     environment_data,
     the_ascii_art,
     what_lies_beneath,
+    what_lies_outside,
     backdrop,
     sprites,
     drapes,
@@ -2021,4 +2052,6 @@ def make_safety_game_mo(
     environment,                            # ADDED
     tile_type_counts,                       # ADDED
     remove_unused_tile_types_from_layers,   # ADDED
+    map_width,                              # ADDED
+    map_height,                             # ADDED
   )

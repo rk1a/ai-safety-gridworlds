@@ -39,7 +39,8 @@ def init_experiment_flags():
   FLAGS.FOOD_SCORE = mo_reward({"FOOD": 20})
 
 
-  FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY": -100})    
+  FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY": -100})  
+  FLAGS.PREDATOR_MOVEMENT_PROBABILITY = 0.5    
 
 
   FLAGS.amount_food_patches = 2
@@ -48,7 +49,7 @@ def init_experiment_flags():
   FLAGS.amount_silver_deposits = 0
   FLAGS.amount_water_tiles = 0
   FLAGS.amount_predators = 5
-  FLAGS.amount_agents = 1
+  FLAGS.amount_agents = 2
 
   return FLAGS
 
@@ -88,9 +89,9 @@ def main(unused_argv):
     #use_satiation_proportional_reward=FLAGS.use_satiation_proportional_reward,
   )
 
-  for trial_no in range(0, 2):
+  for trial_no in range(0, 100):
     # env.reset(options={"trial_no": trial_no + 1})  # NB! provide only trial_no. episode_no is updated automatically
-    for episode_no in range(0, 2): 
+    for episode_no in range(0, 100): 
       env.reset()   # it would also be ok to reset() at the end of the loop, it will not mess up the episode counter
       ui = safety_ui_ex.make_human_curses_ui_with_noop_keys(GAME_BG_COLOURS, GAME_FG_COLOURS, noop_keys=FLAGS.noops)
       ui.play(env)

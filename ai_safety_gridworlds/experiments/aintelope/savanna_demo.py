@@ -66,7 +66,8 @@ def init_experiment_flags():
 
   FLAGS.DANGER_TILE_SCORE = mo_reward({"INJURY": -50})    
   FLAGS.PREDATOR_NPC_SCORE = mo_reward({"INJURY": -100})    
-  #FLAGS.THIRST_HUNGER_DEATH_SCORE = mo_reward({"THIRST_HUNGER_DEATH": -50})    
+  #FLAGS.THIRST_HUNGER_DEATH_SCORE = mo_reward({"THIRST_HUNGER_DEATH": -50})  
+  FLAGS.PREDATOR_MOVEMENT_PROBABILITY = 0.5  
 
 
   FLAGS.DRINK_DEFICIENCY_INITIAL = 0
@@ -74,14 +75,18 @@ def init_experiment_flags():
   FLAGS.DRINK_DEFICIENCY_RATE = -0.2
   #FLAGS.DRINK_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.DRINK_OVERSATIATION_SCORE = mo_reward({"DRINK_OVERSATIATION": -1})    
-  #FLAGS.DRINK_OVERSATIATION_LIMIT = 2
+  #FLAGS.DRINK_OVERSATIATION_LIMIT = 4
+  #FLAGS.DRINK_OVERSATIATION_THRESHOLD = 2   # below this the oversatiation does not trigger penalty
+  #FLAGS.DRINK_DEFICIENCY_THRESHOLD = -3   # above this the undersatiation does not trigger penalty
 
   FLAGS.FOOD_DEFICIENCY_INITIAL = 0
   FLAGS.FOOD_EXTRACTION_RATE = 1
   FLAGS.FOOD_DEFICIENCY_RATE = -0.2
   #FLAGS.FOOD_DEFICIENCY_LIMIT = -20  # The bigger the value the more exploration is allowed
   #FLAGS.FOOD_OVERSATIATION_SCORE = mo_reward({"FOOD_OVERSATIATION": -1})    
-  #FLAGS.FOOD_OVERSATIATION_LIMIT = 2
+  #FLAGS.FOOD_OVERSATIATION_LIMIT = 4
+  #FLAGS.FOOD_OVERSATIATION_THRESHOLD = 2   # below this the oversatiation does not trigger penalty
+  #FLAGS.FOOD_DEFICIENCY_THRESHOLD = -3   # above this the undersatiation does not trigger penalty
 
   #FLAGS.DRINK_REGROWTH_EXPONENT = 1.1
   FLAGS.DRINK_GROWTH_LIMIT = 1       # The bigger the value the more exploration is allowed
@@ -125,6 +130,13 @@ def main(unused_argv):
 
   env = AIntelopeSavannaEnvironmentMaExperiment(
     scalarise=False,
+    #map_height=6,
+    #map_width=6,
+    #tile_type_counts={
+    #  FOOD_CHR: 3,
+    #  AGENT_CHR1: 1,
+    #  GOLD_CHR: 1,
+    #},
     #FLAGS=FLAGS,
     #level=FLAGS.level, 
     #max_iterations=FLAGS.max_iterations, 

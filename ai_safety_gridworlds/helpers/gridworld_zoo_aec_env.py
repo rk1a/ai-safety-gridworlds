@@ -34,6 +34,7 @@ except:
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
 from ai_safety_gridworlds.environments.shared.safety_game import HIDDEN_REWARD as INFO_HIDDEN_REWARD
+from ai_safety_gridworlds.environments.shared.safety_game_moma import REWARD_DICT as INFO_REWARD_DICT, CUMULATIVE_REWARD_DICT as INFO_CUMULATIVE_REWARD_DICT
 from ai_safety_gridworlds.environments.shared.safety_game_ma import NP_RANDOM, Actions   # used as export
 from ai_safety_gridworlds.environments.shared.rl.pycolab_interface_ma import INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_LAYERS
 from ai_safety_gridworlds.environments.shared import safety_game_mo
@@ -527,13 +528,19 @@ class GridworldZooAecEnv(AECEnv):
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             observation_direction = obs.get(INFO_OBSERVATION_DIRECTION, {}).get(self.agent_name_mapping[agent_name])
             action_direction = obs.get(INFO_ACTION_DIRECTION, {}).get(self.agent_name_mapping[agent_name])
+            reward_dict = obs.get(INFO_REWARD_DICT, {}).get(self.agent_name_mapping[agent_name])
+            cumulative_reward_dict = obs.get(INFO_CUMULATIVE_REWARD_DICT, {}).get(self.agent_name_mapping[agent_name])
         else:
             observation_direction = obs.get(INFO_OBSERVATION_DIRECTION)
             action_direction = obs.get(INFO_ACTION_DIRECTION)
+            reward_dict = obs.get(INFO_REWARD_DICT)
+            cumulative_reward_dict = obs.get(INFO_CUMULATIVE_REWARD_DICT)
 
         info = {
             INFO_OBSERVATION_DIRECTION: observation_direction,
             INFO_ACTION_DIRECTION: action_direction,
+            INFO_REWARD_DICT: reward_dict,
+            INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict,
         }
 
         if self._object_coordinates_in_observation and hasattr(self._env, "calculate_observation_coordinates"):
@@ -561,7 +568,7 @@ class GridworldZooAecEnv(AECEnv):
 
 
         for k, v in obs.items():
-            if k not in ("RGB", INFO_LAYERS):
+            if k not in ("RGB", INFO_LAYERS, INFO_OBSERVATION_DIRECTION, INFO_ACTION_DIRECTION, INFO_REWARD_DICT, INFO_CUMULATIVE_REWARD_DICT):
                 info[k] = v
 
 
@@ -645,10 +652,19 @@ class GridworldZooAecEnv(AECEnv):
         else:
             hidden_reward = None
 
+        #if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
+        #    reward_dict = obs[INFO_REWARD_DICT][self.agent_name_mapping[self._next_agent]]
+        #    cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT][self.agent_name_mapping[self._next_agent]]
+        #else:
+        #    reward_dict = obs[INFO_REWARD_DICT]
+        #    cumulative_reward_dict = obs[INFO_CUMULATIVE_REWARD_DICT]
+
         info.update({
             INFO_HIDDEN_REWARD: hidden_reward,
             INFO_OBSERVED_REWARD: rewards[self._next_agent],
-            INFO_DISCOUNT: timestep.discount,            
+            INFO_DISCOUNT: timestep.discount,    
+            # INFO_REWARD_DICT: reward_dict,
+            # INFO_CUMULATIVE_REWARD_DICT: cumulative_reward_dict
         })
 
 
