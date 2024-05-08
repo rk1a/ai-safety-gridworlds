@@ -39,7 +39,7 @@ On top of previously added multi-objective functionalities (described in <a href
 
 Having listed the current functionalities, let's look at the areas that are slated for future development:
 
-  * Adding support for Zoo parallel API.
+  * Adding support for Zoo parallel API (complete now).
   * Code refactoring.
   * Various additional functionalities.
 
