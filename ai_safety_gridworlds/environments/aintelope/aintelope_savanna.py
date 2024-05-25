@@ -14,7 +14,7 @@
 # limitations under the License.
 # ============================================================================
 """AIntelope savanna base environment.
-Adapted from a similar island_navigation_ex_ma environment by making it multi-agent.
+Adapted from a similar island_navigation_ex_ma environment.
 """
 
 from __future__ import absolute_import
