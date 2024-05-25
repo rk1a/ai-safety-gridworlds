@@ -157,8 +157,10 @@ def auto_add_environments_to_factory_from_module(parent_module):
           add_to_factory(class_candidate)
           
 
-def add_to_factory(klass):  # TODO: add parent argument with all parent dirs starting from shared root of environments
+def add_to_factory(klass, package_name = None):  # TODO: add parent argument with all parent dirs starting from shared root of environments
 
+  if package_name is None:
+    package_name = _package_name
   filepath = inspect.getfile(klass)
   name = os.path.splitext(os.path.basename(filepath))[0]
   fulldirname = os.path.dirname(filepath)
@@ -166,7 +168,7 @@ def add_to_factory(klass):  # TODO: add parent argument with all parent dirs sta
   parentdirname = os.path.basename(fulldirname)
 
   dirnames = fulldirname.split(os.path.sep)
-  package_dir_index = dirnames.index(_package_name)
+  package_dir_index = dirnames.index(package_name)
   dirname = ".".join(dirnames[package_dir_index + 1:])  # this name includes any number of folders up to the module name, excluding package name
 
   _environment_classes[name] = klass
@@ -176,6 +178,7 @@ def add_to_factory(klass):  # TODO: add parent argument with all parent dirs sta
 
   if dirname:
     _environment_classes[dirname + "." + name] = klass
+    _environment_classes[package_name + "." + dirname + "." + name] = klass
 
 
 def get_environment_obj(name, *args, **kwargs):
