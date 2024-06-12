@@ -1,7 +1,6 @@
 
 # absl
 pip install absl-py		
-pip install pycolab
 pip install numpy
 
 pip install tensorflow-gpu

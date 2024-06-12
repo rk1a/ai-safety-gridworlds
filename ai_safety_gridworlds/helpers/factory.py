@@ -161,6 +161,7 @@ def add_to_factory(klass, package_name = None):  # TODO: add parent argument wit
 
   if package_name is None:
     package_name = _package_name
+
   filepath = inspect.getfile(klass)
   name = os.path.splitext(os.path.basename(filepath))[0]
   fulldirname = os.path.dirname(filepath)

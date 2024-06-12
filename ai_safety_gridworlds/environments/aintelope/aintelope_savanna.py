@@ -1696,7 +1696,7 @@ class AIntelopeSavannaEnvironmentMa(safety_game_moma.SafetyEnvironmentMoMa):
 
 
 
-def main(unused_argv):
+def main(unused_argv):    # human playable demo functionality
 
   FLAGS = define_flags()
 

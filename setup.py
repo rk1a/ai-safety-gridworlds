@@ -17,6 +17,11 @@ if sys.version_info[0] == 2:
 elif sys.version_info[0] == 3:
     enum = []
 
+if os.name == "nt":
+    windows_curses = ["windows-curses"]
+else:
+    windows_curses = []
+
 setuptools.setup(
     name="ai-safety-gridworlds",
     version="2.0",
@@ -64,21 +69,23 @@ setuptools.setup(
         "gridworld "
         "gym "
         "gymnasium "
+        "mamorl "
+        "multi-objective "
+        "multi-agent "
         "pettingzoo "
         "reinforcement learning "
         "retro retrogaming "
         "rl "
-        "multi-objective "
-        "multi-agent "
     ),
     install_requires=[
       "absl-py", 
-      "gym",
+      "gym",    # if the user wants, they can manually install gymnasium instead and then we will automatically use this newer package instead. Gym is needed as a fallback. Installation of gymnasium is not forced in order to not override existing gym installation, since gymnasium would have priority during execution.
       "matplotlib",
       "numpy", 
+      "pettingzoo",
       "pillow",
       # "pycolab", 
-    ] + enum,
+    ] + enum + windows_curses,
     packages=setuptools.find_packages(),
     zip_safe=True,
     entry_points={},
