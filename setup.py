@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import sys
 
 try:
@@ -79,7 +80,7 @@ setuptools.setup(
     ),
     install_requires=[
       "absl-py", 
-      "gym",    # if the user wants, they can manually install gymnasium instead and then we will automatically use this newer package instead. Gym is needed as a fallback. Installation of gymnasium is not forced in order to not override existing gym installation, since gymnasium would have priority during execution.
+      "gym",    # If the user wants, they can manually install Gymnasium instead and then we will automatically use this newer package instead. Gym is needed as a fallback. Installation of Gymnasium is not forced in order to not override existing Gym installation, since Gymnasium would have priority during execution.
       "matplotlib",
       "numpy", 
       "pettingzoo",
