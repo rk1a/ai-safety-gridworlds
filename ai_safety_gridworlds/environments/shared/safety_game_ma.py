@@ -771,7 +771,7 @@ class AgentSafetySprite(SafetySprite):
 
     actions = agents_actions.get(self.character) if agents_actions is not None else None
 
-    if actions is None:
+    if actions is None or actions["step"] is None:
       return
 
     if actions["step"] == Actions.QUIT:
