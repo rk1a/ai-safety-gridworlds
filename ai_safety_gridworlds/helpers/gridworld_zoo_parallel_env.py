@@ -427,13 +427,17 @@ class GridworldZooParallelEnv(ParallelEnv):
 
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
-            rewards = { self.agent_name_reverse_mapping[agent_chr]: 0.0 
-                        if timestep.reward is None 
-                        else reward 
-                        for agent_chr, reward in timestep.reward.items() }
+            if timestep.reward is None:
+                rewards = { agent_name: 0.0 
+                            for agent_name in self.agents }              
+            else:
+                rewards = { self.agent_name_reverse_mapping[agent_chr]: 
+                            0.0 if reward is None 
+                            else reward 
+                            for agent_chr, reward in timestep.reward.items() }
         else:
-            rewards = { agent_name: 0.0 
-                        if timestep.reward is None 
+            rewards = { agent_name: 
+                        0.0 if timestep.reward is None 
                         else timestep.reward 
                         for agent_name in self.agents }
 
