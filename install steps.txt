@@ -3,10 +3,6 @@
 pip install absl-py		
 pip install numpy
 
-pip install tensorflow-gpu
-OR
-pip install tensorflow
-
 
 # if using Windows:
 pip install windows-curses
