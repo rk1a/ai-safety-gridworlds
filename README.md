@@ -77,5 +77,5 @@ One more elaborate environment is described separately here: https://github.com/
 
 
 # Acknowledgements
-I would like to thank Ben Smith, Robert Klassert, Joel Pyykkö, AI Safety Camp V, AIntelope, EA Funds, Emergent Ventures / Mercatus Center at George Mason University, and Foresight Institute.
+I would like to thank Ben Smith, Robert Klassert, Joel Pyykkö, AI Safety Camp V, AIntelope, LTFF, Emergent Ventures / Mercatus Center at George Mason University, and Foresight Institute.
 
