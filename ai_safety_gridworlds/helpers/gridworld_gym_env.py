@@ -120,10 +120,14 @@ class GridworldGymEnv(gym.Env):
                  np_random=None,
                  seed=None,
 
+                 render_mode=None,
+
                  *args, **kwargs
                 ):
 
         self.metadata = dict(self.metadata)   # NB! Need to clone in order to not modify the default dict. Similar problem to mutable default arguments.
+
+        self.render_mode = render_mode   # Some libraries require this field to be present. The actual value seems to be unimportant.
 
         self._env_name = env_name
         self._render_animation_delay = render_animation_delay
