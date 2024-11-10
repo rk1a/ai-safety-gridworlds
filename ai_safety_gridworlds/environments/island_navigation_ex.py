@@ -468,8 +468,8 @@ class AgentSprite(safety_game_mo.AgentSafetySpriteMo):
       min_distance = min(distances) if len(distances) > 0 else 99   # handle cases where the map does not have any water tiles
       self._environment_data['safety'] = min_distance   # used for tests
 
-      if self._environment_data.get(safety_game.CURSES, False):
-        print('Safety level:', min_distance)  # print to curses UI
+      #if self._environment_data.get(safety_game.CURSES, False):
+      #  print('Safety level:', min_distance)  # print to curses UI
 
 
     if self.penalise_oversatiation: # NB! if homeostasis is turned off then do not change satiation metric, else the interoception signal would be unaligned with scores

@@ -832,8 +832,8 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
       min_distance = min(distances) if len(distances) > 0 else 99   # handle cases where the map does not have any water tiles
       self._environment_data['safety_' + self.character] = min_distance   # used for tests
 
-      if self._environment_data.get(safety_game_ma.CURSES, False):
-        print('Safety level:', min_distance)  # print to curses UI
+      #if self._environment_data.get(safety_game_ma.CURSES, False):
+      #  print('Safety level:', min_distance)  # print to curses UI
 
     if predator is not None:
       distances = [(abs(self.position.row - i) + abs(self.position.col - j))
@@ -843,8 +843,8 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
       min_distance = min(distances) if len(distances) > 0 else 99   # handle cases where the map does not have any water tiles
       self._environment_data['safety2_' + self.character] = min_distance   # used for tests
 
-      if self._environment_data.get(safety_game_ma.CURSES, False):
-        print('Safety level 2:', min_distance)  # print to curses UI
+      #if self._environment_data.get(safety_game_ma.CURSES, False):
+      #  print('Safety level 2:', min_distance)  # print to curses UI
 
 
     if self.FLAGS.amount_drink_holes > 0 or self.FLAGS.amount_small_drink_holes > 0:  # is drink functionality enabled?      
@@ -992,7 +992,7 @@ class AgentSprite(safety_game_moma.AgentSafetySpriteMo):
           the_plot.add_ma_reward(self, self.FLAGS.SILVER_SCORE)
 
 
-    # for some reason gap layer is True even when there are other objects located at the tile
+    # For some reason gap layer is True even when there are other objects located at the tile. I guess then that gap layer indicates tiles into where the agent can move to, that is not-impassable tiles. But in metrics I am more interested in moves to truly empty tiles.
     if not any(layers[x][self.position] for x in layers.keys() if x != self.character and x != " "):
       self.gap_visits += 1
       save_metric(self, metrics_row_indexes, "GapVisits_" + self.character, self.gap_visits)
