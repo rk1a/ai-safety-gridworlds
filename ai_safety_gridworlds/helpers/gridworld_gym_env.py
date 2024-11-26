@@ -115,7 +115,9 @@ class GridworldGymEnv(gym.Env):
                  # observable_attribute_value_mapping:dict[str, dict[str, float]]={},  
                  observable_attribute_value_mapping:dict[str, float]={}, 
 
-                 agent_character = None,    # used in case of multi-agent environments
+                 use_multi_discrete_action_space=False,   # note that some baseline algorithms may not support this mode
+
+                 agent_character=None,    # used in case of multi-agent environments
 
                  np_random=None,
                  seed=None,
@@ -149,6 +151,7 @@ class GridworldGymEnv(gym.Env):
         self._layers_order_in_cube = layers_order_in_cube
         self._observable_attribute_categories = observable_attribute_categories
         self._observable_attribute_value_mapping = observable_attribute_value_mapping
+        self._use_multi_discrete_action_space = use_multi_discrete_action_space
 
         self._last_board = None
         self._last_agent_board = None
@@ -200,7 +203,10 @@ class GridworldGymEnv(gym.Env):
                 self._internal_np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
 
         # TODO: make these fields readonly
-        self._action_space = GridworldsActionSpace(self)
+        if self._use_multi_discrete_action_space:
+            self._action_space = MultiDiscreteGridworldsActionSpace(self)
+        else:
+            self._action_space = DiscreteGridworldsActionSpace(self)
 
         # TODO: agent-centric observation space support
         self._observation_space = GridworldsObservationSpace(self, use_transitions, flatten_observations)
@@ -700,7 +706,7 @@ class GridworldGymEnv(gym.Env):
             super(GridworldEnv, self).render(mode=mode)  # just raise an exception
 
 
-class GridworldsActionSpace(MultiDiscrete):  # gym.Space
+class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
 
     def __init__(self, env):
         self._env = env
@@ -729,14 +735,14 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
         self.n = (self.max_action - self.min_action) + 1
 
         if gym_v26:
-            super(GridworldsActionSpace, self).__init__(
+            super(MultiDiscreteGridworldsActionSpace, self).__init__(
                 # shape=shape, dtype=action_spec.dtype
-                nvec=self.n, start=self.min_action, dtype=action_spec.dtype
+                nvec=[self.n], start=self.min_action, dtype=action_spec.dtype
             )
         else:
-            super(GridworldsActionSpace, self).__init__(
+            super(MultiDiscreteGridworldsActionSpace, self).__init__(
                 # shape=shape, dtype=action_spec.dtype
-                nvec=self.n, dtype=action_spec.dtype
+                nvec=[self.n], dtype=action_spec.dtype
             )
 
         self._shape = shape   # needs to be set after super().__init__() has been called
@@ -747,7 +753,7 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
 
         self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
 
-        result = super(GridworldsActionSpace, self).sample(mask)
+        result = super(MultiDiscreteGridworldsActionSpace, self).sample(mask)
         if not gym_v26:
             result += self.min_action
         return result
@@ -767,6 +773,64 @@ class GridworldsActionSpace(MultiDiscrete):  # gym.Space
             return self.min_action <= x <= self.max_action
         else:
             return all(self.min_action <= x <= self.max_action)
+
+
+class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
+
+    def __init__(self, env):
+        self._env = env
+        action_spec = env._env.action_spec()
+
+        if isinstance(env._env, safety_game_moma.SafetyEnvironmentMoMa):
+            assert action_spec[0].name == "discrete"
+            assert action_spec[0].dtype == "int32"
+            #assert action_spec[1].name == "continuous"
+            #assert action_spec[1].dtype == "float32"
+            # self.min_action = action_spec[0].minimum.astype(int)
+            # self.max_action = action_spec[0].maximum.astype(int)
+            self.min_action = action_spec[0].minimum.astype(int)[0]   # spec for step modality
+            self.max_action = action_spec[0].maximum.astype(int)[0]   # spec for step modality
+            action_spec = action_spec[0]
+            shape = (1,)
+        else:
+            assert action_spec.name == "discrete"
+            assert action_spec.dtype == "int32"
+            assert len(action_spec.shape) == 1 and action_spec.shape[0] == 1
+            self.min_action = int(action_spec.minimum)
+            self.max_action = int(action_spec.maximum)
+            shape = action_spec.shape
+
+        self.n = (self.max_action - self.min_action) + 1
+
+        super(DiscreteGridworldsActionSpace, self).__init__(
+            n=self.n, start=self.min_action
+        )
+
+        self._shape = shape   # needs to be set after super().__init__() has been called
+
+        # self._internal_np_random = self._env._internal_np_random
+
+    def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
+
+        self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
+
+        result = super(DiscreteGridworldsActionSpace, self).sample(mask)
+        if not gym_v26:
+            result += self.min_action
+        return result
+
+        #if mask is None:
+        #    return self._env._internal_np_random.randint(self.min_action, self.max_action)
+        #else:
+        #    return self.min_action + self._env._internal_np_random.choice(np.where(mask == 1)[0])
+
+    def contains(self, x):
+        """
+        Return True is x is a valid action. Note, that this does not use the
+        pycolab validate function, because that expects a numpy array and not
+        an individual action.
+        """
+        return self.min_action <= x <= self.max_action
 
 
 class GridworldsObservationSpace(gym.Space):  # TODO: support for agent-centric observations
