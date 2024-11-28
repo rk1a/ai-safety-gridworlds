@@ -16,19 +16,19 @@ import copy
 import numpy as np
 
 try:
-  import gymnasium as gym
-  from gymnasium import error
-  from gymnasium.spaces import MultiDiscrete, Discrete
-  from gymnasium.utils import seeding
-  from gymnasium.utils.env_checker import data_equivalence
-  gym_v26 = True
+    import gymnasium as gym
+    from gymnasium import error
+    from gymnasium.spaces import MultiDiscrete, Discrete
+    from gymnasium.utils import seeding
+    from gymnasium.utils.env_checker import data_equivalence
+    gym_v26 = True
 except:
-  import gym
-  from gym import error
-  from gym.spaces import MultiDiscrete, Discrete
-  from gym.utils import seeding
-  from gym.utils.env_checker import data_equivalence
-  gym_v26 = False
+    import gym
+    from gym import error
+    from gym.spaces import MultiDiscrete, Discrete
+    from gym.utils import seeding
+    from gym.utils.env_checker import data_equivalence
+    gym_v26 = False
 
 # from ai_safety_gridworlds.environments.shared.safety_game_mp import METRICS_DICT, METRICS_MATRIX
 # from ai_safety_gridworlds.environments.shared.safety_game import EXTRA_OBSERVATIONS, HIDDEN_REWARD
@@ -200,7 +200,9 @@ class GridworldGymEnv(gym.Env):
                 np.random.seed(seed)
             self._internal_np_random = self._env.environment_data.get(NP_RANDOM)
             if self._internal_np_random is None:
-                self._internal_np_random = np.random.RandomState(seed)    # TODO: use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+                # self._internal_np_random = np.random.RandomState(seed)
+                # use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+                self._internal_np_random = seeding.np_random(seed)[0]
 
         # TODO: make these fields readonly
         if self._use_multi_discrete_action_space:
@@ -669,7 +671,9 @@ class GridworldGymEnv(gym.Env):
         # TODO: seed global random generator only if the env is not multi-agent and not multi-objective
         # TODO: update environment's environment_data["seed"] entry as well?
         np.random.seed(seed)
-        self._internal_np_random.seed(seed)
+        # self._internal_np_random.seed(seed)
+        # use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+        self._internal_np_random = seeding.np_random(seed)[0]
 
     def render(self, mode="human"):
         """ Implements the gym render modes "rgb_array", "ansi" and "human".
@@ -737,7 +741,7 @@ class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
         if gym_v26:
             super(MultiDiscreteGridworldsActionSpace, self).__init__(
                 # shape=shape, dtype=action_spec.dtype
-                nvec=[self.n], start=self.min_action, dtype=action_spec.dtype
+                nvec=[self.n], start=[self.min_action], dtype=action_spec.dtype
             )
         else:
             super(MultiDiscreteGridworldsActionSpace, self).__init__(
@@ -751,6 +755,7 @@ class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
 
+        # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
         self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
 
         result = super(MultiDiscreteGridworldsActionSpace, self).sample(mask)
@@ -812,6 +817,7 @@ class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
 
+        # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
         self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
 
         result = super(DiscreteGridworldsActionSpace, self).sample(mask)

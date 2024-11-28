@@ -655,7 +655,7 @@ class AgentSafetySprite(SafetySprite):
       proposed_actions = proposed_actions["step"]
 
 
-    if proposed_actions == Actions.NOOP or proposed_actions == Actions.QUIT:   # Actions.QUIT happens during tests
+    if proposed_actions == Actions.NOOP or proposed_actions == Actions.QUIT:
       direction = current_direction
 
     elif observation_direction_mode == 0:   # fixed

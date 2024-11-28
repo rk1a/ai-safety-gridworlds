@@ -49,6 +49,13 @@ import numpy as np
 
 import six
 
+try:
+    from gymnasium.utils import seeding
+    gym_v26 = True
+except:
+    from gym.utils import seeding
+    gym_v26 = False
+
 
 
 log_compresslevel = 6   # 6 is default level for gzip: https://linux.die.net/man/1/gzip
@@ -275,7 +282,10 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
     if np_random is None:
       if seed is not None:
         np.random.seed(seed)
-      np_random = np.random.RandomState(seed) # NB! use a separate random state object even if seed is None
+      # np_random = np.random.RandomState(seed) # NB! use a separate random state object even if seed is None
+      # use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+      np_random = seeding.np_random(seed)[0]
+
     self._environment_data[NP_RANDOM] = np_random
     self._environment_data[SEED] = seed
 
@@ -367,7 +377,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
       else:
         new_seed = int(new_seed) & 0xFFFFFFFF  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
       np.random.seed(new_seed)
-      self._environment_data[NP_RANDOM].seed(new_seed)
+      # self._environment_data[NP_RANDOM].seed(new_seed)
+      # use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+      self._environment_data[NP_RANDOM] = seeding.np_random(new_seed)[0]
 
     if episode_no is not None:
       setattr(self.__class__, "episode_no", episode_no)  # use static attribute so that the value survives re-construction of the environment
@@ -800,7 +812,9 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
         else:
           new_seed = int(new_seed) & 0xFFFFFFFF  # 0xFFFFFFFF: np.random.seed accepts 32-bit int only
         np.random.seed(new_seed)
-        self._environment_data[NP_RANDOM].seed(new_seed)
+        # self._environment_data[NP_RANDOM].seed(new_seed)
+        # use seeding.np_random(seed) which uses new np.random.Generator instead. It is supposedly faster and has better statistical properties. See also https://numpy.org/doc/stable/reference/random/index.html#design
+        self._environment_data[NP_RANDOM] = seeding.np_random(new_seed)[0]
 
     else:
       # if self._state is not None and self._state != environment_ma.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
