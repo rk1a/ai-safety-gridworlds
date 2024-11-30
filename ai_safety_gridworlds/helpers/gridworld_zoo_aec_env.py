@@ -941,6 +941,18 @@ class GridworldZooAecEnv(AECEnv):
 
 class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
 
+    # https://docs.python.org/3/library/pickle.html#handling-stateful-objects
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # don't pickle _env since it contains absl Flags which is not picklable
+        del state["_env"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Add _env back since it doesn't exist in the pickle
+        self._env = None
+
     def __init__(self, env, agent):   # TODO: agent-specific action space
         self._env = env
         self._agent = agent
@@ -984,7 +996,7 @@ class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
         # self._np_random = self._env._np_random
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
-        if self._env.terminations[self._agent] or self._env.truncations[self._agent]:
+        if self._env is not None and self._env.terminations[self._agent] or self._env.truncations[self._agent]:
             raise ValueError(f"Agent {self._agent} is done")
 
         # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
@@ -1013,6 +1025,18 @@ class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
 
 
 class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
+
+    # https://docs.python.org/3/library/pickle.html#handling-stateful-objects
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # don't pickle _env since it contains absl Flags which is not picklable
+        del state["_env"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Add _env back since it doesn't exist in the pickle
+        self._env = None
 
     def __init__(self, env, agent):   # TODO: agent-specific action space
         self._env = env
@@ -1049,7 +1073,7 @@ class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
         # self._np_random = self._env._np_random
 
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
-        if self._env.terminations[self._agent] or self._env.truncations[self._agent]:
+        if self._env is not None and self._env.terminations[self._agent] or self._env.truncations[self._agent]:
             raise ValueError(f"Agent {self._agent} is done")
 
         # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
@@ -1078,7 +1102,7 @@ class GridworldsObservationSpace(gym.Space):
 
     # TODO: support for 3D observation cube as observation space
     def __init__(self, env, agent, use_transitions, flatten_observations):
-        self._env = env
+        # self._env = env
         if isinstance(env._env, safety_game_moma.SafetyEnvironmentMoMa):
             self.observation_spec_dict = env._env.observation_spec(env.agent_name_mapping[agent])
         else:
@@ -1086,8 +1110,9 @@ class GridworldsObservationSpace(gym.Space):
         self.use_transitions = use_transitions
         self.flatten_observations = flatten_observations
 
-        dict_key = "ascii" if self._env._ascii_observation_format else "board"
+        self._observation_dict_key = "ascii" if env._ascii_observation_format else "board"
 
+        dict_key = self._observation_dict_key
         if flatten_observations:
             if self.use_transitions:
                 shape = (2, np.prod(self.observation_spec_dict[dict_key].shape))
@@ -1126,13 +1151,13 @@ class GridworldsObservationSpace(gym.Space):
                 else:
                     observation[key] = spec.generate_value()
         # TODO: support for "ascii" observation sampling
-        result = observation["ascii" if self._env._ascii_observation_format else "board"][np.newaxis, :]    # TODO: add object coordinates and agent perspectives?
+        result = observation[self._observation_dict_key][np.newaxis, :]    # TODO: add object coordinates and agent perspectives?
         if self.flatten_observations:
             result = result.flatten()
         return result
 
     def contains(self, x):
-        dict_key = "ascii" if self._env._ascii_observation_format else "board"
+        dict_key = self._observation_dict_key
         if dict_key in self.observation_spec_dict.keys():
             try:
                 self.observation_spec_dict[dict_key].validate(x[0, ...])
