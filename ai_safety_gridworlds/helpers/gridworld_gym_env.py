@@ -712,6 +712,18 @@ class GridworldGymEnv(gym.Env):
 
 class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
 
+    # https://docs.python.org/3/library/pickle.html#handling-stateful-objects
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # don't pickle _env since it contains absl Flags which is not picklable
+        del state["_env"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Add _env back since it doesn't exist in the pickle
+        self._env = None
+
     def __init__(self, env):
         self._env = env
         action_spec = env._env.action_spec()
@@ -782,6 +794,18 @@ class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
 
 class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
 
+    # https://docs.python.org/3/library/pickle.html#handling-stateful-objects
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # don't pickle _env since it contains absl Flags which is not picklable
+        del state["_env"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Add _env back since it doesn't exist in the pickle
+        self._env = None
+
     def __init__(self, env):
         self._env = env
         action_spec = env._env.action_spec()
@@ -842,7 +866,7 @@ class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
 class GridworldsObservationSpace(gym.Space):  # TODO: support for agent-centric observations
 
     def __init__(self, env, use_transitions, flatten_observations):
-        self._env = env
+        # self._env = env
         if isinstance(env._env, safety_game_moma.SafetyEnvironmentMoMa):
             self.observation_spec_dict = env._env.observation_spec(env._agent_chr)
         else:
@@ -851,8 +875,9 @@ class GridworldsObservationSpace(gym.Space):  # TODO: support for agent-centric 
         self.use_transitions = use_transitions
         self.flatten_observations = flatten_observations
 
-        dict_key = "ascii" if self._env._ascii_observation_format else "board"
+        self._observation_dict_key = "ascii" if env._ascii_observation_format else "board"
 
+        dict_key = self._observation_dict_key
         if flatten_observations:
             if self.use_transitions:
                 shape = (2, np.prod(self.observation_spec_dict[dict_key].shape))
@@ -891,13 +916,13 @@ class GridworldsObservationSpace(gym.Space):  # TODO: support for agent-centric 
                 else:
                     observation[key] = spec.generate_value()
         # TODO: support for "ascii" observation sampling
-        result = observation["ascii" if self._env._ascii_observation_format else "board"][np.newaxis, :]    # TODO: add object coordinates and agent perspectives?
+        result = observation[self._observation_dict_key][np.newaxis, :]    # TODO: add object coordinates and agent perspectives?
         if self.flatten_observations:
             result = result.flatten()
         return result
 
     def contains(self, x):
-        dict_key = "ascii" if self._env._ascii_observation_format else "board"
+        dict_key = self._observation_dict_key
         if dict_key in self.observation_spec_dict.keys():
             try:
                 self.observation_spec_dict[dict_key].validate(x[0, ...])
