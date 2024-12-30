@@ -1446,6 +1446,16 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
   def get_episode_no(self):
     return getattr(self.__class__, "episode_no", -1)
 
+  def get_next_episode_no(self):
+    episode_no = getattr(self.__class__, "episode_no", -1)
+    if (  # check that current episode has any steps
+      self._state is not None 
+      and self._state != {} 
+      and any( not self._state[agent].first() for agent in self._environment_data[AGENT_SPRITE].keys() )
+    ):
+      episode_no += 1
+    return episode_no
+
 
   # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
   def set_current_q_value_per_action(self, q_value_per_action):
