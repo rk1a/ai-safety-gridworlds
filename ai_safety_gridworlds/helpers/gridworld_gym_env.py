@@ -650,11 +650,17 @@ class GridworldGymEnv(gym.Env):
         # TODO: use agent-specific reward unit space?
         return self._env.get_reward_unit_space()
 
+    def get_step_no(self):                           # ADDED
+        return self._env._current_game.the_plot.frame
+
     def get_trial_no(self):                             # ADDED
         return self._env.get_trial_no()
 
     def get_episode_no(self):                           # ADDED
         return self._env.get_episode_no()
+
+    def get_next_episode_no(self):                           # ADDED
+        return self._env.get_next_episode_no()
 
     # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
     def set_current_q_value_per_action(self, q_value_per_action):                           # ADDED
