@@ -768,7 +768,10 @@ class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
 
         # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
-        self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
+        if self._env is not None:   # _env is None when action space is pickled and sent to a subprocess
+            self._np_random = self._env._np_random    # NB! update on each call since env may have been reset after constructing
+        elif self._np_random is None:
+            self._np_random = seeding.np_random()[0]
 
         result = super(MultiDiscreteGridworldsActionSpace, self).sample(mask)
         if not gym_v26:
@@ -842,7 +845,10 @@ class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
 
         # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
-        self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
+        if self._env is not None:   # _env is None when action space is pickled and sent to a subprocess
+            self._np_random = self._env._np_random    # NB! update on each call since env may have been reset after constructing
+        elif self._np_random is None:
+            self._np_random = seeding.np_random()[0]
 
         result = super(DiscreteGridworldsActionSpace, self).sample(mask)
         if not gym_v26:
