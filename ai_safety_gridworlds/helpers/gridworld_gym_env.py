@@ -122,10 +122,17 @@ class GridworldGymEnv(gym.Env):
                  np_random=None,
                  seed=None,
 
+                 pre_reset_callback=None,
+                 post_reset_callback=None,
+                 pre_step_callback=None,
+                 post_step_callback=None,
+
                  render_mode=None,
 
                  *args, **kwargs
                 ):
+
+        super().__init__()
 
         self.metadata = dict(self.metadata)   # NB! Need to clone in order to not modify the default dict. Similar problem to mutable default arguments.
 
@@ -152,6 +159,11 @@ class GridworldGymEnv(gym.Env):
         self._observable_attribute_categories = observable_attribute_categories
         self._observable_attribute_value_mapping = observable_attribute_value_mapping
         self._use_multi_discrete_action_space = use_multi_discrete_action_space
+
+        self._pre_reset_callback = pre_reset_callback
+        self._post_reset_callback = post_reset_callback
+        self._pre_step_callback = pre_step_callback
+        self._post_step_callback = post_step_callback
 
         self._last_board = None
         self._last_agent_board = None
@@ -457,6 +469,9 @@ class GridworldGymEnv(gym.Env):
                   the "extra_observations"
         """
 
+        if self._pre_step_callback is not None:
+            action = self._pre_step_callback(action, *args, **kwargs)
+
         # in case of multi-agent environment, step only one specific agent. Other agents should then be controlled by the environment code as NPC-s.
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
@@ -560,15 +575,22 @@ class GridworldGymEnv(gym.Env):
             # TODO: However, environments that have reasons for episode truncation rather than termination should read through the associated PR https://github.com/openai/gym/pull/2752
             terminated = done
             truncated = False
-            return (self._agent_state, reward, terminated, truncated, info) 
+            result = (self._agent_state, reward, terminated, truncated, info) 
         else:
-            return (self._agent_state, reward, done, info)     
-            
-        # self._agents_last_step_result = result
-        # return result
+            result = (self._agent_state, reward, done, info) 
+
+        if self._post_step_callback is not None:
+            self._post_step_callback(action, *result, *args, **kwargs)
+
+        return result
 
 
     def reset(self, seed=None, return_info=False, *args, **kwargs):                     # CHANGED: added seed, *args, **kwargs
+
+        if self._pre_reset_callback is not None:
+            (allow_reset, seed, args, kwargs) = self._pre_reset_callback(seed, *args, **kwargs)
+            if not allow_reset:
+                return  # TODO return value
 
         if seed is not None:
             self.seed(seed=seed)    # ADDED
@@ -641,20 +663,32 @@ class GridworldGymEnv(gym.Env):
 
         if gym_v26 or return_info:
             # return state, self._info
-            return self._agent_state, info
+            result = (self._agent_state, info)
+            if self._post_reset_callback is not None:
+                self._post_reset_callback(*result)
         else:
-            return self._agent_state
+            result = self._agent_state
+            if self._post_reset_callback is not None:
+                self._post_reset_callback(result)
+            
+        return result
 
 
     def get_reward_unit_space(self):                    # ADDED
         # TODO: use agent-specific reward unit space?
         return self._env.get_reward_unit_space()
 
+    def get_step_no(self):                           # ADDED
+        return self._env._current_game.the_plot.frame
+
     def get_trial_no(self):                             # ADDED
         return self._env.get_trial_no()
 
     def get_episode_no(self):                           # ADDED
         return self._env.get_episode_no()
+
+    def get_next_episode_no(self):                           # ADDED
+        return self._env.get_next_episode_no()
 
     # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
     def set_current_q_value_per_action(self, q_value_per_action):                           # ADDED
@@ -768,7 +802,10 @@ class MultiDiscreteGridworldsActionSpace(MultiDiscrete):  # gym.Space
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
 
         # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
-        self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
+        if self._env is not None:   # _env is None when action space is pickled and sent to a subprocess
+            self._np_random = self._env._np_random    # NB! update on each call since env may have been reset after constructing
+        elif self._np_random is None:
+            self._np_random = seeding.np_random()[0]
 
         result = super(MultiDiscreteGridworldsActionSpace, self).sample(mask)
         if not gym_v26:
@@ -842,7 +879,10 @@ class DiscreteGridworldsActionSpace(Discrete):  # gym.Space
     def sample(self, mask: Optional[tuple] = None) -> np.ndarray:
 
         # MultiDiscrete action space is able to work with MT19937, but Discrete action space requires using the newer Generator class
-        self._np_random = self._env._internal_np_random    # NB! update on each call since env may have been reset after constructing
+        if self._env is not None:   # _env is None when action space is pickled and sent to a subprocess
+            self._np_random = self._env._np_random    # NB! update on each call since env may have been reset after constructing
+        elif self._np_random is None:
+            self._np_random = seeding.np_random()[0]
 
         result = super(DiscreteGridworldsActionSpace, self).sample(mask)
         if not gym_v26:

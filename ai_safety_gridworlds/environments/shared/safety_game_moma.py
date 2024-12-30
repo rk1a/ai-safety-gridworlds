@@ -818,7 +818,11 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
     else:
       # if self._state is not None and self._state != environment_ma.StepType.FIRST:   # increment the episode_no only if the previous game was played, and not upon early or repeated reset() calls
-      if self._state is not None and self._state != {} and any( not self._state[agent].first() for agent in self._environment_data[AGENT_SPRITE].keys() ): # TODO: verify this logic
+      if (  # check that current episode has any steps
+        self._state is not None 
+        and self._state != {} 
+        and any( not self._state[agent].first() for agent in self._environment_data[AGENT_SPRITE].keys() )
+      ): # TODO: verify this logic
 
         episode_no = getattr(self.__class__, "episode_no")
         episode_no += 1
@@ -849,7 +853,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
   def _write_log_header(self, file):
 
-    writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
+    writer = csv.writer(file, quoting=csv.QUOTE_MINIMAL, delimiter=';')
 
     data = []
     for col in self.log_columns:
@@ -1324,7 +1328,7 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
   def _write_log_row(self, file, iteration, reward_dims, scalar_reward, cumulative_reward_dims, average_reward_dims, scalar_cumulative_reward, scalar_average_reward, gini_index, cumulative_gini_index, mo_variance, cumulative_mo_variance, average_mo_variance):
 
-    writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
+    writer = csv.writer(file, quoting=csv.QUOTE_MINIMAL, delimiter=';')
 
     data = []
     for col in self.log_columns:
@@ -1445,6 +1449,16 @@ class SafetyEnvironmentMoMa(SafetyEnvironmentMa):
 
   def get_episode_no(self):
     return getattr(self.__class__, "episode_no", -1)
+
+  def get_next_episode_no(self):
+    episode_no = getattr(self.__class__, "episode_no", -1)
+    if (  # check that current episode has any steps
+      self._state is not None 
+      and self._state != {} 
+      and any( not self._state[agent].first() for agent in self._environment_data[AGENT_SPRITE].keys() )
+    ):
+      episode_no += 1
+    return episode_no
 
 
   # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
