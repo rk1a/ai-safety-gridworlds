@@ -124,10 +124,17 @@ class GridworldZooParallelEnv(ParallelEnv):
                  test_death=False,
                  test_death_probability=0.33,
 
-                 render_mode=None,
+                 pre_reset_callback=None,
+                 post_reset_callback=None,
+                 pre_step_callback=None,
+                 post_step_callback=None,
+
+                 render_mode=None,                 
 
                  *args, **kwargs
                 ):
+
+        super().__init__()
 
         self.metadata = dict(self.metadata)   # NB! Need to clone in order to not modify the default dict. Similar problem to mutable default arguments.
 
@@ -157,6 +164,11 @@ class GridworldZooParallelEnv(ParallelEnv):
         self._observable_attribute_categories = observable_attribute_categories
         self._observable_attribute_value_mapping = observable_attribute_value_mapping
         self._use_multi_discrete_action_space = use_multi_discrete_action_space
+
+        self._pre_reset_callback = pre_reset_callback
+        self._post_reset_callback = post_reset_callback
+        self._pre_step_callback = pre_step_callback
+        self._post_step_callback = post_step_callback
 
         self._last_observation = None
         self._last_observation_coordinates = None
@@ -429,6 +441,10 @@ class GridworldZooParallelEnv(ParallelEnv):
                   excluding the RGB array. This includes in particular
                   the "extra_observations"
         """
+
+        if self._pre_step_callback is not None:
+            actions = self._pre_step_callback(actions, *args, **kwargs)
+
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             action = { self.agent_name_mapping[agent_name]: agent_action for agent_name, agent_action in actions.items() }
         else:
@@ -589,11 +605,22 @@ class GridworldZooParallelEnv(ParallelEnv):
             terminateds = dones
             truncateds = {agent: False for agent in dones.keys()}    # TODO   
             # NB! shallow copy self._agent_states dict since the dict values will change in next iteration, but main dict object will remain same
-            return (dict(self._agent_states), rewards, terminateds, truncateds, infos)
+            result = (dict(self._agent_states), rewards, terminateds, truncateds, infos)
         else:
-            return (dict(self._agent_states), rewards, dones, infos)
+            result = (dict(self._agent_states), rewards, dones, infos)
+
+        if self._post_step_callback is not None:
+            self._post_step_callback(actions, *result, *args, **kwargs)
+
+        return result
+
 
     def reset(self, seed=None, *args, **kwargs):                     # CHANGED: added seed, *args, **kwargs
+
+        if self._pre_reset_callback is not None:
+            (allow_reset, seed, args, kwargs) = self._pre_reset_callback(seed, *args, **kwargs)
+            if not allow_reset:
+                return  # return value
 
         if seed is not None:
             self.seed(seed=seed)    # ADDED
@@ -668,17 +695,27 @@ class GridworldZooParallelEnv(ParallelEnv):
 
         # NB! shallow copy self._agent_states dict since the dict values will change in next iteration, but main dict object will remain same
         obs = dict(self._agent_states)
+
+        if self._post_reset_callback is not None:
+            self._post_reset_callback(obs, infos)
+
         return obs, infos
 
     def get_reward_unit_space(self):                    # ADDED
         # TODO: use agent-specific reward unit space?
         return self._env.get_reward_unit_space()
 
+    def get_step_no(self):                           # ADDED
+        return self._env._current_game.the_plot.frame
+
     def get_trial_no(self):                             # ADDED
         return self._env.get_trial_no()
 
     def get_episode_no(self):                           # ADDED
         return self._env.get_episode_no()
+
+    def get_next_episode_no(self):                           # ADDED
+        return self._env.get_next_episode_no()
 
     # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
     def set_current_q_value_per_action(self, current_agent: dict):                           # ADDED

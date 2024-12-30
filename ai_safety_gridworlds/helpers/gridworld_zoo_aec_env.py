@@ -126,10 +126,17 @@ class GridworldZooAecEnv(AECEnv):
                  test_death=False,
                  test_death_probability=0.33,
 
+                 pre_reset_callback=None,
+                 post_reset_callback=None,
+                 pre_step_callback=None,
+                 post_step_callback=None,
+
                  render_mode=None,
 
                  *args, **kwargs
                 ):
+
+        super().__init__()
 
         self.metadata = dict(self.metadata)   # NB! Need to clone in order to not modify the default dict. Similar problem to mutable default arguments.
 
@@ -159,6 +166,11 @@ class GridworldZooAecEnv(AECEnv):
         self._observable_attribute_categories = observable_attribute_categories
         self._observable_attribute_value_mapping = observable_attribute_value_mapping
         self._use_multi_discrete_action_space = use_multi_discrete_action_space
+
+        self._pre_reset_callback = pre_reset_callback
+        self._post_reset_callback = post_reset_callback
+        self._pre_step_callback = pre_step_callback
+        self._post_step_callback = post_step_callback
 
         if isinstance(self._env, safety_game_moma.SafetyEnvironmentMoMa):
             self._env.set_observable_attribute_categories(observable_attribute_categories, observable_attribute_value_mapping)
@@ -608,6 +620,9 @@ class GridworldZooAecEnv(AECEnv):
                   the "extra_observations"
         """
 
+        if self._pre_step_callback is not None:
+            action = self._pre_step_callback(self._next_agent, action, *args, transition_from_agents_prev_step_result=transition_from_agents_prev_step_result, **kwargs)
+
         # a dead agent must call .step(None) once more after becoming dead. Only after that call will this dead agent be removed from various dictionaries and from .agent_iter loop.
         if self.terminations[self._next_agent] or self.truncations[self._next_agent]:
 
@@ -782,10 +797,20 @@ class GridworldZooAecEnv(AECEnv):
             self.dones[self._next_agent] = done
 
         self._move_to_next_agent()    # https://pettingzoo.farama.org/content/basic_usage/#interacting-with-environments 
+
+        if self._post_step_callback is not None:
+            result = self._given_agents_last_step_result[self._next_agent]
+            self._post_step_callback(self._next_agent, action, *result, *args, transition_from_agents_prev_step_result=transition_from_agents_prev_step_result, **kwargs)
+
         return
 
 
     def reset(self, seed=None, *args, **kwargs):                     # CHANGED: added seed, *args, **kwargs
+
+        if self._pre_reset_callback is not None:
+            (allow_reset, seed, args, kwargs) = self._pre_reset_callback(seed, *args, **kwargs)
+            if not allow_reset:
+                return
 
         if seed is not None:
             self.seed(seed=seed)    # ADDED
@@ -875,16 +900,29 @@ class GridworldZooAecEnv(AECEnv):
 
         self._test_deads = {agent_name: False for agent_name in self.possible_agents}
 
+        if self._post_reset_callback is not None:
+            obs = agent_states
+            infos = self._infos
+            self._post_reset_callback(obs, infos)
+
+        return
+
 
     def get_reward_unit_space(self):                    # ADDED
         # TODO: use agent-specific reward unit space?
         return self._env.get_reward_unit_space()
+
+    def get_step_no(self):                           # ADDED
+        return self._env._current_game.the_plot.frame
 
     def get_trial_no(self):                             # ADDED
         return self._env.get_trial_no()
 
     def get_episode_no(self):                           # ADDED
         return self._env.get_episode_no()
+
+    def get_next_episode_no(self):                           # ADDED
+        return self._env.get_next_episode_no()
 
     # gym does not support additional arguments to .step() method so we need to use a separate method. See also https://github.com/openai/gym/issues/2399
     def set_current_q_value_per_action(self, q_value_per_action_per_agent: dict):                           # ADDED
