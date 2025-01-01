@@ -41,6 +41,24 @@ from six.moves import map
 from six.moves import range
 
 
+# Make absl flags pickleable. This is needed for multiprocessing purposes.
+import absl
+
+def my_absl_getstate(self):
+  return self.__dict__.copy()
+
+def my_absl_setstate(self, state):
+  self.__dict__.update(state)
+
+# delattr(absl.flags.FlagValues, "__getstate__")
+absl.flags.FlagValues.__getstate__ = my_absl_getstate
+absl.flags.FlagValues.__setstate__ = my_absl_setstate
+
+# delattr(absl.flags.Flag, "__getstate__")
+absl.flags.Flag.__getstate__ = my_absl_getstate
+absl.flags.Flag.__setstate__ = my_absl_setstate
+
+
 class Directions(enum.IntEnum):
   """Enum for observation and action directions of all the players.
 
