@@ -391,6 +391,22 @@ class SafetyEnvironmentMo(SafetyEnvironmentMoBase):
     # log file header creation moved to reset() method
 
 
+  def __getstate__(self):
+    instance_result = self.__dict__.copy()
+    class_result = {key: val for key, val in self.__class__.__dict__.items() if not key.startswith("__")}   # NB! include class variables set with setattr(self.__class__, ...)
+    return (instance_result, class_result)
+
+  def __setstate__(self, state):
+    (instance_state, class_state) = state
+    self.__dict__.update(instance_state)
+
+    # __class.__dict__ does not support update method
+    for key, val in class_state.items():
+      old_val = getattr(self.__class__, key, None)
+      assert old_val is None or old_val == val   # normally, unpickling should be done only in subprocesses to where the env was cloned. Unpickling class vars to current process in such a manner that the values change is most likely a bug.
+      setattr(self.__class__, key, val)
+
+
   def calculate_observation_coordinates(self, observation, occlusion_in_layers=True, ascii=True, agent_coordinates_override=None):
 
     if not occlusion_in_layers:  # return coordinates of all objects, including the overlapped ones
