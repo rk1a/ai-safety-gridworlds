@@ -26,6 +26,7 @@ Most of currently available experiment environments are described in the followi
 * Support for relative observation and action direction per agent. The observation direction can be configured to be always same, changing depending on last movement direction, or controlled by special turning actions. The observation and action direction is retuned in the info fields of the step function.
 * Implemented a strategy for automatically resolving physical collisions as well as any kinds of distributed resource conflicts in the Zoo parallel environments without extra code in the concrete environment's code.
 * Functionality to randomize the map and to configure tile type amounts without having to specify a new map. Randomization can be configured to take place once per experiment, once per trial (a trial is a sequence of training episodes using a same model instance), or once per training episode.
+* Abseil flags are updated to support pickling, which is needed for parallel processing.
 
 
 # Other updates
@@ -76,6 +77,18 @@ Most of currently available experiment environments are described in the followi
 
 * A published research paper based on experiments using this repository: Smith, B.J., Klassert, R. & Pihlakas, R. "Using soft maximin for risk averse multi-objective decision-making". Autonomous Agents and Multi-Agent Systems 37, Article 11 (2023). https://link.springer.com/article/10.1007/s10458-022-09586-2
 * A working paper using this repo: Pihlakas, R & Pyykkö, J. "From homeostasis to resource sharing: Biologically and economically compatible multi-objective multi-agent AI safety benchmarks". Arxiv (2024). https://arxiv.org/abs/2410.00081 (See also https://github.com/aintelope/biological-compatibility-benchmarks)
+
+
+# Presentations
+
+* At VAISU unconference, May 2024:
+    - Demo and feedback session - AI safety benchmarking in multi-objective multi-agent gridworlds - Biologically essential yet neglected themes illustrating the weaknesses and dangers of current industry standard approaches to reinforcement learning. 
+    - Video: https://www.youtube.com/watch?v=ydxMlGlQeco
+    - Slides: https://bit.ly/bmmbs
+* At Foresight Institute's Intelligent Cooperation Group, Nov 2024: 
+    - The subject of the presentation was describing why we should consider fundamental yet neglected principles from biology and economics when thinking about AI alignment, and how these considerations will help with AI safety as well (alignment and safety were treated in this research explicitly as separate aspects, which both benefit from consideration of aforementioned principles). These principles include homeostasis and diminishing returns in utility functions, and sustainability. Next I will introduce multi-objective and multi-agent gridworlds-based benchmark environments we have created for measuring the performance of machine learning algorithms and AI agents in relation to their capacity for biological and economical alignment. The benchmarks are now available as a public repo. At the end I will mention some of the related themes and dilemmas not yet covered by these benchmarks, and describe new benchmark environments we have planned for future implementation.
+    - Recording: https://www.youtube.com/watch?v=DCUqqyyhcko
+    - Slides: https://bit.ly/beamm 
 
 
 # Acknowledgements
